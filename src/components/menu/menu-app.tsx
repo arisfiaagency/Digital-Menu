@@ -27,8 +27,9 @@ import { defaultAppData } from "@/data/default-data";
 import { localized, translate } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney, normalizeSearch, serviceFeeAmount } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
+import { menuThemeStyle } from "@/lib/utils/color";
 import { useLocale } from "@/hooks/use-locale";
-import type { AppData, Category, Locale, MenuItem, MenuSettings } from "@/types/models";
+import type { AppData, Category, CategoryNavStyle, Locale, MenuItem, MenuSettings, SectionHeaderStyle } from "@/types/models";
 
 export function MenuApp({
   initialCategorySlug,
@@ -160,9 +161,17 @@ export function MenuApp({
   const serviceFeePercent = data.general.serviceFeePercent ?? 10;
   const cartGrandTotal = cart.totalPrice + serviceFeeAmount(cart.totalPrice, serviceFeePercent);
 
+  const appearance = data.appearance;
+  const cardDesign = appearance.cardDesign ?? "classic";
+  // Compact cards are horizontal, so they read best in a 1–2 column list; the
+  // image-forward classic/overlay designs use the wider grid.
+  const itemsGridClass = cardDesign === "compact" ? "grid gap-3 lg:grid-cols-2" : "grid gap-5 sm:grid-cols-2 xl:grid-cols-3";
+  const categoryNavStyle = appearance.categoryNavStyle ?? "pills";
+  const sectionHeaderStyle = appearance.sectionHeaderStyle ?? "plain";
+
   return (
-    <main dir="ltr" className="no-select relative min-h-screen">
-      <MenuBackground />
+    <main dir="ltr" className="no-select relative min-h-screen" style={menuThemeStyle(appearance)}>
+      <MenuBackground appearance={appearance} />
       {/* Branded header */}
       <header className="relative overflow-hidden border-b bg-gradient-to-b from-accent/55 via-card/95 to-card/90">
         <div className="glow-primary pointer-events-none absolute -right-16 -top-20 h-64 w-64" aria-hidden />
@@ -264,16 +273,17 @@ export function MenuApp({
         </div>
       </header>
 
-      {/* Sticky category pills. Solid background (no backdrop-blur) — a blurred
+      {/* Sticky category nav. Solid background (no backdrop-blur) — a blurred
           sticky bar re-blurs the page every scroll frame and janks on phones. */}
       <nav className="sticky top-0 z-10 border-b bg-background">
         <div className="container flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <CategoryPill active={activeCategoryId === "all"} onClick={() => scrollToCategory("all")} slug="all" textDir={textDir}>
+          <CategoryNavItem style={categoryNavStyle} active={activeCategoryId === "all"} onClick={() => scrollToCategory("all")} slug="all" textDir={textDir}>
             {translate(locale, "menu.all")}
-          </CategoryPill>
+          </CategoryNavItem>
           {data.categories.map((category) => (
-            <CategoryPill
+            <CategoryNavItem
               key={category.id}
+              style={categoryNavStyle}
               active={activeCategoryId === category.id}
               onClick={() => scrollToCategory(category.id)}
               slug={category.slug}
@@ -281,7 +291,7 @@ export function MenuApp({
               textDir={textDir}
             >
               {localized(category.name, locale)}
-            </CategoryPill>
+            </CategoryNavItem>
           ))}
         </div>
       </nav>
@@ -295,20 +305,21 @@ export function MenuApp({
                   ref={(el) => { sectionRefs.current[section.category.id] = el; }}
                   className="grid scroll-mt-24 gap-5"
                 >
-                  <div dir={textDir} className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <CategoryIcon slug={section.category.slug} icon={section.category.icon} className="h-5 w-5" />
-                    </span>
-                    <h2 className="text-xl font-bold sm:text-2xl">{localized(section.category.name, locale)}</h2>
-                    <span className="h-px flex-1 bg-border" aria-hidden />
-                  </div>
-                  <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  <SectionHeader
+                    style={sectionHeaderStyle}
+                    title={localized(section.category.name, locale)}
+                    slug={section.category.slug}
+                    icon={section.category.icon}
+                    textDir={textDir}
+                  />
+                  <div className={itemsGridClass}>
                     {section.items.map((item, itemIndex) => (
                       <MenuItemCard
                         key={item.id}
                         item={item}
                         locale={locale}
                         settings={data.menu}
+                        appearance={appearance}
                         onViewDetails={setActiveItem}
                         quantity={cart.quantityOf(item.id)}
                         onAdd={() => cart.add(item)}
@@ -324,13 +335,14 @@ export function MenuApp({
             })}
 
             {orphanItems.length ? (
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className={itemsGridClass}>
                 {orphanItems.map((item) => (
                   <MenuItemCard
                     key={item.id}
                     item={item}
                     locale={locale}
                     settings={data.menu}
+                    appearance={appearance}
                     onViewDetails={setActiveItem}
                     quantity={cart.quantityOf(item.id)}
                     onAdd={() => cart.add(item)}
@@ -411,7 +423,10 @@ export function MenuApp({
   );
 }
 
-function CategoryPill({
+// One category button in the sticky nav. Three presentation styles share the
+// same behavior (scroll to the section) so the scroll-spy logic is untouched.
+function CategoryNavItem({
+  style,
   active,
   onClick,
   children,
@@ -419,6 +434,7 @@ function CategoryPill({
   icon,
   textDir
 }: {
+  style: CategoryNavStyle;
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
@@ -426,6 +442,41 @@ function CategoryPill({
   icon?: string;
   textDir: "ltr" | "rtl";
 }) {
+  if (style === "underline") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "focus-ring inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+          active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" />
+        <span dir={textDir}>{children}</span>
+      </button>
+    );
+  }
+
+  if (style === "cards") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "focus-ring inline-flex w-20 shrink-0 flex-col items-center gap-1.5 whitespace-nowrap rounded-xl border px-2 py-2.5 text-xs font-medium transition-colors",
+          active ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:bg-muted"
+        )}
+      >
+        <span className={cn("inline-flex h-9 w-9 items-center justify-center rounded-lg", active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
+          <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
+        </span>
+        <span dir={textDir} className="w-full truncate text-center">{children}</span>
+      </button>
+    );
+  }
+
+  // Default: pills.
   return (
     <button
       type="button"
@@ -438,6 +489,66 @@ function CategoryPill({
       <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" />
       <span dir={textDir}>{children}</span>
     </button>
+  );
+}
+
+// In-page section heading with four presentation styles.
+function SectionHeader({
+  style,
+  title,
+  slug,
+  icon,
+  textDir
+}: {
+  style: SectionHeaderStyle;
+  title: string;
+  slug: string;
+  icon?: string;
+  textDir: "ltr" | "rtl";
+}) {
+  const iconChip = (
+    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
+    </span>
+  );
+
+  if (style === "centered") {
+    return (
+      <div dir={textDir} className="flex flex-col items-center gap-2 text-center">
+        {iconChip}
+        <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+      </div>
+    );
+  }
+
+  if (style === "divider") {
+    return (
+      <div dir={textDir} className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" aria-hidden />
+        <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+        <span className="h-px flex-1 bg-border" aria-hidden />
+      </div>
+    );
+  }
+
+  if (style === "banner") {
+    return (
+      <div dir={textDir} className="flex items-center gap-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/20">
+          <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
+        </span>
+        <h2 className="text-lg font-bold sm:text-xl">{title}</h2>
+      </div>
+    );
+  }
+
+  // Default: plain (icon chip + title + hairline).
+  return (
+    <div dir={textDir} className="flex items-center gap-3">
+      {iconChip}
+      <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+      <span className="h-px flex-1 bg-border" aria-hidden />
+    </div>
   );
 }
 

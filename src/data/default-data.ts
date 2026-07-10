@@ -48,7 +48,16 @@ export const defaultAppearanceSettings = {
   cardStyle: "outlined" as const,
   headerLayout: "expanded" as const,
   menuLayout: "grid" as const,
-  defaultTheme: "light" as const
+  defaultTheme: "light" as const,
+  cardDesign: "classic" as const,
+  categoryNavStyle: "pills" as const,
+  sectionHeaderStyle: "plain" as const,
+  backgroundType: "preset" as const,
+  backgroundColor: "#ffffff",
+  backgroundGradientFrom: "#ecfdf5",
+  backgroundGradientTo: "#ffffff",
+  backgroundOverlay: 45,
+  backgroundPreset: "cafe"
 };
 
 export const defaultQrSettings = {

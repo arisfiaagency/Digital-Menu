@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, LogOut, Plus, RefreshCw, ShieldCheck } from "lucide-react";
 import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-preferences";
+import { MenuDesigner } from "@/components/admin/menu-designer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -34,6 +35,8 @@ export function PlatformSupervisor() {
   const [status, setStatus] = useState<ClientStatus>("active");
   const [defaultCurrency, setDefaultCurrency] = useState<Currency>("IQD");
   const [defaultLanguage, setDefaultLanguage] = useState<Locale>("ckb");
+
+  const [tab, setTab] = useState<"clients" | "design">("clients");
 
   const resolvedSlug = useMemo(() => normalizeClientSlug(slug || name), [name, slug]);
 
@@ -150,7 +153,26 @@ export function PlatformSupervisor() {
         {message ? <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm text-primary">{message}</p> : null}
         {error ? <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p> : null}
 
-        <section className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="inline-flex gap-1 rounded-lg border bg-muted/40 p-1">
+          <button
+            type="button"
+            onClick={() => setTab("clients")}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${tab === "clients" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            Clients
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("design")}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${tab === "design" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            Menu Design
+          </button>
+        </div>
+
+        {tab === "design" ? <MenuDesigner /> : null}
+
+        <section className={`grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)] ${tab === "design" ? "hidden" : ""}`}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

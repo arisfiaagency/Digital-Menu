@@ -1,14 +1,61 @@
 import { CakeSlice, Coffee, Croissant, CupSoda, GlassWater, Martini, Pizza, Sandwich } from "lucide-react";
+import type { AppearanceSettings } from "@/types/models";
 
-// The same drifting coffee-shop animation as the welcome page, tuned softer so
-// menu content stays readable. Rendered as a fixed layer behind the page so it
-// stays put while the menu scrolls. Honors prefers-reduced-motion (globals.css).
+// Public menu background. The cafe chooses the type in the /admin designer:
+//   preset   → the drifting coffee-shop animation (default, original look)
+//   solid    → a single background color
+//   gradient → a top-to-bottom two-color gradient
+//   image    → an uploaded photo with a dark scrim for readability
+// Rendered as a fixed layer behind the page so it stays put while the menu scrolls.
+export function MenuBackground({ appearance }: { appearance?: AppearanceSettings }) {
+  const type = appearance?.backgroundType ?? "preset";
+
+  if (type === "solid") {
+    return (
+      <div
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{ backgroundColor: appearance?.backgroundColor || "#ffffff" }}
+        aria-hidden
+      />
+    );
+  }
+
+  if (type === "gradient") {
+    const from = appearance?.backgroundGradientFrom || "#ecfdf5";
+    const to = appearance?.backgroundGradientTo || "#ffffff";
+    return (
+      <div
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{ backgroundImage: `linear-gradient(to bottom, ${from}, ${to})` }}
+        aria-hidden
+      />
+    );
+  }
+
+  if (type === "image" && appearance?.backgroundImageUrl) {
+    const overlay = Math.min(100, Math.max(0, appearance?.backgroundOverlay ?? 45)) / 100;
+    return (
+      <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden>
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${appearance.backgroundImageUrl})` }}
+        />
+        <div className="absolute inset-0 bg-black" style={{ opacity: overlay }} />
+      </div>
+    );
+  }
+
+  return <PresetBackground />;
+}
+
+// The original drifting coffee-shop animation, tuned softly so menu content stays
+// readable. Honors prefers-reduced-motion (globals.css).
 //
 // Hidden on phones (`hidden sm:block`): a full-viewport `position: fixed` layer
 // with many infinitely-animating children makes iOS in-app browsers (Instagram /
 // Facebook WKWebView) drop the paint during fast momentum scrolling — the page
 // goes blank until a refresh. Desktop keeps the full effect.
-export function MenuBackground() {
+function PresetBackground() {
   const figures = [
     { Icon: Coffee, top: "8%", left: "5%", size: 34, delay: "0s", opacity: 0.14 },
     { Icon: Martini, top: "16%", left: "89%", size: 36, delay: "1.2s", opacity: 0.13 },

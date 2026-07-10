@@ -226,6 +226,11 @@ export type PosState = {
   updatedAt?: Timestamp;
 };
 
+export type MenuCardDesign = "classic" | "compact" | "overlay";
+export type CategoryNavStyle = "pills" | "underline" | "cards";
+export type SectionHeaderStyle = "plain" | "divider" | "banner" | "centered";
+export type MenuBackgroundType = "preset" | "solid" | "gradient" | "image";
+
 export type AppearanceSettings = {
   primaryColor: string;
   secondaryColor: string;
@@ -235,6 +240,25 @@ export type AppearanceSettings = {
   headerLayout: "compact" | "expanded";
   menuLayout: "list" | "grid";
   defaultTheme: "light" | "dark";
+  // Item-card layout. Drives the section layout too: compact ⇒ single-column
+  // list, classic/overlay ⇒ grid. `cardStyle` above still modifies border/shadow.
+  cardDesign?: MenuCardDesign;
+  // Sticky category navigation presentation.
+  categoryNavStyle?: CategoryNavStyle;
+  // In-page section heading treatment.
+  sectionHeaderStyle?: SectionHeaderStyle;
+  // Public menu background. Fields are read per `backgroundType`.
+  backgroundType?: MenuBackgroundType;
+  backgroundColor?: string;
+  backgroundGradientFrom?: string;
+  backgroundGradientTo?: string;
+  backgroundImageUrl?: string;
+  backgroundImagePath?: string;
+  // Dark scrim over an image background, 0–100 (%). Keeps menu text readable.
+  backgroundOverlay?: number;
+  // Which built-in preset when backgroundType === "preset". "cafe" = the
+  // original animated food-icon layer.
+  backgroundPreset?: string;
   updatedAt?: Timestamp;
 };
 

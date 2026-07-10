@@ -1,25 +1,16 @@
 import { Plus, Pointer } from "lucide-react";
 import { dirForLocale, localized, translate } from "@/lib/i18n/config";
 import { formatMoney } from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
 import { QuantityStepper } from "@/components/menu/cart";
-import type { Locale, MenuItem, MenuSettings } from "@/types/models";
+import type { AppearanceSettings, Locale, MenuItem, MenuSettings } from "@/types/models";
 
-export function MenuItemCard({
-  item,
-  locale,
-  settings,
-  onViewDetails,
-  quantity = 0,
-  onAdd,
-  onIncrement,
-  onDecrement,
-  priority = false,
-  lcp = false
-}: {
+type MenuItemCardProps = {
   item: MenuItem;
   locale: Locale;
   settings: MenuSettings;
+  appearance?: AppearanceSettings;
   onViewDetails?: (item: MenuItem) => void;
   quantity?: number;
   onAdd?: () => void;
@@ -27,27 +18,113 @@ export function MenuItemCard({
   onDecrement?: () => void;
   priority?: boolean;
   lcp?: boolean;
-}) {
+};
+
+// Surface treatment shared by every card design. `cardStyle` controls
+// border/shadow; `borderRadius` is applied inline so a cafe's rounding choice
+// takes effect. Mirrors the preview mapping in settings-manager.tsx.
+function surfaceClasses(appearance?: AppearanceSettings) {
+  const cardStyle = appearance?.cardStyle ?? "outlined";
+  return cn(
+    "bg-card transition-all duration-300",
+    cardStyle === "flat" && "border border-transparent shadow-none",
+    cardStyle === "outlined" && "border shadow-sm",
+    cardStyle === "elevated" && "border shadow-lg"
+  );
+}
+
+function radiusStyle(appearance?: AppearanceSettings) {
+  return { borderRadius: Math.max(0, appearance?.borderRadius ?? 8) };
+}
+
+export function MenuItemCard(props: MenuItemCardProps) {
+  const design = props.appearance?.cardDesign ?? "classic";
+  if (design === "compact") return <CompactCard {...props} />;
+  if (design === "overlay") return <OverlayCard {...props} />;
+  return <ClassicCard {...props} />;
+}
+
+// Shared price block (respects the showPrices toggle and discount pricing).
+function PriceBlock({ item, locale, settings, tone = "default" }: Pick<MenuItemCardProps, "item" | "locale" | "settings"> & { tone?: "default" | "overlay" }) {
+  if (!settings.showPrices) return null;
+  const hasDiscount = Boolean(item.discountPrice);
+  const baseTone = tone === "overlay" ? "text-white/70" : "text-muted-foreground";
+  const primaryTone = tone === "overlay" ? "text-white" : "text-primary";
+  return (
+    <div className="shrink-0 text-end">
+      {hasDiscount ? (
+        <>
+          <p className={cn("text-xs line-through", baseTone)}>{formatMoney(item.basePrice, item.currency, locale)}</p>
+          <p className={cn("text-sm font-bold", tone === "overlay" ? "text-white" : "text-secondary")}>
+            {formatMoney(item.discountPrice as number, item.currency, locale)}
+          </p>
+        </>
+      ) : (
+        <p className={cn("text-sm font-bold", primaryTone)}>{formatMoney(item.basePrice, item.currency, locale)}</p>
+      )}
+    </div>
+  );
+}
+
+// Shared "view details" + add-to-cart controls.
+function CardActions({ item, locale, settings, onViewDetails, quantity = 0, onAdd, onIncrement, onDecrement, tone = "default" }: MenuItemCardProps & { tone?: "default" | "overlay" }) {
+  return (
+    <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+      <button
+        type="button"
+        onClick={() => onViewDetails?.(item)}
+        className={cn(
+          "focus-ring inline-flex items-center gap-1.5 rounded-md text-sm font-semibold transition-colors",
+          tone === "overlay" ? "text-white hover:text-white/80" : "text-primary hover:text-primary/80"
+        )}
+      >
+        <span>{translate(locale, "menu.viewDetails")}</span>
+        <Pointer className="h-4 w-4" aria-hidden />
+      </button>
+
+      {settings.showPrices && !item.isSoldOut && onAdd ? (
+        quantity > 0 ? (
+          <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={() => onIncrement?.()} onDecrement={() => onDecrement?.()} />
+        ) : (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="focus-ring inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:bg-primary/90 active:scale-95"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            <span>{translate(locale, "cart.add")}</span>
+          </button>
+        )
+      ) : null}
+    </div>
+  );
+}
+
+function SoldOutBadge({ locale }: { locale: Locale }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-background/65 backdrop-blur-[2px]">
+      <span className="rounded-full border border-destructive bg-background/90 px-4 py-1.5 text-sm font-semibold text-destructive">
+        {translate(locale, "menu.soldOut")}
+      </span>
+    </div>
+  );
+}
+
+function ClassicCard(props: MenuItemCardProps) {
+  const { item, locale, priority = false, lcp = false } = props;
   const title = localized(item.name, locale);
   const description = localized(item.description, locale);
   const textDir = dirForLocale(locale);
-  const hasDiscount = Boolean(item.discountPrice);
 
   return (
     <article
       dir={textDir}
-      className="group relative flex flex-col overflow-hidden rounded-lg border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5"
+      style={radiusStyle(props.appearance)}
+      className={cn("group relative flex flex-col overflow-hidden hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5", surfaceClasses(props.appearance))}
     >
       <div className="relative aspect-[5/4] overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10">
         <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />
-
-        {item.isSoldOut ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/65 backdrop-blur-[2px]">
-            <span className="rounded-full border border-destructive bg-background/90 px-4 py-1.5 text-sm font-semibold text-destructive">
-              {translate(locale, "menu.soldOut")}
-            </span>
-          </div>
-        ) : null}
+        {item.isSoldOut ? <SoldOutBadge locale={locale} /> : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-4">
@@ -55,62 +132,69 @@ export function MenuItemCard({
           <div className="min-w-0">
             <h3 className="text-lg font-semibold leading-tight">{title}</h3>
           </div>
-          {settings.showPrices ? (
-            <div className="shrink-0 text-end">
-              {hasDiscount ? (
-                <>
-                  <p className="text-xs text-muted-foreground line-through">
-                    {formatMoney(item.basePrice, item.currency, locale)}
-                  </p>
-                  <p className="text-sm font-bold text-secondary">
-                    {formatMoney(item.discountPrice as number, item.currency, locale)}
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm font-bold text-primary">
-                  {formatMoney(item.basePrice, item.currency, locale)}
-                </p>
-              )}
-            </div>
-          ) : null}
+          <PriceBlock item={item} locale={locale} settings={props.settings} />
         </div>
+        {description ? <p className="line-clamp-2 text-sm text-muted-foreground">{description}</p> : null}
+        <CardActions {...props} />
+      </div>
+    </article>
+  );
+}
 
-        {description ? (
-          <p className="line-clamp-2 text-sm text-muted-foreground">
-            {description}
-          </p>
-        ) : null}
+function CompactCard(props: MenuItemCardProps) {
+  const { item, locale, priority = false, lcp = false } = props;
+  const title = localized(item.name, locale);
+  const description = localized(item.description, locale);
+  const textDir = dirForLocale(locale);
 
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          <button
-            type="button"
-            onClick={() => onViewDetails?.(item)}
-            className="focus-ring inline-flex items-center gap-1.5 rounded-md text-sm font-semibold text-primary transition-colors hover:text-primary/80"
-          >
-            <span>{translate(locale, "menu.viewDetails")}</span>
-            <Pointer className="h-4 w-4" aria-hidden />
-          </button>
+  return (
+    <article
+      dir={textDir}
+      style={radiusStyle(props.appearance)}
+      className={cn("group relative flex gap-3 overflow-hidden p-3 hover:border-primary/30 hover:shadow-md sm:gap-4 sm:p-4", surfaceClasses(props.appearance))}
+    >
+      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-accent via-primary/5 to-secondary/10 sm:h-28 sm:w-28">
+        <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />
+        {item.isSoldOut ? <SoldOutBadge locale={locale} /> : null}
+      </div>
 
-          {settings.showPrices && !item.isSoldOut && onAdd ? (
-            quantity > 0 ? (
-              <QuantityStepper
-                size="sm"
-                quantity={quantity}
-                locale={locale}
-                onIncrement={() => onIncrement?.()}
-                onDecrement={() => onDecrement?.()}
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={onAdd}
-                className="focus-ring inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:bg-primary/90 active:scale-95"
-              >
-                <Plus className="h-4 w-4" aria-hidden />
-                <span>{translate(locale, "cart.add")}</span>
-              </button>
-            )
-          ) : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="min-w-0 text-base font-semibold leading-tight sm:text-lg">{title}</h3>
+          <PriceBlock item={item} locale={locale} settings={props.settings} />
+        </div>
+        {description ? <p className="line-clamp-2 text-sm text-muted-foreground">{description}</p> : null}
+        <CardActions {...props} />
+      </div>
+    </article>
+  );
+}
+
+function OverlayCard(props: MenuItemCardProps) {
+  const { item, locale, priority = false, lcp = false } = props;
+  const title = localized(item.name, locale);
+  const description = localized(item.description, locale);
+  const textDir = dirForLocale(locale);
+
+  return (
+    <article
+      dir={textDir}
+      style={radiusStyle(props.appearance)}
+      className={cn("group relative flex flex-col overflow-hidden hover:-translate-y-1 hover:shadow-xl", surfaceClasses(props.appearance))}
+    >
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10">
+        <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />
+        {/* readability scrim */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+        {item.isSoldOut ? <SoldOutBadge locale={locale} /> : null}
+
+        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="min-w-0 text-lg font-semibold leading-tight text-white drop-shadow">{title}</h3>
+            <PriceBlock item={item} locale={locale} settings={props.settings} tone="overlay" />
+          </div>
+          {description ? <p className="line-clamp-2 text-sm text-white/85">{description}</p> : null}
+          <CardActions {...props} tone="overlay" />
         </div>
       </div>
     </article>
