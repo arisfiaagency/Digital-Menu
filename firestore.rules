@@ -1,0 +1,120 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function adminProfileRef() {
+      return /databases/$(database)/documents/adminProfiles/$(request.auth.uid);
+    }
+
+    function hasProfile() {
+      return signedIn() && exists(adminProfileRef());
+    }
+
+    function adminData() {
+      return get(adminProfileRef()).data;
+    }
+
+    // Any approved staff member (admin OR employee). Grants data READ access and
+    // is the gate the app relies on for loading menu/POS/expenses data.
+    function isApprovedAdmin() {
+      return signedIn()
+        && (
+          request.auth.token.admin == true
+          || (hasProfile() && adminData().isAdmin == true && adminData().disabled != true)
+        );
+    }
+
+    // A full administrator. Employees carry role == "employee"; original admins
+    // have no role field, so a missing role counts as a full admin.
+    function isFullAdmin() {
+      return signedIn()
+        && (
+          request.auth.token.admin == true
+          || (
+            hasProfile()
+            && adminData().isAdmin == true
+            && adminData().disabled != true
+            && adminData().role != 'employee'
+          )
+        );
+    }
+
+    // Full admins can do anything; employees only the features toggled on their
+    // profile's permissions map. Missing permissions/feature default to false.
+    function hasFeature(feature) {
+      return isFullAdmin()
+        || (isApprovedAdmin() && adminData().get('permissions', {}).get(feature, false) == true);
+    }
+
+    match /categories/{categoryId} {
+      allow get, list: if resource.data.isActive == true || isApprovedAdmin();
+      allow create, update, delete: if hasFeature('categories');
+    }
+
+    match /menuItems/{menuItemId} {
+      allow get, list: if resource.data.isAvailable == true || isApprovedAdmin();
+      allow create, update, delete: if hasFeature('menuItems');
+    }
+
+    match /settings/{settingsId} {
+      allow get, list: if settingsId in ["general", "menu", "appearance", "qr"] || isApprovedAdmin();
+      // POS order/table state lives in settings/pos and is gated by the POS
+      // feature; the rest of the settings docs are general admin configuration.
+      allow create: if settingsId == "pos"
+        ? hasFeature('pos')
+          && (isFullAdmin() || request.resource.data.get('completedOrders', []).size() == 0)
+        : hasFeature('settings');
+      allow update: if settingsId == "pos"
+        ? hasFeature('pos')
+          && (isFullAdmin()
+            || request.resource.data.get('completedOrders', []) == resource.data.get('completedOrders', []))
+        : hasFeature('settings');
+      allow delete: if settingsId == "pos" ? isFullAdmin() : hasFeature('settings');
+    }
+
+    match /completedOrders/{orderId} {
+      allow read: if isApprovedAdmin();
+      // POS staff can complete a new sale. Once recorded, only a full admin can
+      // cancel, alter, or permanently remove it.
+      allow create: if hasFeature('pos')
+        && request.resource.data.get('status', 'completed') == 'completed';
+      allow update, delete: if isFullAdmin();
+    }
+
+    match /expenses/{expenseId} {
+      // Reads stay open to any approved staff (the Reports page needs them).
+      // Employees with Expenses access may record expenses; cancellation,
+      // editing, and permanent deletion remain full-admin actions.
+      allow read: if isApprovedAdmin();
+      allow create: if hasFeature('expenses')
+        && request.resource.data.get('status', 'active') == 'active';
+      allow update, delete: if isFullAdmin();
+    }
+
+    match /adminProfiles/{uid} {
+      allow get: if isApprovedAdmin() || (signedIn() && request.auth.uid == uid);
+      allow list: if isFullAdmin();
+      allow create, update, delete: if isFullAdmin();
+    }
+
+    // Public username -> email lookup so the login screen can resolve a username
+    // to its email before the user is signed in. Only stores { email, uid }.
+    match /usernames/{username} {
+      allow get: if true;
+      allow list, create, update, delete: if isFullAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read, create: if isApprovedAdmin();
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

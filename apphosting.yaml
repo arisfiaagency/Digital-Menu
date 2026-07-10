@@ -1,0 +1,6 @@
+runConfig:
+  minInstances: 0
+  maxInstances: 10
+env:
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://restaurant-domain.com

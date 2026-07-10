@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function adminProfile() {
+      return /databases/(default)/documents/adminProfiles/$(request.auth.uid);
+    }
+
+    function isApprovedAdmin() {
+      return signedIn()
+        && (
+          request.auth.token.admin == true
+          || (
+            firestore.exists(adminProfile())
+            && firestore.get(adminProfile()).data.isAdmin == true
+            && firestore.get(adminProfile()).data.disabled != true
+          )
+        );
+    }
+
+    function validImage() {
+      return request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    match /restaurants/main/{folder}/{fileName} {
+      allow read: if true;
+      allow write: if isApprovedAdmin() && validImage();
+    }
+
+    match /categories/{categoryId}/{fileName} {
+      allow read: if true;
+      allow write: if isApprovedAdmin() && validImage();
+    }
+
+    match /menu-items/{itemId}/{fileName} {
+      allow read: if true;
+      allow write: if isApprovedAdmin() && validImage();
+    }
+
+    match /qr/{fileName} {
+      allow read: if true;
+      allow write: if isApprovedAdmin() && validImage();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
