@@ -27,7 +27,7 @@ import { defaultAppData } from "@/data/default-data";
 import { localized, translate } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney, normalizeSearch, serviceFeeAmount } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-import { menuThemeStyle } from "@/lib/utils/color";
+import { menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
 import { useLocale } from "@/hooks/use-locale";
 import type { AppData, Category, CategoryNavStyle, Locale, MenuItem, MenuSettings, SectionHeaderStyle } from "@/types/models";
 
@@ -169,113 +169,187 @@ export function MenuApp({
   const categoryNavStyle = appearance.categoryNavStyle ?? "pills";
   const sectionHeaderStyle = appearance.sectionHeaderStyle ?? "plain";
 
+  // --- Header customization ---
+  const headerCompact = appearance.headerLayout === "compact";
+  const headerAlign = appearance.headerAlign ?? "left";
+  const headerBgType = appearance.headerBackgroundType ?? "theme";
+  const headerStyle: React.CSSProperties | undefined =
+    headerBgType === "solid"
+      ? { backgroundColor: appearance.headerBackgroundColor || "#ffffff" }
+      : headerBgType === "gradient"
+        ? { backgroundImage: `linear-gradient(to bottom, ${appearance.headerGradientFrom || "#ecfdf5"}, ${appearance.headerGradientTo || "#ffffff"})` }
+        : undefined;
+  const showContactRow = appearance.showContactRow !== false;
+
+  // --- Search customization ---
+  const searchEnabled = data.menu.enableSearch;
+  const searchPlacement = appearance.searchPlacement ?? "header";
+  const searchInputClass = cn(
+    "w-full ps-10",
+    (appearance.searchSize ?? "normal") === "large" ? "h-14 text-base" : "h-12",
+    (appearance.searchShape ?? "pill") === "pill" ? "rounded-full" : appearance.searchShape === "square" ? "rounded-none" : "rounded-lg",
+    (appearance.searchStyle ?? "outlined") === "filled" ? "border-transparent bg-muted" : ""
+  );
+  const searchField = searchEnabled ? (
+    <label className={cn("relative block w-full max-w-2xl", headerAlign === "center" && "mx-auto")}>
+      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+      <Input className={searchInputClass} dir={textDir} placeholder={translate(locale, "menu.search")} value={query} onChange={(event) => setQuery(event.target.value)} />
+    </label>
+  ) : null;
+
+  // --- Above-category region ---
+  const aboveCategory = appearance.aboveCategory ?? "none";
+  const coverImageUrl = data.general.coverImageUrl;
+  const promoText = localized(data.general.promoText, locale);
+
+  // Reusable header pieces (shared by the left and centered layouts).
+  const brandLogo = (
+    <div className={cn("relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary font-bold text-primary-foreground shadow-md ring-1 ring-primary/20", headerCompact ? "h-12 w-12 text-base" : "h-14 w-14 text-lg sm:h-16 sm:w-16 sm:text-xl")}>
+      {logoUrl ? <Image src={logoUrl} alt={restaurantName} width={64} height={64} className="h-full w-full object-cover" priority /> : restaurantName.slice(0, 2)}
+    </div>
+  );
+  const brandText = (
+    <div className="min-w-0" dir={textDir}>
+      <h1 className={cn("truncate font-bold", headerCompact ? "text-lg sm:text-2xl" : "text-xl sm:text-3xl")}>{restaurantName}</h1>
+      {description ? <p className="line-clamp-2 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
+    </div>
+  );
+  const actionButtons = (
+    <div className="flex shrink-0 items-center justify-end gap-2">
+      {data.menu.showPrices ? <CartIconButton count={cart.totalQuantity} locale={locale} onClick={() => setCartOpen(true)} /> : null}
+      <ThemeToggle />
+      <LanguageGlobe locale={locale} onChange={setLocale} />
+    </div>
+  );
+  const contactRow = (
+    <div className={cn("flex max-w-full flex-wrap items-center gap-2 text-sm", headerAlign === "center" && "justify-center")}>
+      <OpenStatusBadge locale={locale} textDir={textDir} openHour={data.general.openHour} closeHour={data.general.closeHour} />
+      {data.general.phone ? (
+        <button
+          type="button"
+          className="focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted"
+          onClick={() =>
+            setContactPrompt({
+              title: translate(locale, "menu.callConfirmTitle"),
+              description: data.general.phone,
+              confirmLabel: translate(locale, "menu.call"),
+              href: `tel:${data.general.phone}`,
+              external: false
+            })
+          }
+        >
+          <PhoneSignalIcon className="h-4 w-4 text-primary" />
+          <span className="truncate">{data.general.phone}</span>
+        </button>
+      ) : null}
+      {data.general.whatsapp ? (
+        <button
+          type="button"
+          className="focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted"
+          onClick={() =>
+            setContactPrompt({
+              title: translate(locale, "menu.whatsappConfirmTitle"),
+              description: restaurantName,
+              confirmLabel: translate(locale, "menu.open"),
+              href: `https://wa.me/${(data.general.whatsapp || "").replace(/\D/g, "")}`,
+              external: true
+            })
+          }
+        >
+          <WhatsappSendIcon className="h-4 w-4 text-primary" />
+          <span dir={textDir}>{translate(locale, "menu.whatsapp")}</span>
+        </button>
+      ) : null}
+      {data.general.googleMapsUrl ? (
+        <button
+          type="button"
+          className="focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted"
+          onClick={() =>
+            setContactPrompt({
+              title: translate(locale, "menu.mapsConfirmTitle"),
+              description: restaurantName,
+              confirmLabel: translate(locale, "menu.open"),
+              href: data.general.googleMapsUrl || "",
+              external: true
+            })
+          }
+        >
+          <LocationPinIcon className="h-4 w-4 text-primary" />
+          <span dir={textDir}>{translate(locale, "menu.openMaps")}</span>
+        </button>
+      ) : null}
+      <SocialLinks social={data.general.socialLinks} className="ms-1" />
+    </div>
+  );
+
   return (
     <main dir="ltr" className="no-select relative min-h-screen" style={menuThemeStyle(appearance)}>
       <MenuBackground appearance={appearance} />
       {/* Branded header */}
-      <header className="relative overflow-hidden border-b bg-gradient-to-b from-accent/55 via-card/95 to-card/90">
+      <header className={cn("relative overflow-hidden border-b", headerBgType === "theme" && "bg-gradient-to-b from-accent/55 via-card/95 to-card/90")} style={headerStyle}>
         <div className="glow-primary pointer-events-none absolute -right-16 -top-20 h-64 w-64" aria-hidden />
-        <div className="container relative grid gap-5 py-7">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
-            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-md ring-1 ring-primary/20 sm:h-16 sm:w-16 sm:text-xl">
-                {logoUrl ? (
-                  <Image src={logoUrl} alt={restaurantName} width={64} height={64} className="h-full w-full object-cover" priority />
-                ) : (
-                  restaurantName.slice(0, 2)
-                )}
+        <div className={cn("container relative grid", headerCompact ? "gap-3 py-5" : "gap-5 py-7")}>
+          {headerAlign === "center" ? (
+            <>
+              {actionButtons}
+              <div className="flex flex-col items-center gap-2 text-center">
+                {brandLogo}
+                {brandText}
               </div>
-              <div className="min-w-0" dir={textDir}>
-                <h1 className="truncate text-xl font-bold sm:text-3xl">{restaurantName}</h1>
-                <p className="line-clamp-2 max-w-2xl text-sm text-muted-foreground">{description}</p>
+            </>
+          ) : (
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
+              <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                {brandLogo}
+                {brandText}
               </div>
+              {actionButtons}
             </div>
-            <div className="flex shrink-0 items-center justify-end gap-2">
-              {data.menu.showPrices ? (
-                <CartIconButton count={cart.totalQuantity} locale={locale} onClick={() => setCartOpen(true)} />
-              ) : null}
-              <ThemeToggle />
-              <LanguageGlobe locale={locale} onChange={setLocale} />
-            </div>
-          </div>
+          )}
 
-          <div className="flex max-w-full flex-wrap items-center gap-2 text-sm">
-            <OpenStatusBadge locale={locale} textDir={textDir} openHour={data.general.openHour} closeHour={data.general.closeHour} />
-            {data.general.phone ? (
-              <button
-                type="button"
-                className="focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted"
-                onClick={() =>
-                  setContactPrompt({
-                    title: translate(locale, "menu.callConfirmTitle"),
-                    description: data.general.phone,
-                    confirmLabel: translate(locale, "menu.call"),
-                    href: `tel:${data.general.phone}`,
-                    external: false
-                  })
-                }
-              >
-                <PhoneSignalIcon className="h-4 w-4 text-primary" />
-                <span className="truncate">{data.general.phone}</span>
-              </button>
-            ) : null}
-            {data.general.whatsapp ? (
-              <button
-                type="button"
-                className="focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted"
-                onClick={() =>
-                  setContactPrompt({
-                    title: translate(locale, "menu.whatsappConfirmTitle"),
-                    description: restaurantName,
-                    confirmLabel: translate(locale, "menu.open"),
-                    href: `https://wa.me/${(data.general.whatsapp || "").replace(/\D/g, "")}`,
-                    external: true
-                  })
-                }
-              >
-                <WhatsappSendIcon className="h-4 w-4 text-primary" />
-                <span dir={textDir}>{translate(locale, "menu.whatsapp")}</span>
-              </button>
-            ) : null}
-            {data.general.googleMapsUrl ? (
-              <button
-                type="button"
-                className="focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted"
-                onClick={() =>
-                  setContactPrompt({
-                    title: translate(locale, "menu.mapsConfirmTitle"),
-                    description: restaurantName,
-                    confirmLabel: translate(locale, "menu.open"),
-                    href: data.general.googleMapsUrl || "",
-                    external: true
-                  })
-                }
-              >
-                <LocationPinIcon className="h-4 w-4 text-primary" />
-                <span dir={textDir}>{translate(locale, "menu.openMaps")}</span>
-              </button>
-            ) : null}
-            <SocialLinks social={data.general.socialLinks} className="ms-1" />
-          </div>
+          {showContactRow ? contactRow : null}
 
-          {data.menu.enableSearch ? (
-            <label className="relative block max-w-2xl">
-              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <Input
-                className="h-12 rounded-full ps-10"
-                dir={textDir}
-                placeholder={translate(locale, "menu.search")}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </label>
-          ) : null}
+          {searchPlacement === "header" ? searchField : null}
         </div>
       </header>
+
+      {/* Region above the category bar (cover / promo / featured), set in /admin. */}
+      {aboveCategory === "cover" && coverImageUrl ? (
+        <section className="relative h-40 w-full overflow-hidden sm:h-56">
+          <Image src={coverImageUrl} alt={restaurantName} fill sizes="100vw" className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+          <div className="container absolute inset-x-0 bottom-0 pb-4" dir={textDir}>
+            <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">{restaurantName}</h2>
+            {description ? <p className="line-clamp-2 max-w-xl text-sm text-white/85">{description}</p> : null}
+          </div>
+        </section>
+      ) : null}
+      {aboveCategory === "promo" && promoText ? (
+        <div
+          className="w-full"
+          style={{ backgroundColor: appearance.promoColor || "#0f766e", color: `hsl(${readableForegroundHslVar(appearance.promoColor || "#0f766e") || "0 0% 100%"})` }}
+        >
+          <div className="container py-2.5 text-center text-sm font-semibold" dir={textDir}>{promoText}</div>
+        </div>
+      ) : null}
+      {aboveCategory === "featured" && data.categories.length ? (
+        <section className="border-b bg-background/70">
+          <div className="container flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {data.categories.map((category) => (
+              <CategoryNavItem key={category.id} style="cards" active={false} onClick={() => scrollToCategory(category.id)} slug={category.slug} icon={category.icon} textDir={textDir}>
+                {localized(category.name, locale)}
+              </CategoryNavItem>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* Sticky category nav. Solid background (no backdrop-blur) — a blurred
           sticky bar re-blurs the page every scroll frame and janks on phones. */}
       <nav className="sticky top-0 z-10 border-b bg-background">
+        {searchPlacement === "sticky" && searchField ? (
+          <div className="container pt-3">{searchField}</div>
+        ) : null}
         <div className="container flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <CategoryNavItem style={categoryNavStyle} active={activeCategoryId === "all"} onClick={() => scrollToCategory("all")} slug="all" textDir={textDir}>
             {translate(locale, "menu.all")}

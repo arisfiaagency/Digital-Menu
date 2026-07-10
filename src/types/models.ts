@@ -70,6 +70,8 @@ export type GeneralSettings = {
   logoPath?: string;
   coverImageUrl?: string;
   coverImagePath?: string;
+  // Optional announcement shown in the "promo" above-category strip.
+  promoText?: OptionalLocalizedText;
   phone?: string;
   whatsapp?: string;
   email?: string;
@@ -230,6 +232,13 @@ export type MenuCardDesign = "classic" | "compact" | "overlay";
 export type CategoryNavStyle = "pills" | "underline" | "cards";
 export type SectionHeaderStyle = "plain" | "divider" | "banner" | "centered";
 export type MenuBackgroundType = "preset" | "solid" | "gradient" | "image";
+export type HeaderAlign = "left" | "center";
+export type HeaderBackgroundType = "theme" | "solid" | "gradient";
+export type SearchShape = "pill" | "rounded" | "square";
+export type SearchStyle = "filled" | "outlined";
+export type SearchSize = "normal" | "large";
+export type SearchPlacement = "header" | "sticky";
+export type AboveCategoryRegion = "none" | "cover" | "promo" | "featured";
 
 export type AppearanceSettings = {
   primaryColor: string;
@@ -259,6 +268,22 @@ export type AppearanceSettings = {
   // Which built-in preset when backgroundType === "preset". "cafe" = the
   // original animated food-icon layer.
   backgroundPreset?: string;
+  // Header (logo/name/description/contact row). `headerLayout` above controls
+  // density; these control alignment, background, and the contact-chips row.
+  headerAlign?: HeaderAlign;
+  headerBackgroundType?: HeaderBackgroundType;
+  headerBackgroundColor?: string;
+  headerGradientFrom?: string;
+  headerGradientTo?: string;
+  showContactRow?: boolean;
+  // Search bar presentation.
+  searchShape?: SearchShape;
+  searchStyle?: SearchStyle;
+  searchSize?: SearchSize;
+  searchPlacement?: SearchPlacement;
+  // Region shown between the header and the sticky category nav.
+  aboveCategory?: AboveCategoryRegion;
+  promoColor?: string;
   updatedAt?: Timestamp;
 };
 

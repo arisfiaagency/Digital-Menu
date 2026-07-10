@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUploadField } from "@/components/forms/image-upload-field";
 import { MenuItemCard } from "@/components/menu/menu-item-card";
-import { menuThemeStyle } from "@/lib/utils/color";
+import { cn } from "@/lib/utils/cn";
+import { menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
 import { getAdminAppData, listClients, saveSettings } from "@/lib/firebase/firestore";
 import { setActiveClientSlug } from "@/lib/tenant";
 import { defaultAppearanceSettings, defaultGeneralSettings, defaultMenuItems, defaultMenuSettings } from "@/data/default-data";
@@ -149,6 +151,75 @@ export function MenuDesigner() {
             </Card>
 
             <Card>
+              <CardHeader><CardTitle>Header</CardTitle></CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <Field label="Layout density">
+                  <Select value={appearance.headerLayout} onChange={(e) => update({ headerLayout: e.target.value as AppearanceSettings["headerLayout"] })}>
+                    <option value="expanded">Expanded</option>
+                    <option value="compact">Compact</option>
+                  </Select>
+                </Field>
+                <Field label="Alignment">
+                  <Select value={appearance.headerAlign ?? "left"} onChange={(e) => update({ headerAlign: e.target.value as AppearanceSettings["headerAlign"] })}>
+                    <option value="left">Left</option>
+                    <option value="center">Centered</option>
+                  </Select>
+                </Field>
+                <Field label="Header background">
+                  <Select value={appearance.headerBackgroundType ?? "theme"} onChange={(e) => update({ headerBackgroundType: e.target.value as AppearanceSettings["headerBackgroundType"] })}>
+                    <option value="theme">Theme (default)</option>
+                    <option value="solid">Solid color</option>
+                    <option value="gradient">Gradient</option>
+                  </Select>
+                </Field>
+                <div className="flex items-center justify-between gap-3 pt-6">
+                  <span className="text-sm font-medium">Show contact row</span>
+                  <Switch label="Show contact row" checked={appearance.showContactRow !== false} onCheckedChange={(v) => update({ showContactRow: v })} />
+                </div>
+                {(appearance.headerBackgroundType ?? "theme") === "solid" ? (
+                  <Field label="Header color"><Input type="color" value={appearance.headerBackgroundColor || "#ffffff"} onChange={(e) => update({ headerBackgroundColor: e.target.value })} /></Field>
+                ) : null}
+                {(appearance.headerBackgroundType ?? "theme") === "gradient" ? (
+                  <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
+                    <Field label="Header gradient top"><Input type="color" value={appearance.headerGradientFrom || "#ecfdf5"} onChange={(e) => update({ headerGradientFrom: e.target.value })} /></Field>
+                    <Field label="Header gradient bottom"><Input type="color" value={appearance.headerGradientTo || "#ffffff"} onChange={(e) => update({ headerGradientTo: e.target.value })} /></Field>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Search Bar</CardTitle></CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <Field label="Shape">
+                  <Select value={appearance.searchShape ?? "pill"} onChange={(e) => update({ searchShape: e.target.value as AppearanceSettings["searchShape"] })}>
+                    <option value="pill">Pill</option>
+                    <option value="rounded">Rounded</option>
+                    <option value="square">Square</option>
+                  </Select>
+                </Field>
+                <Field label="Fill">
+                  <Select value={appearance.searchStyle ?? "outlined"} onChange={(e) => update({ searchStyle: e.target.value as AppearanceSettings["searchStyle"] })}>
+                    <option value="outlined">Outlined</option>
+                    <option value="filled">Filled</option>
+                  </Select>
+                </Field>
+                <Field label="Size">
+                  <Select value={appearance.searchSize ?? "normal"} onChange={(e) => update({ searchSize: e.target.value as AppearanceSettings["searchSize"] })}>
+                    <option value="normal">Normal</option>
+                    <option value="large">Large</option>
+                  </Select>
+                </Field>
+                <Field label="Placement">
+                  <Select value={appearance.searchPlacement ?? "header"} onChange={(e) => update({ searchPlacement: e.target.value as AppearanceSettings["searchPlacement"] })}>
+                    <option value="header">In header</option>
+                    <option value="sticky">Docked with categories</option>
+                  </Select>
+                </Field>
+              </CardContent>
+            </Card>
+
+            <Card>
               <CardHeader><CardTitle>Item Cards</CardTitle></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="Card design">
@@ -186,6 +257,45 @@ export function MenuDesigner() {
                     <option value="centered">Centered</option>
                   </Select>
                 </Field>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Above Categories</CardTitle></CardHeader>
+              <CardContent className="grid gap-4">
+                <Field label="Region">
+                  <Select value={appearance.aboveCategory ?? "none"} onChange={(e) => update({ aboveCategory: e.target.value as AppearanceSettings["aboveCategory"] })}>
+                    <option value="none">None</option>
+                    <option value="cover">Cover / hero image</option>
+                    <option value="promo">Promo strip</option>
+                    <option value="featured">Featured categories row</option>
+                  </Select>
+                </Field>
+
+                {(appearance.aboveCategory ?? "none") === "cover" ? (
+                  <ImageUploadField
+                    label="Cover image"
+                    path={`clients/${slug}/cover`}
+                    imageUrl={general.coverImageUrl}
+                    onUploaded={(result) => setGeneral({ ...general, coverImageUrl: result.imageUrl, coverImagePath: result.imagePath })}
+                    onRemoved={() => setGeneral({ ...general, coverImageUrl: undefined, coverImagePath: undefined })}
+                  />
+                ) : null}
+
+                {(appearance.aboveCategory ?? "none") === "promo" ? (
+                  <div className="grid gap-4">
+                    <Field label="Strip color"><Input type="color" value={appearance.promoColor || "#0f766e"} onChange={(e) => update({ promoColor: e.target.value })} /></Field>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <Field label="Message (English)"><Input value={general.promoText?.en || ""} onChange={(e) => setGeneral({ ...general, promoText: { ...general.promoText, en: e.target.value } })} /></Field>
+                      <Field label="Message (Arabic)"><Input dir="rtl" value={general.promoText?.ar || ""} onChange={(e) => setGeneral({ ...general, promoText: { ...general.promoText, ar: e.target.value } })} /></Field>
+                      <Field label="Message (Kurdish)"><Input dir="rtl" value={general.promoText?.ckb || ""} onChange={(e) => setGeneral({ ...general, promoText: { ...general.promoText, ckb: e.target.value } })} /></Field>
+                    </div>
+                  </div>
+                ) : null}
+
+                {(appearance.aboveCategory ?? "none") === "featured" ? (
+                  <p className="text-sm text-muted-foreground">Shows a quick-jump row of this cafe&apos;s categories above the sticky bar.</p>
+                ) : null}
               </CardContent>
             </Card>
 
@@ -262,7 +372,7 @@ export function MenuDesigner() {
           <Card>
             <CardHeader><CardTitle>Preview</CardTitle></CardHeader>
             <CardContent>
-              <DesignPreview appearance={appearance} />
+              <DesignPreview appearance={appearance} general={general} />
             </CardContent>
           </Card>
         </div>
@@ -279,15 +389,31 @@ function previewBackgroundStyle(appearance: AppearanceSettings): React.CSSProper
   return { backgroundImage: "linear-gradient(to bottom, #ecfdf5, #ffffff)" };
 }
 
-// Lightweight sample of the menu (background + two cards) rendered with the
-// chosen appearance so changes are visible before saving. Uses the same
-// MenuItemCard and theme-variable injection as the live menu.
-function DesignPreview({ appearance }: { appearance: AppearanceSettings }) {
+// Lightweight sample of the menu (header + background + two cards) rendered with
+// the chosen appearance so header/search/card/background changes are visible
+// before saving. Uses the same MenuItemCard and theme-variable injection as the
+// live menu.
+function DesignPreview({ appearance, general }: { appearance: AppearanceSettings; general: GeneralSettings }) {
   const overlay = appearance.backgroundType === "image" ? Math.min(100, Math.max(0, appearance.backgroundOverlay ?? 45)) / 100 : 0;
   const cardDesign = appearance.cardDesign ?? "classic";
   const gridClass = cardDesign === "compact" ? "grid gap-3" : "grid gap-4 sm:grid-cols-2";
   const isDark = appearance.defaultTheme === "dark";
-
+  const align = appearance.headerAlign ?? "left";
+  const headerBg = appearance.headerBackgroundType ?? "theme";
+  const headerStyle: React.CSSProperties | undefined =
+    headerBg === "solid"
+      ? { backgroundColor: appearance.headerBackgroundColor || "#ffffff" }
+      : headerBg === "gradient"
+        ? { backgroundImage: `linear-gradient(to bottom, ${appearance.headerGradientFrom || "#ecfdf5"}, ${appearance.headerGradientTo || "#ffffff"})` }
+        : undefined;
+  const searchSample = cn(
+    "mt-2 flex items-center border px-3 text-xs text-muted-foreground",
+    (appearance.searchSize ?? "normal") === "large" ? "h-9" : "h-8",
+    (appearance.searchShape ?? "pill") === "pill" ? "rounded-full" : appearance.searchShape === "square" ? "rounded-none" : "rounded-md",
+    (appearance.searchStyle ?? "outlined") === "filled" ? "border-transparent bg-muted" : "bg-background"
+  );
+  const name = general.restaurantName.en || "Cafe";
+  const promo = general.promoText?.en;
   const locale = useMemo(() => "en" as const, []);
 
   return (
@@ -295,12 +421,29 @@ function DesignPreview({ appearance }: { appearance: AppearanceSettings }) {
       <div className="relative overflow-hidden rounded-xl border" style={{ ...menuThemeStyle(appearance) }}>
         <div className="absolute inset-0" style={previewBackgroundStyle(appearance)} aria-hidden />
         {overlay ? <div className="absolute inset-0 bg-black" style={{ opacity: overlay }} aria-hidden /> : null}
-        <div className="relative space-y-3 bg-background/0 p-4">
-          <div className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">Coffee</div>
-          <div className={gridClass}>
-            {SAMPLE_ITEMS.map((item) => (
-              <MenuItemCard key={item.id} item={item} locale={locale} settings={defaultMenuSettings} appearance={appearance} />
-            ))}
+        <div className="relative">
+          {/* header sample */}
+          <div className={cn("border-b p-3", headerBg === "theme" && "bg-gradient-to-b from-accent/55 to-card/90")} style={headerStyle}>
+            <div className={cn("flex items-center gap-2", align === "center" && "flex-col text-center")}>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">{name.slice(0, 2)}</span>
+              <span className="text-sm font-bold">{name}</span>
+            </div>
+            {(appearance.searchPlacement ?? "header") === "header" ? <div className={searchSample}>Search…</div> : null}
+          </div>
+          {/* promo sample */}
+          {(appearance.aboveCategory ?? "none") === "promo" && promo ? (
+            <div className="px-3 py-1.5 text-center text-xs font-semibold" style={{ backgroundColor: appearance.promoColor || "#0f766e", color: `hsl(${readableForegroundHslVar(appearance.promoColor || "#0f766e") || "0 0% 100%"})` }}>
+              {promo}
+            </div>
+          ) : null}
+          {/* body sample */}
+          <div className="space-y-3 p-4">
+            <div className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">Coffee</div>
+            <div className={gridClass}>
+              {SAMPLE_ITEMS.map((item) => (
+                <MenuItemCard key={item.id} item={item} locale={locale} settings={defaultMenuSettings} appearance={appearance} />
+              ))}
+            </div>
           </div>
         </div>
       </div>

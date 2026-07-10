@@ -57,7 +57,19 @@ export const defaultAppearanceSettings = {
   backgroundGradientFrom: "#ecfdf5",
   backgroundGradientTo: "#ffffff",
   backgroundOverlay: 45,
-  backgroundPreset: "cafe"
+  backgroundPreset: "cafe",
+  headerAlign: "left" as const,
+  headerBackgroundType: "theme" as const,
+  headerBackgroundColor: "#ffffff",
+  headerGradientFrom: "#ecfdf5",
+  headerGradientTo: "#ffffff",
+  showContactRow: true,
+  searchShape: "pill" as const,
+  searchStyle: "outlined" as const,
+  searchSize: "normal" as const,
+  searchPlacement: "header" as const,
+  aboveCategory: "none" as const,
+  promoColor: "#0f766e"
 };
 
 export const defaultQrSettings = {
