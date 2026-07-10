@@ -1,6 +1,7 @@
 import { deleteApp, initializeApp } from "firebase/app";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { getFirebaseAuth, getFirebaseConfig, hasFirebaseClientConfig } from "@/lib/firebase/client";
+import { getActiveClientSlug } from "@/lib/tenant";
 
 // Create the Firebase Auth account for a new staff member without signing the
 // current admin out. We spin up a throwaway secondary Firebase app, create the
@@ -32,7 +33,7 @@ export async function deleteStaffAccount(uid: string): Promise<boolean> {
   const res = await fetch("/api/admin/users", {
     method: "DELETE",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ uid })
+    body: JSON.stringify({ uid, clientSlug: getActiveClientSlug() })
   });
 
   if (res.status === 503) return false;

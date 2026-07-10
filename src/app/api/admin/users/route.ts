@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { normalizeClientSlug } from "@/lib/tenant";
 
 // Fully delete a staff account: the Firebase Auth login, the username -> email
 // mapping, and the adminProfiles document. The client SDK can only delete the
@@ -21,11 +22,14 @@ export async function DELETE(request: NextRequest) {
   }
 
   let targetUid = "";
+  let clientSlug = "";
   try {
-    const body = (await request.json()) as { uid?: unknown };
+    const body = (await request.json()) as { uid?: unknown; clientSlug?: unknown };
     targetUid = typeof body.uid === "string" ? body.uid.trim() : "";
+    clientSlug = typeof body.clientSlug === "string" ? normalizeClientSlug(body.clientSlug) : "";
   } catch {
     targetUid = "";
+    clientSlug = "";
   }
   if (!targetUid) {
     return NextResponse.json({ ok: false, error: "Missing user id." }, { status: 400 });
@@ -36,7 +40,10 @@ export async function DELETE(request: NextRequest) {
 
     // Only a full admin may delete accounts. Employees are stored with
     // isAdmin:true for data access, so we check the role explicitly.
-    const callerProfile = (await db.collection("adminProfiles").doc(decoded.uid).get()).data();
+    const clientRoot = clientSlug ? db.collection("clients").doc(clientSlug) : null;
+    const clientCallerProfile = clientRoot ? (await clientRoot.collection("adminProfiles").doc(decoded.uid).get()).data() : null;
+    const platformCallerProfile = (await db.collection("adminProfiles").doc(decoded.uid).get()).data();
+    const callerProfile = clientCallerProfile || platformCallerProfile;
     const isFullAdmin =
       decoded.admin === true ||
       (callerProfile?.isAdmin === true && callerProfile?.disabled !== true && callerProfile?.role !== "employee");
@@ -49,10 +56,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Free the username mapping (best effort) before removing the profile.
-    const profileRef = db.collection("adminProfiles").doc(targetUid);
+    const profileRef = clientRoot ? clientRoot.collection("adminProfiles").doc(targetUid) : db.collection("adminProfiles").doc(targetUid);
     const username = (await profileRef.get()).data()?.username;
     if (typeof username === "string" && username) {
-      await db.collection("usernames").doc(username).delete().catch(() => {});
+      const usernameRef = clientRoot ? clientRoot.collection("usernames").doc(username) : db.collection("usernames").doc(username);
+      await usernameRef.delete().catch(() => {});
     }
 
     // Delete the Firebase Auth login. Ignore "user not found" so a missing login

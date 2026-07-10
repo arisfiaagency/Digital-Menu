@@ -1,5 +1,5 @@
-import { ReportsManager } from "@/components/admin/reports-manager";
+import { notFound } from "next/navigation";
 
 export default function AdminReportsPage() {
-  return <ReportsManager />;
+  notFound();
 }

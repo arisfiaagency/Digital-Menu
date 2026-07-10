@@ -1,5 +1,5 @@
-import { UserManager } from "@/components/admin/user-manager";
+import { notFound } from "next/navigation";
 
 export default function AdminUsersPage() {
-  return <UserManager />;
+  notFound();
 }

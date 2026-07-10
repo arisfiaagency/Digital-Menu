@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { PlatformSupervisor } from "@/components/admin/platform-supervisor";
 
 export default function AdminIndexPage() {
-  redirect("/admin/dashboard");
+  return <PlatformSupervisor />;
 }

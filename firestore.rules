@@ -6,111 +6,169 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function adminProfileRef() {
+    function platformProfileRef() {
       return /databases/$(database)/documents/adminProfiles/$(request.auth.uid);
     }
 
-    function hasProfile() {
-      return signedIn() && exists(adminProfileRef());
+    function hasPlatformProfile() {
+      return signedIn() && exists(platformProfileRef());
     }
 
-    function adminData() {
-      return get(adminProfileRef()).data;
+    function platformData() {
+      return get(platformProfileRef()).data;
     }
 
-    // Any approved staff member (admin OR employee). Grants data READ access and
-    // is the gate the app relies on for loading menu/POS/expenses data.
-    function isApprovedAdmin() {
-      return signedIn()
-        && (
-          request.auth.token.admin == true
-          || (hasProfile() && adminData().isAdmin == true && adminData().disabled != true)
-        );
-    }
-
-    // A full administrator. Employees carry role == "employee"; original admins
-    // have no role field, so a missing role counts as a full admin.
-    function isFullAdmin() {
+    function isPlatformAdmin() {
       return signedIn()
         && (
           request.auth.token.admin == true
           || (
-            hasProfile()
-            && adminData().isAdmin == true
-            && adminData().disabled != true
-            && adminData().role != 'employee'
+            hasPlatformProfile()
+            && platformData().isAdmin == true
+            && platformData().disabled != true
           )
         );
     }
 
-    // Full admins can do anything; employees only the features toggled on their
-    // profile's permissions map. Missing permissions/feature default to false.
-    function hasFeature(feature) {
-      return isFullAdmin()
-        || (isApprovedAdmin() && adminData().get('permissions', {}).get(feature, false) == true);
+    function isPlatformFullAdmin() {
+      return signedIn()
+        && (
+          request.auth.token.admin == true
+          || (
+            hasPlatformProfile()
+            && platformData().isAdmin == true
+            && platformData().disabled != true
+            && platformData().role != 'employee'
+          )
+        );
     }
 
-    match /categories/{categoryId} {
-      allow get, list: if resource.data.isActive == true || isApprovedAdmin();
-      allow create, update, delete: if hasFeature('categories');
+    function clientRef(clientId) {
+      return /databases/$(database)/documents/clients/$(clientId);
     }
 
-    match /menuItems/{menuItemId} {
-      allow get, list: if resource.data.isAvailable == true || isApprovedAdmin();
-      allow create, update, delete: if hasFeature('menuItems');
+    function clientExists(clientId) {
+      return exists(clientRef(clientId));
     }
 
-    match /settings/{settingsId} {
-      allow get, list: if settingsId in ["general", "menu", "appearance", "qr"] || isApprovedAdmin();
-      // POS order/table state lives in settings/pos and is gated by the POS
-      // feature; the rest of the settings docs are general admin configuration.
-      allow create: if settingsId == "pos"
-        ? hasFeature('pos')
-          && (isFullAdmin() || request.resource.data.get('completedOrders', []).size() == 0)
-        : hasFeature('settings');
-      allow update: if settingsId == "pos"
-        ? hasFeature('pos')
-          && (isFullAdmin()
-            || request.resource.data.get('completedOrders', []) == resource.data.get('completedOrders', []))
-        : hasFeature('settings');
-      allow delete: if settingsId == "pos" ? isFullAdmin() : hasFeature('settings');
+    function clientData(clientId) {
+      return get(clientRef(clientId)).data;
     }
 
-    match /completedOrders/{orderId} {
-      allow read: if isApprovedAdmin();
-      // POS staff can complete a new sale. Once recorded, only a full admin can
-      // cancel, alter, or permanently remove it.
-      allow create: if hasFeature('pos')
-        && request.resource.data.get('status', 'completed') == 'completed';
-      allow update, delete: if isFullAdmin();
+    function clientActive(clientId) {
+      return clientExists(clientId) && clientData(clientId).status == 'active';
     }
 
-    match /expenses/{expenseId} {
-      // Reads stay open to any approved staff (the Reports page needs them).
-      // Employees with Expenses access may record expenses; cancellation,
-      // editing, and permanent deletion remain full-admin actions.
-      allow read: if isApprovedAdmin();
-      allow create: if hasFeature('expenses')
-        && request.resource.data.get('status', 'active') == 'active';
-      allow update, delete: if isFullAdmin();
+    function tenantProfileRef(clientId) {
+      return /databases/$(database)/documents/clients/$(clientId)/adminProfiles/$(request.auth.uid);
+    }
+
+    function hasTenantProfile(clientId) {
+      return signedIn() && exists(tenantProfileRef(clientId));
+    }
+
+    function tenantData(clientId) {
+      return get(tenantProfileRef(clientId)).data;
+    }
+
+    function isTenantAdmin(clientId) {
+      return isPlatformFullAdmin()
+        || (
+          hasTenantProfile(clientId)
+          && tenantData(clientId).isAdmin == true
+          && tenantData(clientId).disabled != true
+        );
+    }
+
+    function isTenantFullAdmin(clientId) {
+      return isPlatformFullAdmin()
+        || (
+          hasTenantProfile(clientId)
+          && tenantData(clientId).isAdmin == true
+          && tenantData(clientId).disabled != true
+          && tenantData(clientId).role != 'employee'
+        );
+    }
+
+    function hasTenantFeature(clientId, feature) {
+      return isTenantFullAdmin(clientId)
+        || (
+          isTenantAdmin(clientId)
+          && tenantData(clientId).get('permissions', {}).get(feature, false) == true
+        );
     }
 
     match /adminProfiles/{uid} {
-      allow get: if isApprovedAdmin() || (signedIn() && request.auth.uid == uid);
-      allow list: if isFullAdmin();
-      allow create, update, delete: if isFullAdmin();
+      allow get: if isPlatformAdmin() || (signedIn() && request.auth.uid == uid);
+      allow list, create, update, delete: if isPlatformFullAdmin();
     }
 
-    // Public username -> email lookup so the login screen can resolve a username
-    // to its email before the user is signed in. Only stores { email, uid }.
     match /usernames/{username} {
       allow get: if true;
-      allow list, create, update, delete: if isFullAdmin();
+      allow list, create, update, delete: if isPlatformFullAdmin();
     }
 
-    match /auditLogs/{logId} {
-      allow read, create: if isApprovedAdmin();
-      allow update, delete: if false;
+    match /clients/{clientId} {
+      allow get, list: if resource.data.status == 'active' || isPlatformAdmin();
+      allow create, update, delete: if isPlatformFullAdmin();
+
+      match /categories/{categoryId} {
+        allow get, list: if (clientActive(clientId) && resource.data.isActive == true) || isTenantAdmin(clientId);
+        allow create, update, delete: if hasTenantFeature(clientId, 'categories');
+      }
+
+      match /menuItems/{menuItemId} {
+        allow get, list: if (clientActive(clientId) && resource.data.isAvailable == true) || isTenantAdmin(clientId);
+        allow create, update, delete: if hasTenantFeature(clientId, 'menuItems');
+      }
+
+      match /settings/{settingsId} {
+        allow get, list: if (
+            clientActive(clientId)
+            && settingsId in ['general', 'menu', 'appearance', 'qr']
+          ) || isTenantAdmin(clientId);
+        allow create: if settingsId == 'pos'
+          ? hasTenantFeature(clientId, 'pos')
+            && (isTenantFullAdmin(clientId) || request.resource.data.get('completedOrders', []).size() == 0)
+          : hasTenantFeature(clientId, 'settings');
+        allow update: if settingsId == 'pos'
+          ? hasTenantFeature(clientId, 'pos')
+            && (
+              isTenantFullAdmin(clientId)
+              || request.resource.data.get('completedOrders', []) == resource.data.get('completedOrders', [])
+            )
+          : hasTenantFeature(clientId, 'settings');
+        allow delete: if settingsId == 'pos' ? isTenantFullAdmin(clientId) : hasTenantFeature(clientId, 'settings');
+      }
+
+      match /completedOrders/{orderId} {
+        allow read: if isTenantAdmin(clientId);
+        allow create: if hasTenantFeature(clientId, 'pos')
+          && request.resource.data.get('status', 'completed') == 'completed';
+        allow update, delete: if isTenantFullAdmin(clientId);
+      }
+
+      match /expenses/{expenseId} {
+        allow read: if isTenantAdmin(clientId);
+        allow create: if hasTenantFeature(clientId, 'expenses')
+          && request.resource.data.get('status', 'active') == 'active';
+        allow update, delete: if isTenantFullAdmin(clientId);
+      }
+
+      match /adminProfiles/{uid} {
+        allow get: if isTenantAdmin(clientId) || (signedIn() && request.auth.uid == uid);
+        allow list, create, update, delete: if isTenantFullAdmin(clientId);
+      }
+
+      match /usernames/{username} {
+        allow get: if true;
+        allow list, create, update, delete: if isTenantFullAdmin(clientId);
+      }
+
+      match /auditLogs/{logId} {
+        allow read, create: if isTenantAdmin(clientId);
+        allow update, delete: if false;
+      }
     }
 
     match /{document=**} {

@@ -1,5 +1,5 @@
-import { PosManager } from "@/components/admin/pos-manager";
+import { notFound } from "next/navigation";
 
 export default function AdminPosPage() {
-  return <PosManager />;
+  notFound();
 }

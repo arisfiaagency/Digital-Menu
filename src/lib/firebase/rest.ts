@@ -1,9 +1,11 @@
 import { unstable_cache } from "next/cache";
 import { defaultAppData } from "@/data/default-data";
+import { normalizeClientSlug } from "@/lib/tenant";
 import type {
   AppData,
   AppearanceSettings,
   Category,
+  ClientAccount,
   GeneralSettings,
   MenuItem,
   MenuSettings,
@@ -71,7 +73,16 @@ function docIdFromName(name: string): string {
 
 // Runs a `field == true` + orderBy query (matches the public menu queries and
 // the security rules) and returns decoded plain documents with their id.
+async function getRestDocument(path: string): Promise<Record<string, unknown> | null> {
+  const res = await fetch(`${DOCUMENTS_BASE}/${path}?key=${API_KEY}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`get ${path} failed: ${res.status}`);
+  const document = (await res.json()) as RestDocument;
+  return { id: docIdFromName(document.name), ...decodeFields(document.fields) };
+}
+
 async function runBoolQuery(
+  parentPath: string,
   collectionId: string,
   field: string,
   orderByField: string,
@@ -91,7 +102,7 @@ async function runBoolQuery(
       limit: max
     }
   };
-  const res = await fetch(`${DOCUMENTS_BASE}:runQuery?key=${API_KEY}`, {
+  const res = await fetch(`${DOCUMENTS_BASE}/${parentPath}:runQuery?key=${API_KEY}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
@@ -103,9 +114,9 @@ async function runBoolQuery(
     .map((row) => ({ id: docIdFromName(row.document.name), ...decodeFields(row.document.fields) }));
 }
 
-async function batchGetSettings(): Promise<Record<string, Record<string, unknown>>> {
+async function batchGetSettings(clientSlug: string): Promise<Record<string, Record<string, unknown>>> {
   const names = ["general", "menu", "appearance", "qr"].map(
-    (id) => `projects/${PROJECT_ID}/databases/(default)/documents/settings/${id}`
+    (id) => `projects/${PROJECT_ID}/databases/(default)/documents/clients/${clientSlug}/settings/${id}`
   );
   const res = await fetch(`${DOCUMENTS_BASE}:batchGet?key=${API_KEY}`, {
     method: "POST",
@@ -121,13 +132,18 @@ async function batchGetSettings(): Promise<Record<string, Record<string, unknown
   return map;
 }
 
-async function fetchPublicAppData(): Promise<AppData> {
+async function fetchPublicAppData(clientSlug: string): Promise<AppData> {
   if (!DOCUMENTS_BASE || !API_KEY) return defaultAppData;
+  const slug = normalizeClientSlug(clientSlug);
+  if (!slug) return defaultAppData;
   try {
+    const client = await getRestDocument(`clients/${slug}`) as ClientAccount | null;
+    if (!client || client.status !== "active") return defaultAppData;
+    const parentPath = `clients/${slug}`;
     const [categories, menuItemsRaw, settings] = await Promise.all([
-      runBoolQuery("categories", "isActive", "displayOrder", 100),
-      runBoolQuery("menuItems", "isAvailable", "displayOrder", 200),
-      batchGetSettings()
+      runBoolQuery(parentPath, "categories", "isActive", "displayOrder", 100),
+      runBoolQuery(parentPath, "menuItems", "isAvailable", "displayOrder", 200),
+      batchGetSettings(slug)
     ]);
 
     const menuItems = menuItemsRaw.map((item) => {
@@ -151,9 +167,42 @@ async function fetchPublicAppData(): Promise<AppData> {
   }
 }
 
+async function fetchPublicClient(clientSlug: string): Promise<ClientAccount | null> {
+  if (!DOCUMENTS_BASE || !API_KEY) return null;
+  const slug = normalizeClientSlug(clientSlug);
+  if (!slug) return null;
+  try {
+    const client = await getRestDocument(`clients/${slug}`) as ClientAccount | null;
+    return client && client.status === "active" ? client : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchClientAccount(clientSlug: string): Promise<ClientAccount | null> {
+  if (!DOCUMENTS_BASE || !API_KEY) return null;
+  const slug = normalizeClientSlug(clientSlug);
+  if (!slug) return null;
+  try {
+    return await getRestDocument(`clients/${slug}`) as ClientAccount | null;
+  } catch {
+    return null;
+  }
+}
+
 // Shared across every public page so a burst of visitors triggers at most one
 // set of Firestore calls per revalidation window.
 export const getPublicAppDataRest = unstable_cache(fetchPublicAppData, ["public-app-data"], {
+  revalidate: REVALIDATE_SECONDS,
+  tags: [PUBLIC_DATA_TAG]
+});
+
+export const getPublicClientRest = unstable_cache(fetchPublicClient, ["public-client"], {
+  revalidate: REVALIDATE_SECONDS,
+  tags: [PUBLIC_DATA_TAG]
+});
+
+export const getClientAccountRest = unstable_cache(fetchClientAccount, ["client-account"], {
   revalidate: REVALIDATE_SECONDS,
   tags: [PUBLIC_DATA_TAG]
 });

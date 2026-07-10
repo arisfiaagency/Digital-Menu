@@ -1,5 +1,5 @@
-import { CategoryManager } from "@/components/admin/category-manager";
+import { notFound } from "next/navigation";
 
 export default function AdminCategoriesPage() {
-  return <CategoryManager />;
+  notFound();
 }

@@ -267,6 +267,20 @@ export type AdminProfile = {
   createdAt?: Timestamp;
 };
 
+export type ClientStatus = "active" | "disabled";
+
+export type ClientAccount = {
+  id: string;
+  name: string;
+  slug: string;
+  status: ClientStatus;
+  ownerEmail?: string;
+  defaultCurrency?: Currency;
+  defaultLanguage?: Locale;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+};
+
 export type AppData = {
   categories: Category[];
   menuItems: MenuItem[];

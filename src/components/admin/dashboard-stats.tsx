@@ -30,11 +30,13 @@ import { getAdminAppData, getPosState } from "@/lib/firebase/firestore";
 import { localized } from "@/lib/i18n/config";
 import { formatMoney } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
+import { useTenant } from "@/components/tenant-provider";
 import type { AppData, Currency, PosCompletedOrder } from "@/types/models";
 
 export function DashboardStats() {
   const { locale, text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
+  const { adminBasePath, menuPath } = useTenant();
   const [data, setData] = useState<AppData | null>(null);
   const [completed, setCompleted] = useState<PosCompletedOrder[]>([]);
 
@@ -96,14 +98,14 @@ export function DashboardStats() {
   ].filter((issue) => issue.count > 0);
 
   const actions: { href: string; icon: LucideIcon; label: string; show: boolean; target?: string }[] = [
-    { href: "/admin/menu-items", icon: Plus, label: text.addMenuItem, show: canMenuItems },
-    { href: "/admin/categories", icon: Plus, label: text.addCategory, show: auth.can("categories") },
-    { href: "/admin/pos", icon: Table2, label: text.pos, show: auth.can("pos") },
-    { href: "/admin/reports", icon: BarChart3, label: text.reports, show: auth.can("reports") },
-    { href: "/admin/expenses", icon: ReceiptText, label: text.expenses, show: auth.can("expenses") },
-    { href: "/admin/qr-code", icon: QrCode, label: text.qrCode, show: auth.can("qrCode") },
-    { href: "/admin/settings", icon: Settings, label: text.settings, show: auth.can("settings") },
-    { href: "/menu", icon: ExternalLink, label: text.viewPublicMenu, show: true, target: "_blank" }
+    { href: `${adminBasePath}/menu-items`, icon: Plus, label: text.addMenuItem, show: canMenuItems },
+    { href: `${adminBasePath}/categories`, icon: Plus, label: text.addCategory, show: auth.can("categories") },
+    { href: `${adminBasePath}/pos`, icon: Table2, label: text.pos, show: auth.can("pos") },
+    { href: `${adminBasePath}/reports`, icon: BarChart3, label: text.reports, show: auth.can("reports") },
+    { href: `${adminBasePath}/expenses`, icon: ReceiptText, label: text.expenses, show: auth.can("expenses") },
+    { href: `${adminBasePath}/qr-code`, icon: QrCode, label: text.qrCode, show: auth.can("qrCode") },
+    { href: `${adminBasePath}/settings`, icon: Settings, label: text.settings, show: auth.can("settings") },
+    { href: menuPath, icon: ExternalLink, label: text.viewPublicMenu, show: true, target: "_blank" }
   ];
   const visibleActions = actions.filter((action) => action.show);
 
@@ -167,7 +169,7 @@ export function DashboardStats() {
                   </div>
                 );
                 return canMenuItems ? (
-                  <Link key={issue.label} href="/admin/menu-items" className="focus-ring block rounded-lg">{row}</Link>
+                  <Link key={issue.label} href={`${adminBasePath}/menu-items`} className="focus-ring block rounded-lg">{row}</Link>
                 ) : (
                   <div key={issue.label}>{row}</div>
                 );

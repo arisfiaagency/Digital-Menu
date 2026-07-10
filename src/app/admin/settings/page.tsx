@@ -1,5 +1,5 @@
-import { SettingsManager } from "@/components/admin/settings-manager";
+import { notFound } from "next/navigation";
 
 export default function AdminSettingsPage() {
-  return <SettingsManager />;
+  notFound();
 }

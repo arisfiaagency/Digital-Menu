@@ -22,11 +22,13 @@ import {
 } from "@/components/admin/admin-preferences";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { BrandCredit } from "@/components/brand-credit";
+import { useTenant } from "@/components/tenant-provider";
 
 export function LoginForm() {
   const router = useRouter();
   const { text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
+  const { clientSlug, adminBasePath } = useTenant();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,9 +43,10 @@ export function LoginForm() {
   // the admin panel. AdminShell bounces employees without dashboard access to
   // their first allowed section.
   const alreadySignedIn = !auth.loading && auth.isAdmin;
+  const signedInPath = clientSlug ? `${adminBasePath}/dashboard` : "/admin";
   useEffect(() => {
-    if (alreadySignedIn) router.replace("/admin/dashboard");
-  }, [alreadySignedIn, router]);
+    if (alreadySignedIn) router.replace(signedInPath);
+  }, [alreadySignedIn, router, signedInPath]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,7 +66,7 @@ export function LoginForm() {
     setError("");
     try {
       await signInAdmin(identifier, password);
-      router.replace("/admin/dashboard");
+      router.replace(signedInPath);
     } catch (err) {
       setError(
         err instanceof Error

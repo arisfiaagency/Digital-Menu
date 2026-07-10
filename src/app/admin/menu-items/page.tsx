@@ -1,5 +1,5 @@
-import { MenuItemManager } from "@/components/admin/menu-item-manager";
+import { notFound } from "next/navigation";
 
 export default function AdminMenuItemsPage() {
-  return <MenuItemManager />;
+  notFound();
 }

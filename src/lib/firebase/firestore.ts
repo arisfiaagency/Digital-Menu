@@ -13,14 +13,16 @@ import {
   updateDoc,
   writeBatch,
   type FirestoreDataConverter,
+  type Firestore,
   type QueryDocumentSnapshot,
   type SnapshotOptions
 } from "firebase/firestore";
 import { defaultAppData } from "@/data/default-data";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { removeImage } from "@/lib/supabase/storage";
+import { getActiveClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { slugify } from "@/lib/utils/format";
-import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, Expense, MenuItem, OptionalLocalizedText, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape } from "@/types/models";
+import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape } from "@/types/models";
 
 function converter<T extends { id: string }>(): FirestoreDataConverter<T> {
   return {
@@ -57,6 +59,7 @@ const categoryConverter = converter<Category>();
 const itemConverter = converter<MenuItem>();
 const expenseConverter = converter<Expense>();
 const completedOrderConverter = converter<PosCompletedOrder>();
+const clientConverter = converter<ClientAccount>();
 
 const defaultPosState: PosState = {
   tables: Array.from({ length: 8 }, (_, index) => ({
@@ -70,21 +73,93 @@ const defaultPosState: PosState = {
   completedOrders: []
 };
 
+function tenantCollection(db: Firestore, collectionName: string) {
+  const clientSlug = getActiveClientSlug();
+  return clientSlug ? collection(db, "clients", clientSlug, collectionName) : collection(db, collectionName);
+}
+
+function tenantDoc(db: Firestore, collectionName: string, id: string) {
+  const clientSlug = getActiveClientSlug();
+  return clientSlug ? doc(db, "clients", clientSlug, collectionName, id) : doc(db, collectionName, id);
+}
+
 // Public menu data is fetched server-side via the Firestore REST API in
 // src/lib/firebase/rest.ts (getPublicAppDataRest) so the Firebase SDK stays off
 // the customer bundle. Do not add a client getPublicAppData back to public pages.
+
+export async function listClients(): Promise<ClientAccount[]> {
+  const db = getFirebaseDb();
+  if (!db) return [];
+  const snap = await getDocs(query(collection(db, "clients").withConverter(clientConverter), orderBy("name"), limit(500)));
+  return snap.docs.map((entry) => entry.data());
+}
+
+export async function getClient(slug: string): Promise<ClientAccount | null> {
+  const db = getFirebaseDb();
+  if (!db) return null;
+  const normalized = normalizeClientSlug(slug);
+  if (!normalized) return null;
+  const snap = await getDoc(doc(db, "clients", normalized).withConverter(clientConverter));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: string }) {
+  const db = getFirebaseDb();
+  if (!db) throw new Error("Firestore is not configured.");
+  const slug = normalizeClientSlug(client.slug || client.id || client.name);
+  if (!slug) throw new Error("Client slug is required.");
+  const clientRef = doc(db, "clients", slug).withConverter(clientConverter);
+  const existing = await getDoc(clientRef);
+  const payload: ClientAccount = {
+    id: slug,
+    name: client.name.trim(),
+    slug,
+    status: client.status || "active",
+    ownerEmail: client.ownerEmail?.trim() || undefined,
+    defaultCurrency: client.defaultCurrency || "IQD",
+    defaultLanguage: client.defaultLanguage || "ckb",
+    createdAt: existing.exists() ? existing.data().createdAt : serverTimestamp(),
+    updatedAt: serverTimestamp()
+  } as ClientAccount;
+  await setDoc(clientRef, payload, { merge: true });
+  if (!existing.exists()) await seedClientDefaults(slug, payload);
+  return payload;
+}
+
+async function seedClientDefaults(slug: string, client: ClientAccount) {
+  const db = getFirebaseDb();
+  if (!db) return;
+  const batch = writeBatch(db);
+  const general = {
+    ...defaultAppData.general,
+    restaurantName: {
+      en: client.name,
+      ar: client.name,
+      ckb: client.name
+    },
+    defaultCurrency: client.defaultCurrency || defaultAppData.general.defaultCurrency,
+    defaultLanguage: client.defaultLanguage || defaultAppData.general.defaultLanguage,
+    updatedAt: serverTimestamp()
+  };
+  batch.set(doc(db, "clients", slug, "settings", "general"), stripUndefined(general));
+  batch.set(doc(db, "clients", slug, "settings", "menu"), { ...defaultAppData.menu, updatedAt: serverTimestamp() });
+  batch.set(doc(db, "clients", slug, "settings", "appearance"), { ...defaultAppData.appearance, updatedAt: serverTimestamp() });
+  batch.set(doc(db, "clients", slug, "settings", "qr"), { ...defaultAppData.qr, menuUrl: `/${slug}/menu`, updatedAt: serverTimestamp() });
+  batch.set(doc(db, "clients", slug, "settings", "pos"), { ...serializePosState(defaultPosState), updatedAt: serverTimestamp() });
+  await batch.commit();
+}
 
 export async function getAdminAppData(): Promise<AppData> {
   const db = getFirebaseDb();
   if (!db) return defaultAppData;
 
   const [categorySnap, itemSnap, generalSnap, menuSnap, appearanceSnap, qrSnap] = await Promise.all([
-    getDocs(query(collection(db, "categories").withConverter(categoryConverter), orderBy("displayOrder"), limit(200))),
-    getDocs(query(collection(db, "menuItems").withConverter(itemConverter), orderBy("displayOrder"), limit(500))),
-    getDoc(doc(db, "settings", "general")),
-    getDoc(doc(db, "settings", "menu")),
-    getDoc(doc(db, "settings", "appearance")),
-    getDoc(doc(db, "settings", "qr"))
+    getDocs(query(tenantCollection(db, "categories").withConverter(categoryConverter), orderBy("displayOrder"), limit(200))),
+    getDocs(query(tenantCollection(db, "menuItems").withConverter(itemConverter), orderBy("displayOrder"), limit(500))),
+    getDoc(tenantDoc(db, "settings", "general")),
+    getDoc(tenantDoc(db, "settings", "menu")),
+    getDoc(tenantDoc(db, "settings", "appearance")),
+    getDoc(tenantDoc(db, "settings", "qr"))
   ]);
 
   const menuItems = itemSnap.docs.map((entry) => entry.data());
@@ -125,7 +200,7 @@ export function normalizeUsername(username: string) {
 export async function getUsernameEmail(username: string): Promise<string | null> {
   const db = getFirebaseDb();
   if (!db) return null;
-  const snap = await getDoc(doc(db, "usernames", normalizeUsername(username)));
+  const snap = await getDoc(tenantDoc(db, "usernames", normalizeUsername(username)));
   if (!snap.exists()) return null;
   const email = snap.data().email;
   return typeof email === "string" ? email : null;
@@ -135,7 +210,7 @@ export async function isUsernameAvailable(username: string, exceptUid?: string):
   const db = getFirebaseDb();
   if (!db) return true;
   try {
-    const snap = await getDoc(doc(db, "usernames", normalizeUsername(username)));
+    const snap = await getDoc(tenantDoc(db, "usernames", normalizeUsername(username)));
     if (!snap.exists()) return true;
     return snap.data().uid === exceptUid;
   } catch {
@@ -146,27 +221,32 @@ export async function isUsernameAvailable(username: string, exceptUid?: string):
 export async function claimUsername(username: string, email: string, uid: string) {
   const db = getFirebaseDb();
   if (!db || !username) return;
-  await setDoc(doc(db, "usernames", normalizeUsername(username)), { email, uid });
+  await setDoc(tenantDoc(db, "usernames", normalizeUsername(username)), { email, uid });
 }
 
 export async function releaseUsername(username: string) {
   const db = getFirebaseDb();
   if (!db || !username) return;
-  await deleteDoc(doc(db, "usernames", normalizeUsername(username)));
+  await deleteDoc(tenantDoc(db, "usernames", normalizeUsername(username)));
 }
 
 export async function getAdminProfile(uid: string): Promise<AdminProfile | null> {
   const db = getFirebaseDb();
   if (!db) return null;
-  const snap = await getDoc(doc(db, "adminProfiles", uid));
-  if (!snap.exists()) return null;
+  const snap = await getDoc(tenantDoc(db, "adminProfiles", uid));
+  if (!snap.exists()) {
+    if (!getActiveClientSlug()) return null;
+    const platformSnap = await getDoc(doc(db, "adminProfiles", uid));
+    if (!platformSnap.exists()) return null;
+    return toAdminProfile(uid, platformSnap.data());
+  }
   return toAdminProfile(uid, snap.data());
 }
 
 export async function listAdminProfiles(): Promise<AdminProfile[]> {
   const db = getFirebaseDb();
   if (!db) return [];
-  const snap = await getDocs(collection(db, "adminProfiles"));
+  const snap = await getDocs(tenantCollection(db, "adminProfiles"));
   return snap.docs
     .map((entry) => toAdminProfile(entry.id, entry.data()))
     .sort((a, b) => a.email.localeCompare(b.email));
@@ -186,7 +266,7 @@ export async function saveAdminProfile(profile: {
   // isAdmin stays true for every staff member so the current Firestore rules
   // grant them admin-data access; the role + permissions drive the UI gating.
   await setDoc(
-    doc(db, "adminProfiles", profile.uid),
+    tenantDoc(db, "adminProfiles", profile.uid),
     stripUndefined({
       email: profile.email,
       username: profile.username ? normalizeUsername(profile.username) : undefined,
@@ -204,13 +284,13 @@ export async function saveAdminProfile(profile: {
 export async function setAdminProfileDisabled(uid: string, disabled: boolean) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
-  await updateDoc(doc(db, "adminProfiles", uid), { disabled, updatedAt: serverTimestamp() });
+  await updateDoc(tenantDoc(db, "adminProfiles", uid), { disabled, updatedAt: serverTimestamp() });
 }
 
 export async function deleteAdminProfile(uid: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
-  await deleteDoc(doc(db, "adminProfiles", uid));
+  await deleteDoc(tenantDoc(db, "adminProfiles", uid));
 }
 
 export async function saveCategory(category: Category) {
@@ -223,22 +303,22 @@ export async function saveCategory(category: Category) {
     createdAt: category.createdAt || serverTimestamp()
   };
   if (category.id) {
-    await setDoc(doc(db, "categories", category.id).withConverter(categoryConverter), payload);
+    await setDoc(tenantDoc(db, "categories", category.id).withConverter(categoryConverter), payload);
   } else {
-    await addDoc(collection(db, "categories").withConverter(categoryConverter), payload);
+    await addDoc(tenantCollection(db, "categories").withConverter(categoryConverter), payload);
   }
 }
 
 export async function deleteCategory(categoryId: string) {
   const db = getFirebaseDb();
   if (!db) return;
-  await deleteDoc(doc(db, "categories", categoryId));
+  await deleteDoc(tenantDoc(db, "categories", categoryId));
 }
 
 export async function updateCategoryActive(categoryId: string, isActive: boolean) {
   const db = getFirebaseDb();
   if (!db) return;
-  await updateDoc(doc(db, "categories", categoryId), { isActive, updatedAt: serverTimestamp() });
+  await updateDoc(tenantDoc(db, "categories", categoryId), { isActive, updatedAt: serverTimestamp() });
 }
 
 export async function reorderCategories(updates: { id: string; displayOrder: number }[]) {
@@ -246,7 +326,7 @@ export async function reorderCategories(updates: { id: string; displayOrder: num
   if (!db || !updates.length) return;
   const batch = writeBatch(db);
   for (const update of updates) {
-    batch.update(doc(db, "categories", update.id), { displayOrder: update.displayOrder, updatedAt: serverTimestamp() });
+    batch.update(tenantDoc(db, "categories", update.id), { displayOrder: update.displayOrder, updatedAt: serverTimestamp() });
   }
   await batch.commit();
 }
@@ -261,9 +341,9 @@ export async function saveMenuItem(item: MenuItem) {
     createdAt: item.createdAt || serverTimestamp()
   };
   if (item.id) {
-    await setDoc(doc(db, "menuItems", item.id).withConverter(itemConverter), payload);
+    await setDoc(tenantDoc(db, "menuItems", item.id).withConverter(itemConverter), payload);
   } else {
-    await addDoc(collection(db, "menuItems").withConverter(itemConverter), payload);
+    await addDoc(tenantCollection(db, "menuItems").withConverter(itemConverter), payload);
   }
 }
 
@@ -272,7 +352,7 @@ export async function updateMenuItemAvailability(itemId: string, isAvailable: bo
   if (!db) return;
   const patch: Record<string, unknown> = { isAvailable, updatedAt: serverTimestamp() };
   if (typeof isSoldOut === "boolean") patch.isSoldOut = isSoldOut;
-  await updateDoc(doc(db, "menuItems", itemId), patch);
+  await updateDoc(tenantDoc(db, "menuItems", itemId), patch);
 }
 
 export async function reorderMenuItems(updates: { id: string; displayOrder: number }[]) {
@@ -280,7 +360,7 @@ export async function reorderMenuItems(updates: { id: string; displayOrder: numb
   if (!db || !updates.length) return;
   const batch = writeBatch(db);
   for (const update of updates) {
-    batch.update(doc(db, "menuItems", update.id), { displayOrder: update.displayOrder, updatedAt: serverTimestamp() });
+    batch.update(tenantDoc(db, "menuItems", update.id), { displayOrder: update.displayOrder, updatedAt: serverTimestamp() });
   }
   await batch.commit();
 }
@@ -291,7 +371,7 @@ async function pruneExpiredImageHistory(item: MenuItem, persist: boolean) {
   await Promise.allSettled(expired.map((entry) => removeImage(entry.imagePath)));
   if (persist && item.id) {
     const db = getFirebaseDb();
-    if (db) await updateDoc(doc(db, "menuItems", item.id), { imageHistory: withActiveImageHistory(item).imageHistory || [] });
+    if (db) await updateDoc(tenantDoc(db, "menuItems", item.id), { imageHistory: withActiveImageHistory(item).imageHistory || [] });
   }
 }
 
@@ -309,13 +389,13 @@ function isExpired(value: string) {
 export async function deleteMenuItem(itemId: string) {
   const db = getFirebaseDb();
   if (!db) return;
-  await deleteDoc(doc(db, "menuItems", itemId));
+  await deleteDoc(tenantDoc(db, "menuItems", itemId));
 }
 
 export async function listExpenses(): Promise<Expense[]> {
   const db = getFirebaseDb();
   if (!db) return [];
-  const snap = await getDocs(query(collection(db, "expenses").withConverter(expenseConverter), orderBy("date", "desc"), limit(500)));
+  const snap = await getDocs(query(tenantCollection(db, "expenses").withConverter(expenseConverter), orderBy("date", "desc"), limit(500)));
   return snap.docs.map((entry) => entry.data());
 }
 
@@ -328,22 +408,22 @@ export async function saveExpense(expense: Expense) {
     createdAt: expense.createdAt || serverTimestamp()
   };
   if (expense.id) {
-    await setDoc(doc(db, "expenses", expense.id).withConverter(expenseConverter), payload);
+    await setDoc(tenantDoc(db, "expenses", expense.id).withConverter(expenseConverter), payload);
   } else {
-    await addDoc(collection(db, "expenses").withConverter(expenseConverter), payload);
+    await addDoc(tenantCollection(db, "expenses").withConverter(expenseConverter), payload);
   }
 }
 
 export async function deleteExpense(expenseId: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
-  await deleteDoc(doc(db, "expenses", expenseId));
+  await deleteDoc(tenantDoc(db, "expenses", expenseId));
 }
 
 export async function cancelExpense(expenseId: string, cancelledByUid?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
-  await updateDoc(doc(db, "expenses", expenseId), stripUndefined({
+  await updateDoc(tenantDoc(db, "expenses", expenseId), stripUndefined({
     status: "cancelled",
     cancelledAt: new Date().toISOString(),
     cancelledByUid,
@@ -354,8 +434,8 @@ export async function cancelExpense(expenseId: string, cancelledByUid?: string) 
 export async function saveSettings(section: "general" | "menu" | "appearance" | "qr", value: Record<string, unknown>) {
   const db = getFirebaseDb();
   if (!db) return;
-  await updateDoc(doc(db, "settings", section), { ...value, updatedAt: serverTimestamp() }).catch(async () => {
-    await setDoc(doc(db, "settings", section), { ...value, updatedAt: serverTimestamp() });
+  await updateDoc(tenantDoc(db, "settings", section), { ...value, updatedAt: serverTimestamp() }).catch(async () => {
+    await setDoc(tenantDoc(db, "settings", section), { ...value, updatedAt: serverTimestamp() });
   });
 }
 
@@ -363,8 +443,8 @@ export async function getPosState(): Promise<PosState> {
   const db = getFirebaseDb();
   if (!db) return defaultPosState;
   const [snap, completedSnap] = await Promise.all([
-    getDoc(doc(db, "settings", "pos")),
-    getDocs(query(collection(db, "completedOrders").withConverter(completedOrderConverter), orderBy("completedAt", "desc"), limit(2000))).catch(() => null)
+    getDoc(tenantDoc(db, "settings", "pos")),
+    getDocs(query(tenantCollection(db, "completedOrders").withConverter(completedOrderConverter), orderBy("completedAt", "desc"), limit(2000))).catch(() => null)
   ]);
   const state = snap.exists() ? normalizePosState(snap.data()) : defaultPosState;
   const storedOrders = completedSnap?.docs.map((entry) => entry.data()) || [];
@@ -377,15 +457,15 @@ export async function getPosState(): Promise<PosState> {
 export async function savePosState(state: PosState) {
   const db = getFirebaseDb();
   if (!db) return;
-  await setDoc(doc(db, "settings", "pos"), { ...serializePosState(state), updatedAt: serverTimestamp() }, { merge: true });
+  await setDoc(tenantDoc(db, "settings", "pos"), { ...serializePosState(state), updatedAt: serverTimestamp() }, { merge: true });
 }
 
 export async function completePosOrder(state: PosState, completedOrder: PosCompletedOrder) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const batch = writeBatch(db);
-  batch.set(doc(db, "settings", "pos"), { ...serializePosState(state), updatedAt: serverTimestamp() }, { merge: true });
-  batch.set(doc(db, "completedOrders", completedOrder.id).withConverter(completedOrderConverter), completedOrder);
+  batch.set(tenantDoc(db, "settings", "pos"), { ...serializePosState(state), updatedAt: serverTimestamp() }, { merge: true });
+  batch.set(tenantDoc(db, "completedOrders", completedOrder.id).withConverter(completedOrderConverter), completedOrder);
   await batch.commit();
 }
 
@@ -398,13 +478,13 @@ export async function cancelCompletedOrder(order: PosCompletedOrder, cancelledBy
     cancelledAt: new Date().toISOString(),
     cancelledByUid
   };
-  const posRef = doc(db, "settings", "pos");
+  const posRef = tenantDoc(db, "settings", "pos");
   const posSnap = await getDoc(posRef);
   const legacyOrders = posSnap.exists() && Array.isArray(posSnap.data().completedOrders)
     ? (posSnap.data().completedOrders as PosCompletedOrder[]).map((entry) => entry.id === order.id ? cancelledOrder : entry)
     : [];
   const batch = writeBatch(db);
-  batch.set(doc(db, "completedOrders", order.id).withConverter(completedOrderConverter), cancelledOrder);
+  batch.set(tenantDoc(db, "completedOrders", order.id).withConverter(completedOrderConverter), cancelledOrder);
   if (legacyOrders.some((entry) => entry.id === order.id)) {
     batch.set(posRef, { ...stripUndefined({ completedOrders: legacyOrders }), updatedAt: serverTimestamp() }, { merge: true });
   }
@@ -414,13 +494,13 @@ export async function cancelCompletedOrder(order: PosCompletedOrder, cancelledBy
 export async function deleteCompletedOrder(orderId: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
-  const posRef = doc(db, "settings", "pos");
+  const posRef = tenantDoc(db, "settings", "pos");
   const posSnap = await getDoc(posRef);
   const legacyOrders = posSnap.exists() && Array.isArray(posSnap.data().completedOrders)
     ? (posSnap.data().completedOrders as PosCompletedOrder[]).filter((entry) => entry.id !== orderId)
     : [];
   const batch = writeBatch(db);
-  batch.delete(doc(db, "completedOrders", orderId));
+  batch.delete(tenantDoc(db, "completedOrders", orderId));
   if (posSnap.exists() && Array.isArray(posSnap.data().completedOrders)) {
     batch.set(posRef, { completedOrders: legacyOrders, updatedAt: serverTimestamp() }, { merge: true });
   }
@@ -432,10 +512,10 @@ export async function deleteCompletedOrder(orderId: string) {
 export async function updateCompletedOrder(order: PosCompletedOrder) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
-  const posRef = doc(db, "settings", "pos");
+  const posRef = tenantDoc(db, "settings", "pos");
   const posSnap = await getDoc(posRef);
   const batch = writeBatch(db);
-  batch.set(doc(db, "completedOrders", order.id).withConverter(completedOrderConverter), order);
+  batch.set(tenantDoc(db, "completedOrders", order.id).withConverter(completedOrderConverter), order);
   if (posSnap.exists() && Array.isArray(posSnap.data().completedOrders)) {
     const legacyOrders = (posSnap.data().completedOrders as PosCompletedOrder[]);
     if (legacyOrders.some((entry) => entry.id === order.id)) {

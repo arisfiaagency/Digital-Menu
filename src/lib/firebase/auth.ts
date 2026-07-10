@@ -6,8 +6,8 @@ import {
   updatePassword,
   type User
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase/client";
+import { getFirebaseAuth } from "@/lib/firebase/client";
+import { getAdminProfile, getUsernameEmail } from "@/lib/firebase/firestore";
 
 // Accepts either an email (contains "@") or a username. Usernames are resolved
 // to their email through the public `usernames` lookup collection.
@@ -15,12 +15,8 @@ export async function resolveLoginEmail(identifier: string): Promise<string> {
   const value = identifier.trim();
   if (!value) throw new Error("auth/invalid-credential");
   if (value.includes("@")) return value;
-  const db = getFirebaseDb();
-  if (!db) throw new Error("Firebase Authentication is not configured.");
-  const snap = await getDoc(doc(db, "usernames", value.toLowerCase()));
-  if (!snap.exists()) throw new Error("auth/invalid-credential");
-  const email = snap.data().email;
-  if (typeof email !== "string") throw new Error("auth/invalid-credential");
+  const email = await getUsernameEmail(value);
+  if (!email) throw new Error("auth/invalid-credential");
   return email;
 }
 
@@ -38,12 +34,8 @@ export async function signInAdmin(identifier: string, password: string) {
 }
 
 export async function verifyApprovedAdmin(uid: string) {
-  const db = getFirebaseDb();
-  if (!db) return false;
-  const profile = await getDoc(doc(db, "adminProfiles", uid));
-  if (!profile.exists()) return false;
-  const data = profile.data();
-  return data.isAdmin === true && data.disabled !== true;
+  const profile = await getAdminProfile(uid);
+  return Boolean(profile && profile.isAdmin && !profile.disabled);
 }
 
 export async function logoutAdmin() {

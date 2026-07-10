@@ -1,5 +1,5 @@
-import { ExpenseManager } from "@/components/admin/expense-manager";
+import { notFound } from "next/navigation";
 
 export default function AdminExpensesPage() {
-  return <ExpenseManager />;
+  notFound();
 }

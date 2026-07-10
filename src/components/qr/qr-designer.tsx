@@ -14,12 +14,14 @@ import { getAdminAppData, getPosState, saveSettings } from "@/lib/firebase/fires
 import { hasSafeQrContrast } from "@/lib/utils/qr";
 import { cn } from "@/lib/utils/cn";
 import { defaultQrSettings } from "@/data/default-data";
+import { useTenant } from "@/components/tenant-provider";
 import type { LocalizedText, QrSettings } from "@/types/models";
 
 export type QrPrintVariant = "qr" | "design";
 
 export function QrDesigner({ printMode = false, printVariant = "design", tableLabels = [] }: { printMode?: boolean; printVariant?: QrPrintVariant; tableLabels?: string[] }) {
   const { text, dir: textDir } = useAdminLocale();
+  const { adminBasePath, menuPath } = useTenant();
   const [settings, setSettings] = useState<QrSettings>(defaultQrSettings);
   const [dataUrl, setDataUrl] = useState("");
   const [svg, setSvg] = useState("");
@@ -30,7 +32,7 @@ export function QrDesigner({ printMode = false, printVariant = "design", tableLa
   const [posTables, setPosTables] = useState<string[]>([]);
   const [customInput, setCustomInput] = useState("");
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
-  const menuUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/menu`;
+  const menuUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}${menuPath}`;
 
   useEffect(() => {
     getAdminAppData().then((data) => {
@@ -174,7 +176,7 @@ export function QrDesigner({ printMode = false, printVariant = "design", tableLa
   function openPrint(mode: QrPrintVariant) {
     setPrintMenuOpen(false);
     if (!tablesForPrint.length) return;
-    window.open(`/admin/qr-code/print?mode=${mode}&tables=${encodeURIComponent(tablesForPrint.join(","))}`, "_blank", "noopener");
+    window.open(`${adminBasePath}/qr-code/print?mode=${mode}&tables=${encodeURIComponent(tablesForPrint.join(","))}`, "_blank", "noopener");
   }
 
   const safeContrast = hasSafeQrContrast(settings.foregroundColor, settings.backgroundColor);

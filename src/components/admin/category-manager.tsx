@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminErrorText, formatAdminText, useAdminLocale } from "@/components/admin/admin-preferences";
 import { CATEGORY_ICONS, CategoryIcon, DEFAULT_CATEGORY_ICON } from "@/components/menu/category-icon";
+import { useTenant } from "@/components/tenant-provider";
 import { getAdminAppData, deleteCategory, deleteMenuItem, reorderCategories, saveCategory, saveMenuItem, updateCategoryActive } from "@/lib/firebase/firestore";
 import { localized } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils/cn";
@@ -39,6 +40,7 @@ const emptyCategory: CategoryFormData = {
 
 export function CategoryManager() {
   const { locale, text } = useAdminLocale();
+  const { adminBasePath } = useTenant();
   const [data, setData] = useState<AppData | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -478,7 +480,7 @@ export function CategoryManager() {
                         <CategoryAdminPreview category={category} itemCount={itemCount} locale={locale} text={text} />
                         <div className="flex flex-wrap content-start gap-2">
                           <Button type="button" variant="secondary" asChild>
-                            <Link href={`/admin/menu-items?category=${encodeURIComponent(category.id)}`}>
+                            <Link href={`${adminBasePath}/menu-items?category=${encodeURIComponent(category.id)}`}>
                               <PlusCircle className="h-4 w-4" aria-hidden />
                               {text.addItemToCategory}
                             </Link>

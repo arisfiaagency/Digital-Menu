@@ -1,5 +1,5 @@
-import { DashboardStats } from "@/components/admin/dashboard-stats";
+import { notFound } from "next/navigation";
 
 export default function AdminDashboardPage() {
-  return <DashboardStats />;
+  notFound();
 }

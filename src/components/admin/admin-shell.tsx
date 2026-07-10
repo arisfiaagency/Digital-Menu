@@ -33,19 +33,18 @@ import { cn } from "@/lib/utils/cn";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-preferences";
 import type { AdminFeature } from "@/types/models";
+import { useTenant } from "@/components/tenant-provider";
 
-const nav: { href: string; labelKey: string; icon: LucideIcon; feature: AdminFeature }[] = [
-  { href: "/admin/dashboard", labelKey: "dashboard", icon: BarChart3, feature: "dashboard" },
-  { href: "/admin/categories", labelKey: "categories", icon: ListTree, feature: "categories" },
-  { href: "/admin/menu-items", labelKey: "menuItems", icon: MenuSquare, feature: "menuItems" },
-  { href: "/admin/pos", labelKey: "pos", icon: Table2, feature: "pos" },
-  { href: "/admin/reports", labelKey: "reports", icon: LineChart, feature: "reports" },
-  { href: "/admin/expenses", labelKey: "expenses", icon: ReceiptText, feature: "expenses" },
-  { href: "/admin/qr-code", labelKey: "qrCode", icon: QrCode, feature: "qrCode" },
-  { href: "/admin/settings", labelKey: "settings", icon: Settings, feature: "settings" }
+const nav: { path: string; labelKey: string; icon: LucideIcon; feature: AdminFeature }[] = [
+  { path: "/dashboard", labelKey: "dashboard", icon: BarChart3, feature: "dashboard" },
+  { path: "/categories", labelKey: "categories", icon: ListTree, feature: "categories" },
+  { path: "/menu-items", labelKey: "menuItems", icon: MenuSquare, feature: "menuItems" },
+  { path: "/pos", labelKey: "pos", icon: Table2, feature: "pos" },
+  { path: "/reports", labelKey: "reports", icon: LineChart, feature: "reports" },
+  { path: "/expenses", labelKey: "expenses", icon: ReceiptText, feature: "expenses" },
+  { path: "/qr-code", labelKey: "qrCode", icon: QrCode, feature: "qrCode" },
+  { path: "/settings", labelKey: "settings", icon: Settings, feature: "settings" }
 ];
-
-const USERS_HREF = "/admin/users";
 
 // Shown while the session resolves and during redirects — a skeleton, so the admin never sees a
 // spinner or "loading…" text (skeletons are the only loading style across the app).
@@ -79,9 +78,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const auth = useAdminAuth();
   const { text, dir: textDir } = useAdminLocale();
+  const { adminBasePath, menuPath } = useTenant();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const isLogin = pathname === "/admin/login";
-  const isQrPrint = pathname === "/admin/qr-code/print";
+  const loginPath = `${adminBasePath}/login`;
+  const usersHref = `${adminBasePath}/users`;
+  const settingsHref = `${adminBasePath}/settings`;
+  const navItems = nav.map((entry) => ({ ...entry, href: `${adminBasePath}${entry.path}` }));
+  const isLogin = pathname === loginPath;
+  const isQrPrint = pathname === `${adminBasePath}/qr-code/print`;
 
   if (isLogin || isQrPrint) return <>{children}</>;
 
@@ -98,7 +102,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               {text.firebaseRequiredDescription}
             </p>
             <Button asChild>
-              <Link href="/menu">
+              <Link href={menuPath}>
                 <span dir={textDir}>{text.viewPublicMenu}</span>
               </Link>
             </Button>
@@ -113,16 +117,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   if (!auth.user || !auth.isAdmin) {
-    router.replace("/admin/login");
+    router.replace(loginPath);
     return <AdminShellSkeleton />;
   }
 
   // Feature gating: employees only reach the sections they were granted.
-  const allowedNav = nav.filter((entry) => auth.can(entry.feature));
-  const firstAllowedHref = allowedNav[0]?.href ?? (auth.canManageUsers ? USERS_HREF : null);
+  const allowedNav = navItems.filter((entry) => auth.can(entry.feature));
+  const firstAllowedHref = allowedNav[0]?.href ?? (auth.canManageUsers ? usersHref : null);
 
-  const onUsersRoute = pathname.startsWith(USERS_HREF);
-  const currentNav = nav.find((entry) => pathname.startsWith(entry.href));
+  const onUsersRoute = pathname.startsWith(usersHref);
+  const currentNav = navItems.find((entry) => pathname.startsWith(entry.href));
   const routeAllowed = onUsersRoute ? auth.canManageUsers : currentNav ? auth.can(currentNav.feature) : true;
 
   if (!routeAllowed) {
@@ -139,7 +143,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <p dir={textDir} className="text-muted-foreground">{text.noAccessDesc}</p>
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild variant="outline">
-                <Link href="/menu"><span dir={textDir}>{text.viewPublicMenu}</span></Link>
+                <Link href={menuPath}><span dir={textDir}>{text.viewPublicMenu}</span></Link>
               </Button>
               <Button type="button" variant="destructive" onClick={() => void handleLogout()}>
                 <span dir={textDir}>{text.logout}</span>
@@ -153,7 +157,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   async function handleLogout() {
     await logoutAdmin();
-    router.replace("/admin/login");
+    router.replace(loginPath);
   }
 
   return (
@@ -179,6 +183,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           navItems={allowedNav}
           canManageUsers={auth.canManageUsers}
           canSettings={auth.can("settings")}
+          usersHref={usersHref}
+          settingsHref={settingsHref}
+          menuPath={menuPath}
           onLogout={handleLogout}
         />
       </aside>
@@ -216,6 +223,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           navItems={allowedNav}
           canManageUsers={auth.canManageUsers}
           canSettings={auth.can("settings")}
+          usersHref={usersHref}
+          settingsHref={settingsHref}
+          menuPath={menuPath}
           onNavigate={() => setMobileNavOpen(false)}
           onLogout={handleLogout}
         />
@@ -238,6 +248,9 @@ function AdminNavigation({
   navItems,
   canManageUsers,
   canSettings,
+  usersHref,
+  settingsHref,
+  menuPath,
   onNavigate,
   onLogout
 }: {
@@ -248,16 +261,19 @@ function AdminNavigation({
   navItems: { href: string; labelKey: string; icon: LucideIcon; feature: AdminFeature }[];
   canManageUsers: boolean;
   canSettings: boolean;
+  usersHref: string;
+  settingsHref: string;
+  menuPath: string;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
   const items = canManageUsers
-    ? [...navItems, { href: USERS_HREF, labelKey: "users", icon: UsersRound }]
+    ? [...navItems, { href: usersHref, labelKey: "users", icon: UsersRound }]
     : navItems;
 
   return (
     <div className="flex h-full flex-col">
-      <Link href="/menu" dir={textDir} className="mb-6 block pr-10 text-xl font-semibold" onClick={onNavigate}>
+      <Link href={menuPath} dir={textDir} className="mb-6 block pr-10 text-xl font-semibold" onClick={onNavigate}>
         {text.brand}
       </Link>
       <nav className="grid gap-1">
@@ -289,6 +305,9 @@ function AdminNavigation({
         userEmail={userEmail}
         canManageUsers={canManageUsers}
         canSettings={canSettings}
+        usersHref={usersHref}
+        settingsHref={settingsHref}
+        menuPath={menuPath}
         onNavigate={onNavigate}
         onLogout={onLogout}
       />
@@ -302,6 +321,9 @@ function AdminProfileMenu({
   userEmail,
   canManageUsers,
   canSettings,
+  usersHref,
+  settingsHref,
+  menuPath,
   onNavigate,
   onLogout
 }: {
@@ -310,6 +332,9 @@ function AdminProfileMenu({
   userEmail: string;
   canManageUsers: boolean;
   canSettings: boolean;
+  usersHref: string;
+  settingsHref: string;
+  menuPath: string;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
@@ -358,9 +383,9 @@ function AdminProfileMenu({
         >
           {canSettings ? (
             <div className="rounded-xl bg-muted/40 p-1">
-              <ProfileMenuLink href="/admin/settings" icon={Settings} label={text.settings} textDir={textDir} onClick={handleNavigate} />
+              <ProfileMenuLink href={settingsHref} icon={Settings} label={text.settings} textDir={textDir} onClick={handleNavigate} />
               <ProfileMenuLink
-                href="/admin/settings#general"
+                href={`${settingsHref}#general`}
                 icon={Building2}
                 label={text.generalSettings}
                 textDir={textDir}
@@ -368,7 +393,7 @@ function AdminProfileMenu({
                 nested
               />
               <ProfileMenuLink
-                href="/admin/settings#menu"
+                href={`${settingsHref}#menu`}
                 icon={SlidersHorizontal}
                 label={text.menuSettings}
                 textDir={textDir}
@@ -376,7 +401,7 @@ function AdminProfileMenu({
                 nested
               />
               <ProfileMenuLink
-                href="/admin/settings#appearance"
+                href={`${settingsHref}#appearance`}
                 icon={Palette}
                 label={text.appearanceSettings}
                 textDir={textDir}
@@ -384,7 +409,7 @@ function AdminProfileMenu({
                 nested
               />
               <ProfileMenuLink
-                href="/admin/settings#account"
+                href={`${settingsHref}#account`}
                 icon={KeyRound}
                 label={text.accountSettings}
                 textDir={textDir}
@@ -394,9 +419,9 @@ function AdminProfileMenu({
             </div>
           ) : null}
           {canManageUsers ? (
-            <ProfileMenuLink href={USERS_HREF} icon={UsersRound} label={text.userManagement} textDir={textDir} onClick={handleNavigate} />
+            <ProfileMenuLink href={usersHref} icon={UsersRound} label={text.userManagement} textDir={textDir} onClick={handleNavigate} />
           ) : null}
-          <ProfileMenuLink href="/menu" icon={ExternalLink} label={text.viewPublicMenu} textDir={textDir} onClick={handleNavigate} />
+          <ProfileMenuLink href={menuPath} icon={ExternalLink} label={text.viewPublicMenu} textDir={textDir} onClick={handleNavigate} />
           <button
             type="button"
             role="menuitem"

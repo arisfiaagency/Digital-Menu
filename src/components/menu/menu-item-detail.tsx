@@ -13,7 +13,7 @@ import { formatMoney } from "@/lib/utils/format";
 import { useLocale } from "@/hooks/use-locale";
 import type { AppData } from "@/types/models";
 
-export function MenuItemDetail({ itemId, initialData }: { itemId: string; initialData?: AppData }) {
+export function MenuItemDetail({ itemId, initialData, menuPath = "/menu" }: { itemId: string; initialData?: AppData; menuPath?: string }) {
   const { locale, setLocale, dir: textDir } = useLocale(defaultAppData.general.defaultLanguage, {
     documentDirection: "ltr"
   });
@@ -38,7 +38,7 @@ export function MenuItemDetail({ itemId, initialData }: { itemId: string; initia
 
       <header className="container grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-5">
         <Link
-          href="/menu"
+          href={menuPath}
           className="focus-ring inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted"
         >
           <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
@@ -56,7 +56,7 @@ export function MenuItemDetail({ itemId, initialData }: { itemId: string; initia
             <p dir={textDir} className="text-muted-foreground">
               {translate(locale, "menu.itemNotFound")}
             </p>
-            <Link href="/menu" className="focus-ring inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
+            <Link href={menuPath} className="focus-ring inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
               <ArrowLeft className="h-4 w-4" aria-hidden />
               <span dir={textDir}>{translate(locale, "menu.backToMenu")}</span>
             </Link>

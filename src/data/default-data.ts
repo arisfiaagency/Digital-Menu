@@ -52,7 +52,7 @@ export const defaultAppearanceSettings = {
 };
 
 export const defaultQrSettings = {
-  menuUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/menu`,
+  menuUrl: "",
   foregroundColor: "#0f172a",
   backgroundColor: "#ffffff",
   includeLogo: false,

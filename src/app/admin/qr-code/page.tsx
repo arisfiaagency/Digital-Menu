@@ -1,5 +1,5 @@
-import { QrDesigner } from "@/components/qr/qr-designer";
+import { notFound } from "next/navigation";
 
 export default function AdminQrCodePage() {
-  return <QrDesigner />;
+  notFound();
 }
