@@ -93,6 +93,8 @@ export const defaultAppearanceSettings = {
   welcomeLanguageStyle: "buttons" as const,
   welcomeCardStyle: "glass" as const,
   welcomeCardPattern: "none" as const,
+  welcomeFormBlur: 24,
+  welcomeFormTransparency: 15,
   welcomeBackgroundStyle: "gradient" as const,
   welcomeBackgroundColor: "#d7efd8",
   welcomeBackgroundGradientFrom: "#d7efd8",

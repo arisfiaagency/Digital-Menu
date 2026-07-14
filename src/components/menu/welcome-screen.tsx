@@ -21,7 +21,7 @@ import { defaultAppData } from "@/data/default-data";
 import { cn } from "@/lib/utils/cn";
 import { SocialLinks } from "@/components/menu/social-links";
 import { BrandCredit } from "@/components/brand-credit";
-import { hexToHslVar, readableForegroundHslVar } from "@/lib/utils/color";
+import { hexToHslVar, hexToRgba, readableForegroundHslVar } from "@/lib/utils/color";
 import type { AppearanceSettings, GeneralSettings, MenuSettings, WelcomePattern } from "@/types/models";
 
 // The welcome screen always opens in this language, regardless of any previously
@@ -283,7 +283,8 @@ function welcomeCardClass(appearance: AppearanceSettings) {
 
 function welcomeCardStyle(appearance: AppearanceSettings): CSSProperties {
   const style: CSSProperties = {};
-  if (appearance.welcomeFormColor) style.backgroundColor = appearance.welcomeFormColor;
+  const backgroundColor = welcomeFormBackgroundColor(appearance);
+  if (backgroundColor) style.backgroundColor = backgroundColor;
   if (appearance.welcomeFormTextColor) style.color = appearance.welcomeFormTextColor;
   if (appearance.welcomeFormBorderColor) style.borderColor = appearance.welcomeFormBorderColor;
   const blur = normalizeWelcomeFormBlur(appearance.welcomeFormBlur);
@@ -297,6 +298,19 @@ function welcomeCardStyle(appearance: AppearanceSettings): CSSProperties {
 function normalizeWelcomeFormBlur(value: number | undefined) {
   if (typeof value !== "number" || Number.isNaN(value)) return undefined;
   return Math.min(40, Math.max(0, value));
+}
+
+function welcomeFormBackgroundColor(appearance: AppearanceSettings) {
+  const transparency = normalizeWelcomeFormTransparency(appearance.welcomeFormTransparency);
+  if (transparency === undefined) return appearance.welcomeFormColor;
+  const alpha = 1 - transparency / 100;
+  if (!appearance.welcomeFormColor) return `hsl(var(--card) / ${alpha.toFixed(2)})`;
+  return hexToRgba(appearance.welcomeFormColor, alpha) || appearance.welcomeFormColor;
+}
+
+function normalizeWelcomeFormTransparency(value: number | undefined) {
+  if (typeof value !== "number" || Number.isNaN(value)) return undefined;
+  return Math.min(100, Math.max(0, value));
 }
 
 function WelcomeBackgroundPattern({ appearance }: { appearance: AppearanceSettings }) {

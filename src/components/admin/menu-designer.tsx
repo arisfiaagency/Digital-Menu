@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ImageUploadField } from "@/components/forms/image-upload-field";
 import { MenuItemCard } from "@/components/menu/menu-item-card";
 import { cn } from "@/lib/utils/cn";
-import { menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
+import { hexToRgba, menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
 import { getAdminAppData, listClients, saveSettings } from "@/lib/firebase/firestore";
 import { setActiveClientSlug } from "@/lib/tenant";
 import { defaultAppearanceSettings, defaultGeneralSettings, defaultMenuItems, defaultMenuSettings } from "@/data/default-data";
@@ -234,6 +234,17 @@ export function MenuDesigner() {
                       step={1}
                       value={appearance.welcomeFormBlur ?? 24}
                       onChange={(e) => update({ welcomeFormBlur: Number(e.target.value) })}
+                      className="w-full accent-primary"
+                    />
+                  </Field>
+                  <Field label={`Form/card transparency (${appearance.welcomeFormTransparency ?? 15}%)`}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={appearance.welcomeFormTransparency ?? 15}
+                      onChange={(e) => update({ welcomeFormTransparency: Number(e.target.value) })}
                       className="w-full accent-primary"
                     />
                   </Field>
@@ -671,7 +682,7 @@ export function MenuDesigner() {
           <Card>
             <CardHeader><CardTitle>Preview</CardTitle></CardHeader>
             <CardContent>
-              <DesignPreview appearance={appearance} general={general} menu={menu} />
+              <DesignPreview activeTab={activeDesignerTab} appearance={appearance} general={general} menu={menu} />
             </CardContent>
           </Card>
         </div>
@@ -723,7 +734,17 @@ function designerPatternStyle(pattern: string, color: string): React.CSSProperti
 // the chosen appearance so header/search/card/background changes are visible
 // before saving. Uses the same MenuItemCard and theme-variable injection as the
 // live menu.
-function DesignPreview({ appearance, general, menu }: { appearance: AppearanceSettings; general: GeneralSettings; menu: MenuSettings }) {
+function DesignPreview({
+  activeTab,
+  appearance,
+  general,
+  menu
+}: {
+  activeTab: DesignerTab;
+  appearance: AppearanceSettings;
+  general: GeneralSettings;
+  menu: MenuSettings;
+}) {
   const overlay = appearance.backgroundType === "image" ? Math.min(100, Math.max(0, appearance.backgroundOverlay ?? 45)) / 100 : 0;
   const cardDesign = appearance.cardDesign ?? "classic";
   const gridClass = cardDesign === "compact" ? "grid gap-3" : "grid gap-4 sm:grid-cols-2";
@@ -746,9 +767,12 @@ function DesignPreview({ appearance, general, menu }: { appearance: AppearanceSe
   const promo = general.promoText?.en;
   const locale = useMemo(() => "en" as const, []);
 
+  if (activeTab === "welcome") {
+    return <WelcomePreview appearance={appearance} general={general} menu={menu} />;
+  }
+
   return (
     <div className={cn("space-y-4", isDark && "dark")}>
-      <WelcomePreview appearance={appearance} general={general} menu={menu} />
       <div className="relative overflow-hidden rounded-xl border" style={{ ...menuThemeStyle(appearance) }}>
         <div className="absolute inset-0" style={previewBackgroundStyle(appearance)} aria-hidden />
         {overlay ? <div className="absolute inset-0 bg-black" style={{ opacity: overlay }} aria-hidden /> : null}
@@ -797,7 +821,7 @@ function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceS
       <div
         className={cn("relative mx-auto mt-5 max-w-[260px] overflow-hidden p-5 text-center", welcomePreviewCardClass(appearance))}
         style={{
-          backgroundColor: appearance.welcomeFormColor || undefined,
+          backgroundColor: welcomePreviewFormBackgroundColor(appearance),
           borderColor: appearance.welcomeFormBorderColor || undefined,
           color: foreground,
           ...welcomePreviewBlurStyle(appearance.welcomeFormBlur)
@@ -863,6 +887,19 @@ function welcomePreviewBlurStyle(value: number | undefined): React.CSSProperties
     backdropFilter: `blur(${blur}px)`,
     WebkitBackdropFilter: `blur(${blur}px)`
   };
+}
+
+function welcomePreviewFormBackgroundColor(appearance: AppearanceSettings) {
+  const transparency = normalizeWelcomePreviewTransparency(appearance.welcomeFormTransparency);
+  if (transparency === undefined) return appearance.welcomeFormColor || undefined;
+  const alpha = 1 - transparency / 100;
+  if (!appearance.welcomeFormColor) return `hsl(var(--card) / ${alpha.toFixed(2)})`;
+  return hexToRgba(appearance.welcomeFormColor, alpha) || appearance.welcomeFormColor;
+}
+
+function normalizeWelcomePreviewTransparency(value: number | undefined) {
+  if (typeof value !== "number" || Number.isNaN(value)) return undefined;
+  return Math.min(100, Math.max(0, value));
 }
 
 function welcomePreviewPatternStyle(pattern: string, color: string, opacity: number): React.CSSProperties {

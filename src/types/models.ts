@@ -324,6 +324,7 @@ export type AppearanceSettings = {
   welcomeFormTextColor?: string;
   welcomeFormBorderColor?: string;
   welcomeFormBlur?: number;
+  welcomeFormTransparency?: number;
   welcomeBackgroundStyle?: WelcomeBackgroundStyle;
   welcomeBackgroundColor?: string;
   welcomeBackgroundGradientFrom?: string;

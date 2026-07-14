@@ -25,6 +25,13 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   };
 }
 
+export function hexToRgba(hex: string, alpha: number): string | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const opacity = Math.min(1, Math.max(0, alpha));
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+}
+
 /**
  * Convert a hex color to a `"H S% L%"` string for use as a CSS variable value,
  * e.g. `hexToHslVar("#0f766e")` → `"174 60% 26%"`. Returns null for invalid
