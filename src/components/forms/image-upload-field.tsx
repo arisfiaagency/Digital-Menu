@@ -184,5 +184,5 @@ export function ImageUploadField({
 function mediaTypeFromUrl(url?: string): UploadMediaType | null {
   if (!url) return null;
   const pathname = url.split("?")[0]?.toLowerCase() || "";
-  return /\.(mp4|webm|mov|m4v)$/.test(pathname) ? "video" : "image";
+  return /\.(mp4|webm)$/.test(pathname) ? "video" : "image";
 }

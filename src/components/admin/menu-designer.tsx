@@ -294,8 +294,8 @@ export function MenuDesigner() {
                       imageUrl={appearance.welcomeBackgroundImageUrl}
                       mediaType={appearance.welcomeBackgroundMediaType}
                       helpText={WELCOME_BACKGROUND_MEDIA_HINT}
-                      inputHint="Images or MP4/WebM/MOV videos up to 100 MB."
-                      accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                      inputHint="Images or MP4/WebM videos up to 100 MB."
+                      accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
                       allowVideo
                       maxBytes={WELCOME_BACKGROUND_MEDIA_MAX_BYTES}
                       maxBytesLabel="100 MB"
@@ -915,7 +915,7 @@ function WelcomePreviewBackgroundVideo({ appearance }: { appearance: AppearanceS
 function isWelcomePreviewBackgroundVideo(appearance: AppearanceSettings) {
   const url = appearance.welcomeBackgroundImageUrl;
   if (!url || (appearance.welcomeBackgroundStyle ?? "gradient") !== "image") return false;
-  return appearance.welcomeBackgroundMediaType === "video" || /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
+  return appearance.welcomeBackgroundMediaType === "video" || /\.(mp4|webm)(\?.*)?$/i.test(url);
 }
 
 function welcomePreviewCardClass(appearance: AppearanceSettings) {

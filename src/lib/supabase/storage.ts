@@ -11,8 +11,7 @@ const allowedImageTypes: Record<string, string> = {
 
 const allowedVideoTypes: Record<string, string> = {
   "video/mp4": "mp4",
-  "video/webm": "webm",
-  "video/quicktime": "mov"
+  "video/webm": "webm"
 };
 
 const maxImageBytes = 10 * 1024 * 1024;
@@ -24,7 +23,8 @@ export function validateImageFile(file: File) {
 }
 
 export function validateMediaFile(file: File, { maxBytes = maxImageBytes, maxBytesLabel = "10 MB" }: { maxBytes?: number; maxBytesLabel?: string } = {}) {
-  if (!allowedImageTypes[file.type] && !allowedVideoTypes[file.type]) return "Use a JPG, PNG, WebP, GIF, MP4, WebM, or MOV file.";
+  if (file.type === "video/quicktime") return "MOV/QuickTime videos are not supported. Please upload MP4 or WebM.";
+  if (!allowedImageTypes[file.type] && !allowedVideoTypes[file.type]) return "Use a JPG, PNG, WebP, GIF, MP4, or WebM file.";
   if (file.size > maxBytes) return `Files must be ${maxBytesLabel} or smaller.`;
   return null;
 }

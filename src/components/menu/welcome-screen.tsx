@@ -340,7 +340,7 @@ function WelcomeBackgroundVideo({ appearance }: { appearance: AppearanceSettings
 function isWelcomeBackgroundVideo(appearance: AppearanceSettings) {
   const url = appearance.welcomeBackgroundImageUrl;
   if (!url || (appearance.welcomeBackgroundStyle ?? "gradient") !== "image") return false;
-  return appearance.welcomeBackgroundMediaType === "video" || /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
+  return appearance.welcomeBackgroundMediaType === "video" || /\.(mp4|webm)(\?.*)?$/i.test(url);
 }
 
 function WelcomeBackgroundPattern({ appearance }: { appearance: AppearanceSettings }) {

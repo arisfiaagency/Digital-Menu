@@ -22,6 +22,12 @@ describe("Supabase image storage helpers", () => {
     expect(mediaExtensionForFile(file)).toBe("mp4");
   });
 
+  it("rejects QuickTime video uploads with a clear message", () => {
+    const file = new File(["video"], "welcome-background.mov", { type: "video/quicktime" });
+
+    expect(validateMediaFile(file, { maxBytes: 100 * 1024 * 1024, maxBytesLabel: "100 MB" })).toBe("MOV/QuickTime videos are not supported. Please upload MP4 or WebM.");
+  });
+
   it("rejects oversized welcome background media", () => {
     const file = { name: "welcome-background.mp4", type: "video/mp4", size: 101 * 1024 * 1024 } as File;
 
