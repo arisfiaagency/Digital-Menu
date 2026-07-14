@@ -45,7 +45,7 @@ export function MenuItemDetail({ itemId, initialData, menuPath = "/menu" }: { it
           <span dir={textDir} className="truncate">{translate(locale, "menu.backToMenu")}</span>
         </Link>
         <div className="flex shrink-0 items-center gap-2">
-          <ThemeToggle />
+          {data.menu.enableDarkMode !== false ? <ThemeToggle /> : null}
           <LanguageGlobe locale={locale} onChange={setLocale} />
         </div>
       </header>

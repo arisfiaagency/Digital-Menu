@@ -255,7 +255,7 @@ export type WelcomeThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "con
 export type WelcomeLanguageStyle = "buttons" | "segmented" | "cards" | "minimal";
 export type WelcomeCardStyle = "glass" | "solid" | "outlined" | "floating";
 export type WelcomePattern = "none" | "cafe" | "dots" | "grid" | "diagonal" | "waves";
-export type WelcomeBackgroundStyle = "gradient" | "solid" | "pattern";
+export type WelcomeBackgroundStyle = "gradient" | "solid" | "pattern" | "image";
 
 export type AppearanceSettings = {
   primaryColor: string;
@@ -327,6 +327,8 @@ export type AppearanceSettings = {
   welcomeBackgroundColor?: string;
   welcomeBackgroundGradientFrom?: string;
   welcomeBackgroundGradientTo?: string;
+  welcomeBackgroundImageUrl?: string;
+  welcomeBackgroundImagePath?: string;
   welcomeBackgroundPattern?: WelcomePattern;
   welcomeBackgroundPatternColor?: string;
   updatedAt?: Timestamp;

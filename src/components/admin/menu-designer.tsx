@@ -16,10 +16,11 @@ import { menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
 import { getAdminAppData, listClients, saveSettings } from "@/lib/firebase/firestore";
 import { setActiveClientSlug } from "@/lib/tenant";
 import { defaultAppearanceSettings, defaultGeneralSettings, defaultMenuItems, defaultMenuSettings } from "@/data/default-data";
-import type { AppearanceSettings, ClientAccount, GeneralSettings } from "@/types/models";
+import type { AppearanceSettings, ClientAccount, GeneralSettings, MenuSettings } from "@/types/models";
 
 const SAMPLE_ITEMS = defaultMenuItems.slice(0, 2);
 const HOUR_OPTIONS = Array.from({ length: 25 }, (_, hour) => hour);
+const WELCOME_BACKGROUND_IMAGE_HINT = "Recommended: 1080x1920 px mobile / 1920x1080 px desktop. Target: 1-2 MB. Max upload: 10 MB.";
 
 // Central per-cafe menu design editor, shown in the platform /admin panel. The
 // design data lives on each tenant (clients/{slug}/settings/{general,appearance}),
@@ -30,6 +31,7 @@ export function MenuDesigner() {
   const [clients, setClients] = useState<ClientAccount[]>([]);
   const [slug, setSlug] = useState("");
   const [general, setGeneral] = useState<GeneralSettings>(defaultGeneralSettings);
+  const [menu, setMenu] = useState<MenuSettings>(defaultMenuSettings);
   const [appearance, setAppearance] = useState<AppearanceSettings>(defaultAppearanceSettings);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,6 +54,7 @@ export function MenuDesigner() {
     try {
       const data = await getAdminAppData();
       setGeneral(data.general);
+      setMenu(data.menu);
       setAppearance(data.appearance);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load this cafe's design.");
@@ -70,6 +73,7 @@ export function MenuDesigner() {
     try {
       await Promise.all([
         saveSettings("general", general as unknown as Record<string, unknown>),
+        saveSettings("menu", menu as unknown as Record<string, unknown>),
         saveSettings("appearance", appearance as unknown as Record<string, unknown>)
       ]);
       setMessage("Saved. The live menu updates within about 20 seconds.");
@@ -82,6 +86,7 @@ export function MenuDesigner() {
   }
 
   const update = (patch: Partial<AppearanceSettings>) => setAppearance((prev) => ({ ...prev, ...patch }));
+  const updateMenu = (patch: Partial<MenuSettings>) => setMenu((prev) => ({ ...prev, ...patch }));
   const backgroundType = appearance.backgroundType ?? "preset";
 
   return (
@@ -134,21 +139,32 @@ export function MenuDesigner() {
                 </section>
 
                 <section className="grid gap-4 md:grid-cols-2">
-                  <Field label="Theme icon design">
-                    <Select value={appearance.welcomeThemeToggleStyle ?? "circle"} onChange={(e) => update({ welcomeThemeToggleStyle: e.target.value as AppearanceSettings["welcomeThemeToggleStyle"] })}>
-                      <option value="circle">Circle button</option>
-                      <option value="pill">Pill button</option>
-                      <option value="segmented">Segmented button</option>
-                    </Select>
-                  </Field>
-                  <Field label="Theme icon set">
-                    <Select value={appearance.welcomeThemeIconStyle ?? "sunMoon"} onChange={(e) => update({ welcomeThemeIconStyle: e.target.value as AppearanceSettings["welcomeThemeIconStyle"] })}>
-                      <option value="sunMoon">Sun / moon</option>
-                      <option value="coffeeMoon">Coffee / moon</option>
-                      <option value="sparkles">Sparkles / moon</option>
-                      <option value="contrast">Contrast icon</option>
-                    </Select>
-                  </Field>
+                  <div className="flex items-center justify-between gap-3 rounded-md border p-3 md:col-span-2">
+                    <div>
+                      <p className="text-sm font-medium">Show dark/night mode toggle</p>
+                      <p className="text-xs text-muted-foreground">Turn this off if this cafe should not offer dark mode to customers.</p>
+                    </div>
+                    <Switch label="Show dark/night mode toggle" checked={menu.enableDarkMode !== false} onCheckedChange={(v) => updateMenu({ enableDarkMode: v })} />
+                  </div>
+                  {menu.enableDarkMode !== false ? (
+                    <>
+                      <Field label="Theme icon design">
+                        <Select value={appearance.welcomeThemeToggleStyle ?? "circle"} onChange={(e) => update({ welcomeThemeToggleStyle: e.target.value as AppearanceSettings["welcomeThemeToggleStyle"] })}>
+                          <option value="circle">Circle button</option>
+                          <option value="pill">Pill button</option>
+                          <option value="segmented">Segmented button</option>
+                        </Select>
+                      </Field>
+                      <Field label="Theme icon set">
+                        <Select value={appearance.welcomeThemeIconStyle ?? "sunMoon"} onChange={(e) => update({ welcomeThemeIconStyle: e.target.value as AppearanceSettings["welcomeThemeIconStyle"] })}>
+                          <option value="sunMoon">Sun / moon</option>
+                          <option value="coffeeMoon">Coffee / moon</option>
+                          <option value="sparkles">Sparkles / moon</option>
+                          <option value="contrast">Contrast icon</option>
+                        </Select>
+                      </Field>
+                    </>
+                  ) : null}
                   <Field label="Language selector design">
                     <Select value={appearance.welcomeLanguageStyle ?? "buttons"} onChange={(e) => update({ welcomeLanguageStyle: e.target.value as AppearanceSettings["welcomeLanguageStyle"] })}>
                       <option value="buttons">Icon + buttons</option>
@@ -194,6 +210,7 @@ export function MenuDesigner() {
                         <option value="gradient">Gradient</option>
                         <option value="solid">Solid color</option>
                         <option value="pattern">Pattern over color</option>
+                        <option value="image">Uploaded image design</option>
                       </Select>
                     </Field>
                     <Field label="Pattern">
@@ -211,6 +228,17 @@ export function MenuDesigner() {
                     <Field label="Gradient start"><Input type="color" value={appearance.welcomeBackgroundGradientFrom || "#d7efd8"} onChange={(e) => update({ welcomeBackgroundGradientFrom: e.target.value })} /></Field>
                     <Field label="Gradient end"><Input type="color" value={appearance.welcomeBackgroundGradientTo || "#86cc8a"} onChange={(e) => update({ welcomeBackgroundGradientTo: e.target.value })} /></Field>
                   </div>
+                  {(appearance.welcomeBackgroundStyle ?? "gradient") === "image" ? (
+                    <ImageUploadField
+                      label="Welcome background image"
+                      path={`clients/${slug}/welcome-background`}
+                      imageUrl={appearance.welcomeBackgroundImageUrl}
+                      helpText={WELCOME_BACKGROUND_IMAGE_HINT}
+                      inputHint="1080x1920 px mobile / 1920x1080 px desktop. Target 1-2 MB."
+                      onUploaded={(result) => update({ welcomeBackgroundImageUrl: result.imageUrl, welcomeBackgroundImagePath: result.imagePath })}
+                      onRemoved={() => update({ welcomeBackgroundImageUrl: undefined, welcomeBackgroundImagePath: undefined })}
+                    />
+                  ) : null}
                 </section>
               </CardContent>
             </Card>
@@ -603,7 +631,7 @@ export function MenuDesigner() {
           <Card>
             <CardHeader><CardTitle>Preview</CardTitle></CardHeader>
             <CardContent>
-              <DesignPreview appearance={appearance} general={general} />
+              <DesignPreview appearance={appearance} general={general} menu={menu} />
             </CardContent>
           </Card>
         </div>
@@ -655,7 +683,7 @@ function designerPatternStyle(pattern: string, color: string): React.CSSProperti
 // the chosen appearance so header/search/card/background changes are visible
 // before saving. Uses the same MenuItemCard and theme-variable injection as the
 // live menu.
-function DesignPreview({ appearance, general }: { appearance: AppearanceSettings; general: GeneralSettings }) {
+function DesignPreview({ appearance, general, menu }: { appearance: AppearanceSettings; general: GeneralSettings; menu: MenuSettings }) {
   const overlay = appearance.backgroundType === "image" ? Math.min(100, Math.max(0, appearance.backgroundOverlay ?? 45)) / 100 : 0;
   const cardDesign = appearance.cardDesign ?? "classic";
   const gridClass = cardDesign === "compact" ? "grid gap-3" : "grid gap-4 sm:grid-cols-2";
@@ -680,7 +708,7 @@ function DesignPreview({ appearance, general }: { appearance: AppearanceSettings
 
   return (
     <div className={cn("space-y-4", isDark && "dark")}>
-      <WelcomePreview appearance={appearance} general={general} />
+      <WelcomePreview appearance={appearance} general={general} menu={menu} />
       <div className="relative overflow-hidden rounded-xl border" style={{ ...menuThemeStyle(appearance) }}>
         <div className="absolute inset-0" style={previewBackgroundStyle(appearance)} aria-hidden />
         {overlay ? <div className="absolute inset-0 bg-black" style={{ opacity: overlay }} aria-hidden /> : null}
@@ -714,7 +742,7 @@ function DesignPreview({ appearance, general }: { appearance: AppearanceSettings
   );
 }
 
-function WelcomePreview({ appearance, general }: { appearance: AppearanceSettings; general: GeneralSettings }) {
+function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceSettings; general: GeneralSettings; menu: MenuSettings }) {
   const accent = appearance.welcomeAccentColor || appearance.primaryColor || "#A4D8A6";
   const name = general.restaurantName.en || "Cafe";
   const header = general.welcomeHeader?.en || "Welcome to";
@@ -736,8 +764,8 @@ function WelcomePreview({ appearance, general }: { appearance: AppearanceSetting
       >
         {cardPattern !== "none" ? <div className="absolute inset-0" style={welcomePreviewPatternStyle(cardPattern, appearance.welcomeBackgroundPatternColor || accent, 0.08)} aria-hidden /> : null}
         <div className="relative space-y-3">
-          <div className="absolute right-0 top-0 h-8 w-8 rounded-full border bg-background/80" />
-          <p className="pr-10 text-sm font-bold" style={{ color: accent }}>{header}</p>
+          {menu.enableDarkMode !== false ? <div className="absolute right-0 top-0 h-8 w-8 rounded-full border bg-background/80" /> : null}
+          <p className={cn("text-sm font-bold", menu.enableDarkMode !== false && "pr-10")} style={{ color: accent }}>{header}</p>
           <div className="mx-auto h-16 w-16 rounded-full bg-primary/20 ring-4 ring-white/60" />
           <h3 className="text-xl font-bold" style={{ color: foreground }}>{name}</h3>
           <div className="mx-auto h-3 w-28 rounded-full bg-muted" />
@@ -764,6 +792,15 @@ function WelcomePreview({ appearance, general }: { appearance: AppearanceSetting
 
 function welcomePreviewBackgroundStyle(appearance: AppearanceSettings): React.CSSProperties {
   const style = appearance.welcomeBackgroundStyle ?? "gradient";
+  if (style === "image" && appearance.welcomeBackgroundImageUrl) {
+    return {
+      backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8",
+      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), url(${appearance.welcomeBackgroundImageUrl})`,
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      backgroundSize: "cover"
+    };
+  }
   if (style === "solid" || style === "pattern") return { backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8" };
   return {
     backgroundImage: `linear-gradient(135deg, ${appearance.welcomeBackgroundGradientFrom || "#d7efd8"}, ${appearance.welcomeAccentColor || "#A4D8A6"}, ${appearance.welcomeBackgroundGradientTo || "#86cc8a"})`

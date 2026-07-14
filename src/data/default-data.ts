@@ -97,6 +97,8 @@ export const defaultAppearanceSettings = {
   welcomeBackgroundColor: "#d7efd8",
   welcomeBackgroundGradientFrom: "#d7efd8",
   welcomeBackgroundGradientTo: "#86cc8a",
+  welcomeBackgroundImageUrl: "",
+  welcomeBackgroundImagePath: "",
   welcomeBackgroundPattern: "cafe" as const,
   welcomeBackgroundPatternColor: "#3f8a49"
 };

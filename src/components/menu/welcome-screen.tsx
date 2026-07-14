@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils/cn";
 import { SocialLinks } from "@/components/menu/social-links";
 import { BrandCredit } from "@/components/brand-credit";
 import { hexToHslVar, readableForegroundHslVar } from "@/lib/utils/color";
-import type { AppearanceSettings, GeneralSettings, WelcomePattern } from "@/types/models";
+import type { AppearanceSettings, GeneralSettings, MenuSettings, WelcomePattern } from "@/types/models";
 
 // The welcome screen always opens in this language, regardless of any previously
 // stored public locale.
@@ -32,11 +32,13 @@ export function WelcomeScreen({
   initialGeneral,
   initialSocial,
   initialAppearance,
+  initialMenu,
   menuHref = "/menu"
 }: {
   initialGeneral?: GeneralSettings;
   initialSocial?: GeneralSettings["socialLinks"];
   initialAppearance?: AppearanceSettings;
+  initialMenu?: MenuSettings;
   menuHref?: string;
 }) {
   const { locale, setLocale, dir: textDir } = useLocale(WELCOME_DEFAULT_LOCALE, {
@@ -44,6 +46,7 @@ export function WelcomeScreen({
     readStored: false
   });
   const general = initialGeneral ?? defaultAppData.general;
+  const menu = initialMenu ?? defaultAppData.menu;
   const appearance = initialAppearance ?? defaultAppData.appearance;
   const restaurantName = localized(general.restaurantName, locale);
   const welcomeHeader = localized(general.welcomeHeader, locale, translate(locale, "welcome.greeting"));
@@ -112,11 +115,13 @@ export function WelcomeScreen({
         <div className="relative z-10">
         {/* Fixed physical corner (right) so it doesn't move when the selected
             language flips the page direction. */}
-        <ThemeToggle
-          presentation={appearance.welcomeThemeToggleStyle ?? "circle"}
-          iconStyle={appearance.welcomeThemeIconStyle ?? "sunMoon"}
-          className="absolute right-4 top-4 z-20 border-primary/35 bg-background/70 shadow-sm backdrop-blur hover:bg-muted"
-        />
+        {menu.enableDarkMode !== false ? (
+          <ThemeToggle
+            presentation={appearance.welcomeThemeToggleStyle ?? "circle"}
+            iconStyle={appearance.welcomeThemeIconStyle ?? "sunMoon"}
+            className="absolute right-4 top-4 z-20 border-primary/35 bg-background/70 shadow-sm backdrop-blur hover:bg-muted"
+          />
+        ) : null}
 
         <p
           dir={textDir}
@@ -251,6 +256,15 @@ function welcomeThemeStyle(accentColor: string): CSSProperties {
 
 function welcomeBackgroundStyle(appearance: AppearanceSettings): CSSProperties {
   const design = appearance.welcomeBackgroundStyle ?? "gradient";
+  if (design === "image" && appearance.welcomeBackgroundImageUrl) {
+    return {
+      backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8",
+      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), url(${appearance.welcomeBackgroundImageUrl})`,
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      backgroundSize: "cover"
+    };
+  }
   if (design === "solid" || design === "pattern") {
     return { backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8" };
   }

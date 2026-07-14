@@ -16,6 +16,7 @@ export default async function ClientWelcomePage({ params }: { params: Promise<{ 
       initialGeneral={data.general}
       initialSocial={data.general.socialLinks}
       initialAppearance={data.appearance}
+      initialMenu={data.menu}
       menuHref={clientMenuPath(client.slug)}
     />
   );

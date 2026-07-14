@@ -160,6 +160,7 @@ export function MenuApp({
   const logoUrl = data.general.logoUrl;
   const serviceFeePercent = data.general.serviceFeePercent ?? 10;
   const cartGrandTotal = cart.totalPrice + serviceFeeAmount(cart.totalPrice, serviceFeePercent);
+  const darkModeEnabled = data.menu.enableDarkMode !== false;
 
   const appearance = data.appearance;
   const cardDesign = appearance.cardDesign ?? "classic";
@@ -237,7 +238,7 @@ export function MenuApp({
   const actionButtons = (
     <div className="flex shrink-0 items-center justify-end gap-2">
       {data.menu.showPrices ? <CartIconButton count={cart.totalQuantity} locale={locale} onClick={() => setCartOpen(true)} /> : null}
-      <ThemeToggle />
+      {darkModeEnabled ? <ThemeToggle /> : null}
       <LanguageGlobe locale={locale} onChange={setLocale} />
     </div>
   );

@@ -16,6 +16,7 @@ export function ImageUploadField({
   imageUrl,
   imageHistory = [],
   helpText,
+  inputHint,
   onUploaded,
   onRemoved,
   onRollback,
@@ -27,6 +28,7 @@ export function ImageUploadField({
   imageUrl?: string;
   imageHistory?: ImageHistoryEntry[];
   helpText?: string;
+  inputHint?: string;
   onUploaded: (result: { imageUrl: string; imagePath: string }) => void;
   onRemoved?: () => void;
   onRollback?: (entry: ImageHistoryEntry) => void;
@@ -102,6 +104,7 @@ export function ImageUploadField({
           onChange={handleChange}
           disabled={isUploading}
         />
+        {inputHint ? <p className="hidden max-w-56 text-xs leading-snug text-muted-foreground sm:block">{inputHint}</p> : null}
         <Button
           type="button"
           variant="outline"
