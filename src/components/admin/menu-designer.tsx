@@ -20,7 +20,8 @@ import type { AppearanceSettings, ClientAccount, GeneralSettings, MenuSettings }
 
 const SAMPLE_ITEMS = defaultMenuItems.slice(0, 2);
 const HOUR_OPTIONS = Array.from({ length: 25 }, (_, hour) => hour);
-const WELCOME_BACKGROUND_IMAGE_HINT = "Recommended: 1080x1920 px mobile / 1920x1080 px desktop. Target: 1-2 MB. Max upload: 10 MB.";
+const WELCOME_BACKGROUND_MEDIA_HINT = "Supports images or videos. Recommended: 1080x1920 px mobile / 1920x1080 px desktop. Max upload: 100 MB.";
+const WELCOME_BACKGROUND_MEDIA_MAX_BYTES = 100 * 1024 * 1024;
 type DesignerTab = "menu" | "welcome";
 
 // Central per-cafe menu design editor, shown in the platform /admin panel. The
@@ -268,7 +269,7 @@ export function MenuDesigner() {
                         <option value="gradient">Gradient</option>
                         <option value="solid">Solid color</option>
                         <option value="pattern">Pattern over color</option>
-                        <option value="image">Uploaded image design</option>
+                        <option value="image">Uploaded image/video design</option>
                       </Select>
                     </Field>
                     <Field label="Pattern">
@@ -288,13 +289,18 @@ export function MenuDesigner() {
                   </div>
                   {(appearance.welcomeBackgroundStyle ?? "gradient") === "image" ? (
                     <ImageUploadField
-                      label="Welcome background image"
+                      label="Welcome background image or video"
                       path={`clients/${slug}/welcome-background`}
                       imageUrl={appearance.welcomeBackgroundImageUrl}
-                      helpText={WELCOME_BACKGROUND_IMAGE_HINT}
-                      inputHint="1080x1920 px mobile / 1920x1080 px desktop. Target 1-2 MB."
-                      onUploaded={(result) => update({ welcomeBackgroundImageUrl: result.imageUrl, welcomeBackgroundImagePath: result.imagePath })}
-                      onRemoved={() => update({ welcomeBackgroundImageUrl: undefined, welcomeBackgroundImagePath: undefined })}
+                      mediaType={appearance.welcomeBackgroundMediaType}
+                      helpText={WELCOME_BACKGROUND_MEDIA_HINT}
+                      inputHint="Images or MP4/WebM/MOV videos up to 100 MB."
+                      accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                      allowVideo
+                      maxBytes={WELCOME_BACKGROUND_MEDIA_MAX_BYTES}
+                      maxBytesLabel="100 MB"
+                      onUploaded={(result) => update({ welcomeBackgroundImageUrl: result.imageUrl, welcomeBackgroundImagePath: result.imagePath, welcomeBackgroundMediaType: result.mediaType ?? "image" })}
+                      onRemoved={() => update({ welcomeBackgroundImageUrl: undefined, welcomeBackgroundImagePath: undefined, welcomeBackgroundMediaType: undefined })}
                     />
                   ) : null}
                 </section>
@@ -828,6 +834,7 @@ function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceS
 
   return (
     <div className="relative h-[420px] overflow-hidden rounded-xl border p-4" style={{ ...previewThemeStyle, ...welcomePreviewBackgroundStyle(appearance) }}>
+      <WelcomePreviewBackgroundVideo appearance={appearance} />
       {pattern !== "none" ? <div className="absolute inset-0" style={welcomePreviewPatternStyle(pattern, appearance.welcomeBackgroundPatternColor || accent, pattern === "cafe" ? 0.14 : 0.2)} aria-hidden /> : null}
       <div
         className={cn("relative mx-auto mt-5 max-w-[260px] overflow-hidden p-5 text-center", welcomePreviewCardClass(appearance))}
@@ -870,7 +877,7 @@ function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceS
 
 function welcomePreviewBackgroundStyle(appearance: AppearanceSettings): React.CSSProperties {
   const style = appearance.welcomeBackgroundStyle ?? "gradient";
-  if (style === "image" && appearance.welcomeBackgroundImageUrl) {
+  if (style === "image" && appearance.welcomeBackgroundImageUrl && !isWelcomePreviewBackgroundVideo(appearance)) {
     return {
       backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8",
       backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), url(${appearance.welcomeBackgroundImageUrl})`,
@@ -879,10 +886,36 @@ function welcomePreviewBackgroundStyle(appearance: AppearanceSettings): React.CS
       backgroundSize: "cover"
     };
   }
+  if (style === "image") return { backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8" };
   if (style === "solid" || style === "pattern") return { backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8" };
   return {
     backgroundImage: `linear-gradient(135deg, ${appearance.welcomeBackgroundGradientFrom || "#d7efd8"}, ${appearance.welcomeAccentColor || "#A4D8A6"}, ${appearance.welcomeBackgroundGradientTo || "#86cc8a"})`
   };
+}
+
+function WelcomePreviewBackgroundVideo({ appearance }: { appearance: AppearanceSettings }) {
+  if (!isWelcomePreviewBackgroundVideo(appearance)) return null;
+  return (
+    <>
+      <video
+        src={appearance.welcomeBackgroundImageUrl}
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        muted
+        loop
+        playsInline
+        autoPlay
+        preload="metadata"
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute inset-0 bg-black/15" aria-hidden />
+    </>
+  );
+}
+
+function isWelcomePreviewBackgroundVideo(appearance: AppearanceSettings) {
+  const url = appearance.welcomeBackgroundImageUrl;
+  if (!url || (appearance.welcomeBackgroundStyle ?? "gradient") !== "image") return false;
+  return appearance.welcomeBackgroundMediaType === "video" || /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
 }
 
 function welcomePreviewCardClass(appearance: AppearanceSettings) {

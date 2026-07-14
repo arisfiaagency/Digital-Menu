@@ -6,17 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminErrorText } from "@/components/admin/admin-preferences";
 import { hasSupabaseConfig } from "@/lib/supabase/client";
-import { compressImage, uploadImage, validateImageFile } from "@/lib/supabase/storage";
+import { compressImage, mediaTypeForFile, uploadImage, uploadMedia, validateImageFile, validateMediaFile, type UploadMediaType } from "@/lib/supabase/storage";
 import type { ImageHistoryEntry } from "@/types/models";
+
+type UploadResult = { imageUrl: string; imagePath: string; mediaType?: UploadMediaType };
 
 export function ImageUploadField({
   label,
   text,
   path,
   imageUrl,
+  mediaType,
   imageHistory = [],
   helpText,
   inputHint,
+  accept = "image/jpeg,image/png,image/webp,image/gif",
+  allowVideo = false,
+  maxBytes,
+  maxBytesLabel,
   onUploaded,
   onRemoved,
   onRollback,
@@ -26,15 +33,21 @@ export function ImageUploadField({
   text?: Record<string, string>;
   path: string;
   imageUrl?: string;
+  mediaType?: UploadMediaType;
   imageHistory?: ImageHistoryEntry[];
   helpText?: string;
   inputHint?: string;
-  onUploaded: (result: { imageUrl: string; imagePath: string }) => void;
+  accept?: string;
+  allowVideo?: boolean;
+  maxBytes?: number;
+  maxBytesLabel?: string;
+  onUploaded: (result: UploadResult) => void;
   onRemoved?: () => void;
   onRollback?: (entry: ImageHistoryEntry) => void;
   onUploadingChange?: (uploading: boolean) => void;
 }) {
   const [preview, setPreview] = useState(imageUrl || "");
+  const [previewMediaType, setPreviewMediaType] = useState<UploadMediaType>(mediaType || mediaTypeFromUrl(imageUrl) || "image");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,7 +56,8 @@ export function ImageUploadField({
 
   useEffect(() => {
     setPreview(imageUrl || "");
-  }, [imageUrl]);
+    setPreviewMediaType(mediaType || mediaTypeFromUrl(imageUrl) || "image");
+  }, [imageUrl, mediaType]);
 
   async function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -54,22 +68,27 @@ export function ImageUploadField({
       event.target.value = "";
       return;
     }
-    const validation = validateImageFile(file);
+    const validation = allowVideo ? validateMediaFile(file, { maxBytes, maxBytesLabel }) : validateImageFile(file);
     if (validation) {
       setError(validation);
       event.target.value = "";
       return;
     }
+    const selectedMediaType = mediaTypeForFile(file);
     setPreview(URL.createObjectURL(file));
+    setPreviewMediaType(selectedMediaType);
     setProgress(0);
     onUploadingChange?.(true);
     try {
-      const uploadFile = await compressImage(file);
-      const result = await uploadImage(path, uploadFile, setProgress);
+      const uploadFile = selectedMediaType === "image" ? await compressImage(file) : file;
+      const result = allowVideo
+        ? await uploadMedia(path, uploadFile, setProgress, { maxBytes, maxBytesLabel })
+        : await uploadImage(path, uploadFile, setProgress);
       setPreview(result.imageUrl);
+      setPreviewMediaType(result.mediaType ?? selectedMediaType);
       onUploaded(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text?.imageUploadFailed || "Image upload failed.");
+      setError(err instanceof Error ? err.message : text?.imageUploadFailed || "File upload failed.");
     } finally {
       onUploadingChange?.(false);
       event.target.value = "";
@@ -79,6 +98,7 @@ export function ImageUploadField({
   function removeCurrentImage() {
     setError("");
     setPreview("");
+    setPreviewMediaType("image");
     onRemoved?.();
   }
 
@@ -92,15 +112,19 @@ export function ImageUploadField({
     <div className="space-y-2">
       <label className="text-sm font-medium">{label}</label>
       {preview ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="" className="h-32 w-full rounded-md border object-cover" />
+        previewMediaType === "video" ? (
+          <video src={preview} className="h-32 w-full rounded-md border object-cover" muted loop playsInline autoPlay aria-hidden />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt="" className="h-32 w-full rounded-md border object-cover" />
+        )
       ) : null}
       {helpText ? <p className="text-xs text-muted-foreground">{helpText}</p> : null}
       <div className="flex items-center gap-2">
         <Input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={accept}
           onChange={handleChange}
           disabled={isUploading}
         />
@@ -155,4 +179,10 @@ export function ImageUploadField({
       {error ? <p className="text-sm text-destructive">{text ? adminErrorText(error, text) : error}</p> : null}
     </div>
   );
+}
+
+function mediaTypeFromUrl(url?: string): UploadMediaType | null {
+  if (!url) return null;
+  const pathname = url.split("?")[0]?.toLowerCase() || "";
+  return /\.(mp4|webm|mov|m4v)$/.test(pathname) ? "video" : "image";
 }

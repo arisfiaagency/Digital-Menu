@@ -335,6 +335,7 @@ export type AppearanceSettings = {
   welcomeBackgroundGradientTo?: string;
   welcomeBackgroundImageUrl?: string;
   welcomeBackgroundImagePath?: string;
+  welcomeBackgroundMediaType?: "image" | "video";
   welcomeBackgroundPattern?: WelcomePattern;
   welcomeBackgroundPatternColor?: string;
   updatedAt?: Timestamp;

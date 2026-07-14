@@ -104,6 +104,7 @@ export function WelcomeScreen({
       style={mainStyle}
       className="no-select fixed inset-0 flex touch-none items-center justify-center overflow-hidden overscroll-none p-4"
     >
+      <WelcomeBackgroundVideo appearance={appearance} />
       <WelcomeBackgroundPattern appearance={appearance} />
 
       <section
@@ -259,7 +260,7 @@ function welcomeThemeStyle(accentColor: string): CSSProperties {
 
 function welcomeBackgroundStyle(appearance: AppearanceSettings): CSSProperties {
   const design = appearance.welcomeBackgroundStyle ?? "gradient";
-  if (design === "image" && appearance.welcomeBackgroundImageUrl) {
+  if (design === "image" && appearance.welcomeBackgroundImageUrl && !isWelcomeBackgroundVideo(appearance)) {
     return {
       backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8",
       backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), url(${appearance.welcomeBackgroundImageUrl})`,
@@ -268,6 +269,7 @@ function welcomeBackgroundStyle(appearance: AppearanceSettings): CSSProperties {
       backgroundSize: "cover"
     };
   }
+  if (design === "image") return { backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8" };
   if (design === "solid" || design === "pattern") {
     return { backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8" };
   }
@@ -314,6 +316,31 @@ function welcomeFormBackgroundColor(appearance: AppearanceSettings) {
 function normalizeWelcomeFormTransparency(value: number | undefined) {
   if (typeof value !== "number" || Number.isNaN(value)) return undefined;
   return Math.min(100, Math.max(0, value));
+}
+
+function WelcomeBackgroundVideo({ appearance }: { appearance: AppearanceSettings }) {
+  if (!isWelcomeBackgroundVideo(appearance)) return null;
+  return (
+    <>
+      <video
+        src={appearance.welcomeBackgroundImageUrl}
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        muted
+        loop
+        playsInline
+        autoPlay
+        preload="metadata"
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute inset-0 bg-black/15" aria-hidden />
+    </>
+  );
+}
+
+function isWelcomeBackgroundVideo(appearance: AppearanceSettings) {
+  const url = appearance.welcomeBackgroundImageUrl;
+  if (!url || (appearance.welcomeBackgroundStyle ?? "gradient") !== "image") return false;
+  return appearance.welcomeBackgroundMediaType === "video" || /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
 }
 
 function WelcomeBackgroundPattern({ appearance }: { appearance: AppearanceSettings }) {
