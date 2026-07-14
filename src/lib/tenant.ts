@@ -21,6 +21,10 @@ export function clientMenuPath(slug: string) {
   return `/${normalizeClientSlug(slug)}/menu`;
 }
 
+export function clientPublicPath(slug: string) {
+  return `/${normalizeClientSlug(slug)}`;
+}
+
 export function clientAdminPath(slug: string, path = "") {
   const base = `/${normalizeClientSlug(slug)}/admin`;
   return path ? `${base}${path.startsWith("/") ? path : `/${path}`}` : base;

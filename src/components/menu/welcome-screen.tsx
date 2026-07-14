@@ -27,17 +27,26 @@ import type { GeneralSettings } from "@/types/models";
 // stored public locale.
 const WELCOME_DEFAULT_LOCALE = "ckb";
 
-export function WelcomeScreen({ initialSocial }: { initialSocial?: GeneralSettings["socialLinks"] }) {
+export function WelcomeScreen({
+  initialGeneral,
+  initialSocial,
+  menuHref = "/menu"
+}: {
+  initialGeneral?: GeneralSettings;
+  initialSocial?: GeneralSettings["socialLinks"];
+  menuHref?: string;
+}) {
   const { locale, setLocale, dir: textDir } = useLocale(WELCOME_DEFAULT_LOCALE, {
     documentDirection: "ltr",
     readStored: false
   });
-  const restaurantName = localized(defaultAppData.general.restaurantName, locale);
-  const logoUrl = defaultAppData.general.logoUrl;
+  const general = initialGeneral ?? defaultAppData.general;
+  const restaurantName = localized(general.restaurantName, locale);
+  const logoUrl = general.logoUrl;
 
   // Live social links come from the server (falls back to default data). No
   // client Firebase fetch — the welcome page ships zero Firebase.
-  const social = initialSocial ?? defaultAppData.general.socialLinks;
+  const social = initialSocial ?? general.socialLinks;
 
   // Brand mint #A4D8A6 (HSL 122 40% 75%) as the accent. Deep-green foreground
   // keeps text legible on the light mint. Scoped to this subtree so the shared
@@ -170,7 +179,7 @@ export function WelcomeScreen({ initialSocial }: { initialSocial?: GeneralSettin
             and guarantees the fixed-body scroll lock is fully released. The
             chosen language still carries over via localStorage. */}
         <Button asChild size="default" className="mt-8 h-12 w-full text-base font-semibold">
-          <a href="/menu" onClick={releaseScrollLock}>
+          <a href={menuHref} onClick={releaseScrollLock}>
             <span dir={textDir}>{translate(locale, "welcome.enter")}</span>
             <ArrowRight className="h-5 w-5" aria-hidden />
           </a>

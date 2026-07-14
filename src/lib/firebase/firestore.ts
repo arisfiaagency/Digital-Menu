@@ -55,6 +55,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null;
 }
 
+function getSiteOrigin() {
+  return (process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")).replace(/\/+$/, "");
+}
+
 const categoryConverter = converter<Category>();
 const itemConverter = converter<MenuItem>();
 const expenseConverter = converter<Expense>();
@@ -144,7 +148,7 @@ async function seedClientDefaults(slug: string, client: ClientAccount) {
   batch.set(doc(db, "clients", slug, "settings", "general"), stripUndefined(general));
   batch.set(doc(db, "clients", slug, "settings", "menu"), { ...defaultAppData.menu, updatedAt: serverTimestamp() });
   batch.set(doc(db, "clients", slug, "settings", "appearance"), { ...defaultAppData.appearance, updatedAt: serverTimestamp() });
-  batch.set(doc(db, "clients", slug, "settings", "qr"), { ...defaultAppData.qr, menuUrl: `/${slug}/menu`, updatedAt: serverTimestamp() });
+  batch.set(doc(db, "clients", slug, "settings", "qr"), { ...defaultAppData.qr, menuUrl: `${getSiteOrigin()}/${slug}`, updatedAt: serverTimestamp() });
   batch.set(doc(db, "clients", slug, "settings", "pos"), { ...serializePosState(defaultPosState), updatedAt: serverTimestamp() });
   await batch.commit();
 }

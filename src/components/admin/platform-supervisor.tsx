@@ -15,7 +15,7 @@ import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { hasFirebaseClientConfig } from "@/lib/firebase/client";
 import { listClients, saveClient } from "@/lib/firebase/firestore";
 import { logoutAdmin } from "@/lib/firebase/auth";
-import { clientAdminPath, clientMenuPath, normalizeClientSlug } from "@/lib/tenant";
+import { clientAdminPath, clientMenuPath, clientPublicPath, normalizeClientSlug } from "@/lib/tenant";
 import type { ClientAccount, ClientStatus, Currency, Locale } from "@/types/models";
 
 const currencies: Currency[] = ["IQD", "USD", "EUR", "TRY"];
@@ -189,6 +189,8 @@ export function PlatformSupervisor() {
                   <Input id="client-slug" value={slug} onChange={(event) => setSlug(event.target.value)} placeholder={resolvedSlug || "stone"} />
                 </Field>
                 <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                  Welcome: <span className="font-medium text-foreground">/{resolvedSlug || "client"}</span>
+                  <br />
                   Menu: <span className="font-medium text-foreground">/{resolvedSlug || "client"}/menu</span>
                   <br />
                   Admin: <span className="font-medium text-foreground">/{resolvedSlug || "client"}/admin</span>
@@ -238,6 +240,12 @@ export function PlatformSupervisor() {
                         {client.ownerEmail ? <p className="text-sm text-muted-foreground">{client.ownerEmail}</p> : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={clientPublicPath(client.slug)} target="_blank">
+                            <ExternalLink className="h-4 w-4" aria-hidden />
+                            Welcome
+                          </Link>
+                        </Button>
                         <Button asChild variant="outline" size="sm">
                           <Link href={clientMenuPath(client.slug)} target="_blank">
                             <ExternalLink className="h-4 w-4" aria-hidden />

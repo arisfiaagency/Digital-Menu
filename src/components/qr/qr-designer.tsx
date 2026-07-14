@@ -21,7 +21,7 @@ export type QrPrintVariant = "qr" | "design";
 
 export function QrDesigner({ printMode = false, printVariant = "design", tableLabels = [] }: { printMode?: boolean; printVariant?: QrPrintVariant; tableLabels?: string[] }) {
   const { text, dir: textDir } = useAdminLocale();
-  const { adminBasePath, menuPath } = useTenant();
+  const { adminBasePath, menuPath, publicPath } = useTenant();
   const [settings, setSettings] = useState<QrSettings>(defaultQrSettings);
   const [dataUrl, setDataUrl] = useState("");
   const [svg, setSvg] = useState("");
@@ -32,13 +32,15 @@ export function QrDesigner({ printMode = false, printVariant = "design", tableLa
   const [posTables, setPosTables] = useState<string[]>([]);
   const [customInput, setCustomInput] = useState("");
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
-  const menuUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}${menuPath}`;
+  const siteOrigin = getSiteOrigin();
+  const menuUrl = `${siteOrigin}${publicPath}`;
+  const directMenuUrl = `${siteOrigin}${menuPath}`;
 
   useEffect(() => {
     getAdminAppData().then((data) => {
-      setSettings({ ...data.qr, menuUrl: data.qr.menuUrl || menuUrl });
+      setSettings({ ...data.qr, menuUrl: normalizeQrUrl(data.qr.menuUrl, menuUrl, directMenuUrl, menuPath, siteOrigin) });
     });
-  }, [menuUrl]);
+  }, [directMenuUrl, menuPath, menuUrl, siteOrigin]);
 
   // Load the real POS tables (active, in display order) for the "All POS tables"
   // mode. The custom text field is never touched by this, so what you type stays.
@@ -444,6 +446,17 @@ function isValidUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function getSiteOrigin() {
+  return (process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")).replace(/\/+$/, "");
+}
+
+function normalizeQrUrl(value: string | undefined, publicUrl: string, directMenuUrl: string, menuPath: string, siteOrigin: string) {
+  if (!value) return publicUrl;
+  if (value === menuPath || value === directMenuUrl) return publicUrl;
+  if (value.startsWith("/") && !value.startsWith("//")) return `${siteOrigin}${value}`;
+  return value;
 }
 
 function download(href: string, filename: string) {
