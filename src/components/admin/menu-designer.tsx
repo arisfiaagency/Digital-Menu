@@ -165,6 +165,11 @@ export function MenuDesigner() {
                     <Field label="Welcome header (Arabic)"><Input dir="rtl" value={general.welcomeHeader?.ar || ""} placeholder="أهلاً بك في" onChange={(e) => setGeneral({ ...general, welcomeHeader: { ...general.welcomeHeader, ar: e.target.value } })} /></Field>
                     <Field label="Welcome header (Kurdish)"><Input dir="rtl" value={general.welcomeHeader?.ckb || ""} placeholder="بەخێربێیت بۆ" onChange={(e) => setGeneral({ ...general, welcomeHeader: { ...general.welcomeHeader, ckb: e.target.value } })} /></Field>
                   </div>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Field label="Tagline (English)"><Input value={general.welcomeTagline?.en || ""} placeholder="Freshly brewed, just for you" onChange={(e) => setGeneral({ ...general, welcomeTagline: { ...general.welcomeTagline, en: e.target.value } })} /></Field>
+                    <Field label="Tagline (Arabic)"><Input dir="rtl" value={general.welcomeTagline?.ar || ""} placeholder="قهوة طازجة، خصيصاً لك" onChange={(e) => setGeneral({ ...general, welcomeTagline: { ...general.welcomeTagline, ar: e.target.value } })} /></Field>
+                    <Field label="Tagline (Kurdish)"><Input dir="rtl" value={general.welcomeTagline?.ckb || ""} placeholder="قاوەی تازە، تایبەت بۆ تۆ" onChange={(e) => setGeneral({ ...general, welcomeTagline: { ...general.welcomeTagline, ckb: e.target.value } })} /></Field>
+                  </div>
                 </section>
 
                 <section className="grid gap-4 md:grid-cols-2">
@@ -203,6 +208,8 @@ export function MenuDesigner() {
                     </Select>
                   </Field>
                   <Field label="Accent color"><Input type="color" value={appearance.welcomeAccentColor || "#A4D8A6"} onChange={(e) => update({ welcomeAccentColor: e.target.value })} /></Field>
+                  <Field label="Welcome text color"><Input type="color" value={appearance.welcomeHeaderTextColor || appearance.welcomeAccentColor || "#A4D8A6"} onChange={(e) => update({ welcomeHeaderTextColor: e.target.value })} /></Field>
+                  <Field label="Tagline/helper text color"><Input type="color" value={appearance.welcomeHelperTextColor || appearance.welcomeFormTextColor || "#6b7280"} onChange={(e) => update({ welcomeHelperTextColor: e.target.value })} /></Field>
                 </section>
 
                 <section className="grid gap-4 md:grid-cols-2">
@@ -810,13 +817,17 @@ function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceS
   const accent = appearance.welcomeAccentColor || appearance.primaryColor || "#A4D8A6";
   const name = general.restaurantName.en || "Cafe";
   const header = general.welcomeHeader?.en || "Welcome to";
+  const tagline = general.welcomeTagline?.en || "Freshly brewed, just for you";
   const pattern = appearance.welcomeBackgroundPattern ?? "cafe";
   const cardPattern = appearance.welcomeCardPattern ?? "none";
   const foreground = appearance.welcomeFormTextColor || undefined;
+  const headerColor = appearance.welcomeHeaderTextColor || accent;
+  const helperColor = appearance.welcomeHelperTextColor || foreground;
+  const helperStyle = helperColor ? { color: helperColor } : undefined;
   const previewThemeStyle = menuThemeStyle({ ...appearance, primaryColor: accent });
 
   return (
-    <div className="relative h-80 overflow-hidden rounded-xl border p-4" style={{ ...previewThemeStyle, ...welcomePreviewBackgroundStyle(appearance) }}>
+    <div className="relative h-[420px] overflow-hidden rounded-xl border p-4" style={{ ...previewThemeStyle, ...welcomePreviewBackgroundStyle(appearance) }}>
       {pattern !== "none" ? <div className="absolute inset-0" style={welcomePreviewPatternStyle(pattern, appearance.welcomeBackgroundPatternColor || accent, pattern === "cafe" ? 0.14 : 0.2)} aria-hidden /> : null}
       <div
         className={cn("relative mx-auto mt-5 max-w-[260px] overflow-hidden p-5 text-center", welcomePreviewCardClass(appearance))}
@@ -830,10 +841,11 @@ function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceS
         {cardPattern !== "none" ? <div className="absolute inset-0" style={welcomePreviewPatternStyle(cardPattern, appearance.welcomeBackgroundPatternColor || accent, 0.08)} aria-hidden /> : null}
         <div className="relative space-y-3">
           {menu.enableDarkMode !== false ? <div className="absolute right-0 top-0 h-8 w-8 rounded-full border bg-background/80" /> : null}
-          <p className={cn("text-sm font-bold", menu.enableDarkMode !== false && "pr-10")} style={{ color: accent }}>{header}</p>
+          <p className={cn("text-sm font-bold", menu.enableDarkMode !== false && "pr-10")} style={{ color: headerColor }}>{header}</p>
           <div className="mx-auto h-16 w-16 rounded-full bg-primary/20 ring-4 ring-white/60" />
           <h3 className="text-xl font-bold" style={{ color: foreground }}>{name}</h3>
-          <div className="mx-auto h-3 w-28 rounded-full bg-muted" />
+          <p className="text-xs text-muted-foreground" style={helperStyle}>{tagline}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground" style={helperStyle}>Choose your language</p>
           <div className={cn("mx-auto flex justify-center gap-1.5", (appearance.welcomeLanguageStyle ?? "buttons") === "cards" && "grid w-full grid-cols-3")}>
             {["کوردی", "العربية", "EN"].map((label, index) => (
               <span
@@ -849,6 +861,7 @@ function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceS
             ))}
           </div>
           <div className="h-9 rounded-full bg-primary" />
+          <p className="text-[10px] font-medium text-muted-foreground" style={helperStyle}>Find us on social media</p>
         </div>
       </div>
     </div>

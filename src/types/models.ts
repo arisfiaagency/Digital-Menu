@@ -74,6 +74,8 @@ export type GeneralSettings = {
   promoText?: OptionalLocalizedText;
   // Optional headline on the public welcome page, e.g. "Welcome to".
   welcomeHeader?: OptionalLocalizedText;
+  // Optional tagline on the public welcome page, e.g. "Freshly brewed, just for you".
+  welcomeTagline?: OptionalLocalizedText;
   phone?: string;
   whatsapp?: string;
   email?: string;
@@ -315,6 +317,8 @@ export type AppearanceSettings = {
   promoColor?: string;
   // Welcome page presentation at /{clientSlug}.
   welcomeAccentColor?: string;
+  welcomeHeaderTextColor?: string;
+  welcomeHelperTextColor?: string;
   welcomeThemeToggleStyle?: WelcomeThemeToggleStyle;
   welcomeThemeIconStyle?: WelcomeThemeIconStyle;
   welcomeLanguageStyle?: WelcomeLanguageStyle;

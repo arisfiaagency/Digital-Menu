@@ -16,6 +16,11 @@ export const defaultGeneralSettings: GeneralSettings = {
     ar: "أهلاً بك في",
     ckb: "بەخێربێیت بۆ"
   },
+  welcomeTagline: {
+    en: "Freshly brewed, just for you",
+    ar: "قهوة طازجة، خصيصاً لك",
+    ckb: "قاوەی تازە، تایبەت بۆ تۆ"
+  },
   logoUrl: "/stone-cafe-logo.jpg",
   phone: "+964 750 000 0000",
   whatsapp: "+9647500000000",
@@ -88,6 +93,8 @@ export const defaultAppearanceSettings = {
   aboveCategory: "none" as const,
   promoColor: "#0f766e",
   welcomeAccentColor: "#A4D8A6",
+  welcomeHeaderTextColor: "#A4D8A6",
+  welcomeHelperTextColor: "#6b7280",
   welcomeThemeToggleStyle: "circle" as const,
   welcomeThemeIconStyle: "sunMoon" as const,
   welcomeLanguageStyle: "buttons" as const,

@@ -50,6 +50,7 @@ export function WelcomeScreen({
   const appearance = initialAppearance ?? defaultAppData.appearance;
   const restaurantName = localized(general.restaurantName, locale);
   const welcomeHeader = localized(general.welcomeHeader, locale, translate(locale, "welcome.greeting"));
+  const welcomeTagline = localized(general.welcomeTagline, locale, translate(locale, "welcome.tagline"));
   const logoUrl = general.logoUrl;
 
   // Live social links come from the server (falls back to default data). No
@@ -64,6 +65,8 @@ export function WelcomeScreen({
   const mainStyle = { ...accentStyle, ...welcomeBackgroundStyle(appearance) } as CSSProperties;
   const formTextStyle = appearance.welcomeFormTextColor ? { color: appearance.welcomeFormTextColor } : undefined;
   const mutedTextStyle = appearance.welcomeFormTextColor ? { color: appearance.welcomeFormTextColor, opacity: 0.72 } : undefined;
+  const welcomeHeaderStyle = { color: appearance.welcomeHeaderTextColor || accentColor };
+  const helperTextStyle = appearance.welcomeHelperTextColor ? { color: appearance.welcomeHelperTextColor } : mutedTextStyle;
 
   // The welcome always shows Kurdish by default, but the menu reads the persisted
   // locale (`stone-cafe-menu-locale`). Without syncing, a previously chosen language
@@ -125,7 +128,7 @@ export function WelcomeScreen({
 
         <p
           dir={textDir}
-          style={{ color: accentColor }}
+          style={welcomeHeaderStyle}
           className={cn(
             "font-bold",
             // Arabic/Kurdish letters join up, so letter-spacing looks broken —
@@ -170,8 +173,8 @@ export function WelcomeScreen({
         <h1 dir={textDir} className="text-3xl font-bold text-foreground" style={formTextStyle}>
           {restaurantName}
         </h1>
-        <p dir={textDir} className="text-sm text-muted-foreground" style={mutedTextStyle}>
-          {translate(locale, "welcome.tagline")}
+        <p dir={textDir} className="text-sm text-muted-foreground" style={helperTextStyle}>
+          {welcomeTagline}
         </p>
 
         {/* Language */}
@@ -184,7 +187,7 @@ export function WelcomeScreen({
               // break the glyphs, so only the Latin (English) label gets them.
               textDir === "rtl" ? "text-sm tracking-normal" : "text-xs uppercase tracking-wide"
             )}
-            style={mutedTextStyle}
+            style={helperTextStyle}
           >
             {translate(locale, "welcome.chooseLanguage")}
           </p>
@@ -210,7 +213,7 @@ export function WelcomeScreen({
 
         {social && Object.values(social).some((value) => value?.trim()) ? (
           <div className="mt-6 space-y-2">
-            <p dir={textDir} className="text-xs font-medium text-muted-foreground" style={mutedTextStyle}>
+            <p dir={textDir} className="text-xs font-medium text-muted-foreground" style={helperTextStyle}>
               {translate(locale, "welcome.findUsSocial")}
             </p>
             <SocialLinks social={social} className="justify-center" />
