@@ -286,7 +286,17 @@ function welcomeCardStyle(appearance: AppearanceSettings): CSSProperties {
   if (appearance.welcomeFormColor) style.backgroundColor = appearance.welcomeFormColor;
   if (appearance.welcomeFormTextColor) style.color = appearance.welcomeFormTextColor;
   if (appearance.welcomeFormBorderColor) style.borderColor = appearance.welcomeFormBorderColor;
+  const blur = normalizeWelcomeFormBlur(appearance.welcomeFormBlur);
+  if (blur !== undefined) {
+    style.backdropFilter = `blur(${blur}px)`;
+    style.WebkitBackdropFilter = `blur(${blur}px)`;
+  }
   return style;
+}
+
+function normalizeWelcomeFormBlur(value: number | undefined) {
+  if (typeof value !== "number" || Number.isNaN(value)) return undefined;
+  return Math.min(40, Math.max(0, value));
 }
 
 function WelcomeBackgroundPattern({ appearance }: { appearance: AppearanceSettings }) {

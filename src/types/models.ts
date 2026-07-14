@@ -323,6 +323,7 @@ export type AppearanceSettings = {
   welcomeFormColor?: string;
   welcomeFormTextColor?: string;
   welcomeFormBorderColor?: string;
+  welcomeFormBlur?: number;
   welcomeBackgroundStyle?: WelcomeBackgroundStyle;
   welcomeBackgroundColor?: string;
   welcomeBackgroundGradientFrom?: string;

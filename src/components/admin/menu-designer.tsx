@@ -21,6 +21,7 @@ import type { AppearanceSettings, ClientAccount, GeneralSettings, MenuSettings }
 const SAMPLE_ITEMS = defaultMenuItems.slice(0, 2);
 const HOUR_OPTIONS = Array.from({ length: 25 }, (_, hour) => hour);
 const WELCOME_BACKGROUND_IMAGE_HINT = "Recommended: 1080x1920 px mobile / 1920x1080 px desktop. Target: 1-2 MB. Max upload: 10 MB.";
+type DesignerTab = "menu" | "welcome";
 
 // Central per-cafe menu design editor, shown in the platform /admin panel. The
 // design data lives on each tenant (clients/{slug}/settings/{general,appearance}),
@@ -37,6 +38,7 @@ export function MenuDesigner() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [activeDesignerTab, setActiveDesignerTab] = useState<DesignerTab>("menu");
 
   useEffect(() => {
     listClients()
@@ -118,7 +120,34 @@ export function MenuDesigner() {
 
         {slug && !loading ? (
           <>
-            <Card>
+            <div className="inline-flex w-full max-w-md gap-1 rounded-lg border bg-muted/40 p-1" role="tablist" aria-label="Design sections">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeDesignerTab === "menu"}
+                onClick={() => setActiveDesignerTab("menu")}
+                className={cn(
+                  "flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                  activeDesignerTab === "menu" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Menu Page
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeDesignerTab === "welcome"}
+                onClick={() => setActiveDesignerTab("welcome")}
+                className={cn(
+                  "flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                  activeDesignerTab === "welcome" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Welcome Page
+              </button>
+            </div>
+
+            <Card className={activeDesignerTab === "welcome" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Welcome Page</CardTitle></CardHeader>
               <CardContent className="grid gap-6">
                 <section className="grid gap-4">
@@ -197,6 +226,17 @@ export function MenuDesigner() {
                   <Field label="Form/card color"><Input type="color" value={appearance.welcomeFormColor || "#ffffff"} onChange={(e) => update({ welcomeFormColor: e.target.value })} /></Field>
                   <Field label="Form/card text color"><Input type="color" value={appearance.welcomeFormTextColor || "#111827"} onChange={(e) => update({ welcomeFormTextColor: e.target.value })} /></Field>
                   <Field label="Form/card border color"><Input type="color" value={appearance.welcomeFormBorderColor || "#A4D8A6"} onChange={(e) => update({ welcomeFormBorderColor: e.target.value })} /></Field>
+                  <Field label={`Form/card blur (${appearance.welcomeFormBlur ?? 24}px)`}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={40}
+                      step={1}
+                      value={appearance.welcomeFormBlur ?? 24}
+                      onChange={(e) => update({ welcomeFormBlur: Number(e.target.value) })}
+                      className="w-full accent-primary"
+                    />
+                  </Field>
                 </section>
 
                 <section className="grid gap-4">
@@ -243,7 +283,7 @@ export function MenuDesigner() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Branding</CardTitle></CardHeader>
               <CardContent className="grid gap-4">
                 <ImageUploadField
@@ -261,7 +301,7 @@ export function MenuDesigner() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Colors &amp; Theme</CardTitle></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-4">
                 <Field label="Primary color"><Input type="color" value={appearance.primaryColor} onChange={(e) => update({ primaryColor: e.target.value })} /></Field>
@@ -276,7 +316,7 @@ export function MenuDesigner() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Header</CardTitle></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="Logo design">
@@ -332,7 +372,7 @@ export function MenuDesigner() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Hours &amp; Contact Links</CardTitle></CardHeader>
               <CardContent className="grid gap-4">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -383,7 +423,7 @@ export function MenuDesigner() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Search Bar</CardTitle></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-3">
                 <Field label="Shape">
@@ -437,7 +477,7 @@ export function MenuDesigner() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Item Cards</CardTitle></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="Card design">
@@ -457,7 +497,7 @@ export function MenuDesigner() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Categories</CardTitle></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="Category nav style">
@@ -486,7 +526,7 @@ export function MenuDesigner() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Above Categories</CardTitle></CardHeader>
               <CardContent className="grid gap-4">
                 <Field label="Region">
@@ -525,7 +565,7 @@ export function MenuDesigner() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Background</CardTitle></CardHeader>
               <CardContent className="grid gap-4">
                 <Field label="Background type">
@@ -759,7 +799,8 @@ function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceS
         style={{
           backgroundColor: appearance.welcomeFormColor || undefined,
           borderColor: appearance.welcomeFormBorderColor || undefined,
-          color: foreground
+          color: foreground,
+          ...welcomePreviewBlurStyle(appearance.welcomeFormBlur)
         }}
       >
         {cardPattern !== "none" ? <div className="absolute inset-0" style={welcomePreviewPatternStyle(cardPattern, appearance.welcomeBackgroundPatternColor || accent, 0.08)} aria-hidden /> : null}
@@ -813,6 +854,15 @@ function welcomePreviewCardClass(appearance: AppearanceSettings) {
   if (style === "outlined") return "rounded-2xl border-2 border-primary/35 bg-background/80 shadow-xl backdrop-blur";
   if (style === "floating") return "rounded-[2rem] border bg-card shadow-2xl shadow-primary/20";
   return "rounded-3xl border border-primary/35 bg-card/85 shadow-2xl backdrop-blur-xl";
+}
+
+function welcomePreviewBlurStyle(value: number | undefined): React.CSSProperties {
+  if (typeof value !== "number" || Number.isNaN(value)) return {};
+  const blur = Math.min(40, Math.max(0, value));
+  return {
+    backdropFilter: `blur(${blur}px)`,
+    WebkitBackdropFilter: `blur(${blur}px)`
+  };
 }
 
 function welcomePreviewPatternStyle(pattern: string, color: string, opacity: number): React.CSSProperties {
