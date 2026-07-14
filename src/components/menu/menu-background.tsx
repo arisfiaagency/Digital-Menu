@@ -1,5 +1,6 @@
 import { CakeSlice, Coffee, Croissant, CupSoda, GlassWater, Martini, Pizza, Sandwich } from "lucide-react";
-import type { AppearanceSettings } from "@/types/models";
+import type { CSSProperties } from "react";
+import type { AppearanceSettings, MenuBackgroundPattern } from "@/types/models";
 
 // Public menu background. The cafe chooses the type in the /admin designer:
 //   preset   → the drifting coffee-shop animation (default, original look)
@@ -34,18 +35,119 @@ export function MenuBackground({ appearance }: { appearance?: AppearanceSettings
 
   if (type === "image" && appearance?.backgroundImageUrl) {
     const overlay = Math.min(100, Math.max(0, appearance?.backgroundOverlay ?? 45)) / 100;
+    const imageStyle = appearance.backgroundImageStyle ?? "cover";
     return (
       <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden>
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${appearance.backgroundImageUrl})` }}
+          className="absolute inset-0 bg-center"
+          style={{
+            backgroundImage: `url(${appearance.backgroundImageUrl})`,
+            backgroundSize: imageStyle === "tile" ? "220px auto" : imageStyle,
+            backgroundRepeat: imageStyle === "tile" ? "repeat" : "no-repeat",
+            backgroundAttachment: imageStyle === "fixed" ? "fixed" : undefined
+          }}
         />
         <div className="absolute inset-0 bg-black" style={{ opacity: overlay }} />
       </div>
     );
   }
 
+  if (type === "pattern") {
+    return (
+      <PatternBackground
+        pattern={appearance?.backgroundPattern ?? "dots"}
+        color={appearance?.backgroundPatternColor || appearance?.primaryColor || "#3f8a49"}
+        baseColor={appearance?.backgroundColor || "#ffffff"}
+        animated={appearance?.backgroundPatternAnimated !== false}
+      />
+    );
+  }
+
   return <PresetBackground />;
+}
+
+function PatternBackground({
+  pattern,
+  color,
+  baseColor,
+  animated
+}: {
+  pattern: MenuBackgroundPattern;
+  color: string;
+  baseColor: string;
+  animated: boolean;
+}) {
+  if (pattern === "none") {
+    return <div className="pointer-events-none fixed inset-0 -z-10" style={{ backgroundColor: baseColor }} aria-hidden />;
+  }
+  if (pattern === "cafe") return <PresetBackground />;
+  return (
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" style={{ backgroundColor: baseColor }} aria-hidden>
+      <div
+        className={animated ? "menu-pattern-pan absolute inset-[-20%]" : "absolute inset-0"}
+        style={patternStyle(pattern, color)}
+      />
+    </div>
+  );
+}
+
+function patternStyle(pattern: MenuBackgroundPattern, color: string): CSSProperties {
+  const base: CSSProperties = { color, opacity: 0.18 };
+  if (pattern === "grid") {
+    return {
+      ...base,
+      backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)",
+      backgroundSize: "34px 34px"
+    };
+  }
+  if (pattern === "diagonal") {
+    return {
+      ...base,
+      backgroundImage: "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 18px)"
+    };
+  }
+  if (pattern === "waves") {
+    return {
+      ...base,
+      backgroundImage: "radial-gradient(70% 60% at 50% 100%, transparent 58%, currentColor 60%, transparent 62%)",
+      backgroundSize: "58px 32px"
+    };
+  }
+  if (pattern === "checker") {
+    return {
+      ...base,
+      backgroundImage: "linear-gradient(45deg, currentColor 25%, transparent 25%), linear-gradient(-45deg, currentColor 25%, transparent 25%), linear-gradient(45deg, transparent 75%, currentColor 75%), linear-gradient(-45deg, transparent 75%, currentColor 75%)",
+      backgroundPosition: "0 0, 0 14px, 14px -14px, -14px 0",
+      backgroundSize: "28px 28px"
+    };
+  }
+  if (pattern === "confetti") {
+    return {
+      ...base,
+      backgroundImage: "radial-gradient(circle at 20% 30%, currentColor 0 2px, transparent 2px), radial-gradient(circle at 70% 65%, currentColor 0 1.5px, transparent 1.5px), linear-gradient(35deg, transparent 45%, currentColor 45% 48%, transparent 48%)",
+      backgroundSize: "64px 64px"
+    };
+  }
+  if (pattern === "stars") {
+    return {
+      ...base,
+      backgroundImage: "radial-gradient(circle at 50% 50%, currentColor 0 1.4px, transparent 1.6px), radial-gradient(circle at 15% 20%, currentColor 0 1px, transparent 1.2px)",
+      backgroundSize: "44px 44px"
+    };
+  }
+  if (pattern === "mesh") {
+    return {
+      ...base,
+      opacity: 0.26,
+      backgroundImage: "radial-gradient(circle at 20% 20%, currentColor, transparent 30%), radial-gradient(circle at 80% 30%, currentColor, transparent 28%), radial-gradient(circle at 45% 80%, currentColor, transparent 34%)",
+      backgroundSize: "360px 360px"
+    };
+  }
+  return {
+    ...base,
+    backgroundImage: "radial-gradient(currentColor 1.6px, transparent 1.6px)",
+    backgroundSize: "22px 22px"
+  };
 }
 
 // The original drifting coffee-shop animation, tuned softly so menu content stays

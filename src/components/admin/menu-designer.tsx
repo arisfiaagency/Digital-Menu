@@ -19,6 +19,7 @@ import { defaultAppearanceSettings, defaultGeneralSettings, defaultMenuItems, de
 import type { AppearanceSettings, ClientAccount, GeneralSettings } from "@/types/models";
 
 const SAMPLE_ITEMS = defaultMenuItems.slice(0, 2);
+const HOUR_OPTIONS = Array.from({ length: 25 }, (_, hour) => hour);
 
 // Central per-cafe menu design editor, shown in the platform /admin panel. The
 // design data lives on each tenant (clients/{slug}/settings/{general,appearance}),
@@ -71,7 +72,7 @@ export function MenuDesigner() {
         saveSettings("general", general as unknown as Record<string, unknown>),
         saveSettings("appearance", appearance as unknown as Record<string, unknown>)
       ]);
-      setMessage("Saved. The live menu updates within about a minute.");
+      setMessage("Saved. The live menu updates within about 20 seconds.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save the design.");
     } finally {
@@ -113,6 +114,108 @@ export function MenuDesigner() {
         {slug && !loading ? (
           <>
             <Card>
+              <CardHeader><CardTitle>Welcome Page</CardTitle></CardHeader>
+              <CardContent className="grid gap-6">
+                <section className="grid gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">Header &amp; cafe name</h3>
+                    <p className="text-sm text-muted-foreground">This controls the first screen at /{slug} before customers enter the menu.</p>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Field label="Cafe name (English)"><Input value={general.restaurantName.en} onChange={(e) => setGeneral({ ...general, restaurantName: { ...general.restaurantName, en: e.target.value } })} /></Field>
+                    <Field label="Cafe name (Arabic)"><Input dir="rtl" value={general.restaurantName.ar} onChange={(e) => setGeneral({ ...general, restaurantName: { ...general.restaurantName, ar: e.target.value } })} /></Field>
+                    <Field label="Cafe name (Kurdish)"><Input dir="rtl" value={general.restaurantName.ckb} onChange={(e) => setGeneral({ ...general, restaurantName: { ...general.restaurantName, ckb: e.target.value } })} /></Field>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Field label="Welcome header (English)"><Input value={general.welcomeHeader?.en || ""} placeholder="Welcome to" onChange={(e) => setGeneral({ ...general, welcomeHeader: { ...general.welcomeHeader, en: e.target.value } })} /></Field>
+                    <Field label="Welcome header (Arabic)"><Input dir="rtl" value={general.welcomeHeader?.ar || ""} placeholder="أهلاً بك في" onChange={(e) => setGeneral({ ...general, welcomeHeader: { ...general.welcomeHeader, ar: e.target.value } })} /></Field>
+                    <Field label="Welcome header (Kurdish)"><Input dir="rtl" value={general.welcomeHeader?.ckb || ""} placeholder="بەخێربێیت بۆ" onChange={(e) => setGeneral({ ...general, welcomeHeader: { ...general.welcomeHeader, ckb: e.target.value } })} /></Field>
+                  </div>
+                </section>
+
+                <section className="grid gap-4 md:grid-cols-2">
+                  <Field label="Theme icon design">
+                    <Select value={appearance.welcomeThemeToggleStyle ?? "circle"} onChange={(e) => update({ welcomeThemeToggleStyle: e.target.value as AppearanceSettings["welcomeThemeToggleStyle"] })}>
+                      <option value="circle">Circle button</option>
+                      <option value="pill">Pill button</option>
+                      <option value="segmented">Segmented button</option>
+                    </Select>
+                  </Field>
+                  <Field label="Theme icon set">
+                    <Select value={appearance.welcomeThemeIconStyle ?? "sunMoon"} onChange={(e) => update({ welcomeThemeIconStyle: e.target.value as AppearanceSettings["welcomeThemeIconStyle"] })}>
+                      <option value="sunMoon">Sun / moon</option>
+                      <option value="coffeeMoon">Coffee / moon</option>
+                      <option value="sparkles">Sparkles / moon</option>
+                      <option value="contrast">Contrast icon</option>
+                    </Select>
+                  </Field>
+                  <Field label="Language selector design">
+                    <Select value={appearance.welcomeLanguageStyle ?? "buttons"} onChange={(e) => update({ welcomeLanguageStyle: e.target.value as AppearanceSettings["welcomeLanguageStyle"] })}>
+                      <option value="buttons">Icon + buttons</option>
+                      <option value="segmented">Segmented control</option>
+                      <option value="cards">Language cards</option>
+                      <option value="minimal">Minimal text</option>
+                    </Select>
+                  </Field>
+                  <Field label="Accent color"><Input type="color" value={appearance.welcomeAccentColor || "#A4D8A6"} onChange={(e) => update({ welcomeAccentColor: e.target.value })} /></Field>
+                </section>
+
+                <section className="grid gap-4 md:grid-cols-2">
+                  <Field label="Form/card design">
+                    <Select value={appearance.welcomeCardStyle ?? "glass"} onChange={(e) => update({ welcomeCardStyle: e.target.value as AppearanceSettings["welcomeCardStyle"] })}>
+                      <option value="glass">Glass card</option>
+                      <option value="solid">Solid card</option>
+                      <option value="outlined">Outlined card</option>
+                      <option value="floating">Floating card</option>
+                    </Select>
+                  </Field>
+                  <Field label="Form/card pattern">
+                    <Select value={appearance.welcomeCardPattern ?? "none"} onChange={(e) => update({ welcomeCardPattern: e.target.value as AppearanceSettings["welcomeCardPattern"] })}>
+                      <option value="none">None</option>
+                      <option value="dots">Dots</option>
+                      <option value="grid">Grid</option>
+                      <option value="diagonal">Diagonal lines</option>
+                      <option value="waves">Waves</option>
+                    </Select>
+                  </Field>
+                  <Field label="Form/card color"><Input type="color" value={appearance.welcomeFormColor || "#ffffff"} onChange={(e) => update({ welcomeFormColor: e.target.value })} /></Field>
+                  <Field label="Form/card text color"><Input type="color" value={appearance.welcomeFormTextColor || "#111827"} onChange={(e) => update({ welcomeFormTextColor: e.target.value })} /></Field>
+                  <Field label="Form/card border color"><Input type="color" value={appearance.welcomeFormBorderColor || "#A4D8A6"} onChange={(e) => update({ welcomeFormBorderColor: e.target.value })} /></Field>
+                </section>
+
+                <section className="grid gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">Welcome background</h3>
+                    <p className="text-sm text-muted-foreground">Choose a background style, pattern, and colors for the /{slug} welcome screen.</p>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label="Background design">
+                      <Select value={appearance.welcomeBackgroundStyle ?? "gradient"} onChange={(e) => update({ welcomeBackgroundStyle: e.target.value as AppearanceSettings["welcomeBackgroundStyle"] })}>
+                        <option value="gradient">Gradient</option>
+                        <option value="solid">Solid color</option>
+                        <option value="pattern">Pattern over color</option>
+                      </Select>
+                    </Field>
+                    <Field label="Pattern">
+                      <Select value={appearance.welcomeBackgroundPattern ?? "cafe"} onChange={(e) => update({ welcomeBackgroundPattern: e.target.value as AppearanceSettings["welcomeBackgroundPattern"] })}>
+                        <option value="none">None</option>
+                        <option value="cafe">Floating cafe icons</option>
+                        <option value="dots">Dots</option>
+                        <option value="grid">Grid</option>
+                        <option value="diagonal">Diagonal lines</option>
+                        <option value="waves">Waves</option>
+                      </Select>
+                    </Field>
+                    <Field label="Background color"><Input type="color" value={appearance.welcomeBackgroundColor || "#d7efd8"} onChange={(e) => update({ welcomeBackgroundColor: e.target.value })} /></Field>
+                    <Field label="Pattern color"><Input type="color" value={appearance.welcomeBackgroundPatternColor || "#3f8a49"} onChange={(e) => update({ welcomeBackgroundPatternColor: e.target.value })} /></Field>
+                    <Field label="Gradient start"><Input type="color" value={appearance.welcomeBackgroundGradientFrom || "#d7efd8"} onChange={(e) => update({ welcomeBackgroundGradientFrom: e.target.value })} /></Field>
+                    <Field label="Gradient end"><Input type="color" value={appearance.welcomeBackgroundGradientTo || "#86cc8a"} onChange={(e) => update({ welcomeBackgroundGradientTo: e.target.value })} /></Field>
+                  </div>
+                </section>
+              </CardContent>
+            </Card>
+
+            <Card>
               <CardHeader><CardTitle>Branding</CardTitle></CardHeader>
               <CardContent className="grid gap-4">
                 <ImageUploadField
@@ -122,11 +225,6 @@ export function MenuDesigner() {
                   onUploaded={(result) => setGeneral({ ...general, logoUrl: result.imageUrl, logoPath: result.imagePath })}
                   onRemoved={() => setGeneral({ ...general, logoUrl: undefined, logoPath: undefined })}
                 />
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Field label="Name (English)"><Input value={general.restaurantName.en} onChange={(e) => setGeneral({ ...general, restaurantName: { ...general.restaurantName, en: e.target.value } })} /></Field>
-                  <Field label="Name (Arabic)"><Input dir="rtl" value={general.restaurantName.ar} onChange={(e) => setGeneral({ ...general, restaurantName: { ...general.restaurantName, ar: e.target.value } })} /></Field>
-                  <Field label="Name (Kurdish)"><Input dir="rtl" value={general.restaurantName.ckb} onChange={(e) => setGeneral({ ...general, restaurantName: { ...general.restaurantName, ckb: e.target.value } })} /></Field>
-                </div>
                 <div className="grid gap-4 md:grid-cols-3">
                   <Field label="Description (English)"><Textarea value={general.description.en || ""} onChange={(e) => setGeneral({ ...general, description: { ...general.description, en: e.target.value } })} /></Field>
                   <Field label="Description (Arabic)"><Textarea dir="rtl" value={general.description.ar || ""} onChange={(e) => setGeneral({ ...general, description: { ...general.description, ar: e.target.value } })} /></Field>
@@ -153,6 +251,15 @@ export function MenuDesigner() {
             <Card>
               <CardHeader><CardTitle>Header</CardTitle></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
+                <Field label="Logo design">
+                  <Select value={appearance.menuLogoStyle ?? "rounded"} onChange={(e) => update({ menuLogoStyle: e.target.value as AppearanceSettings["menuLogoStyle"] })}>
+                    <option value="rounded">Rounded square</option>
+                    <option value="circle">Circle</option>
+                    <option value="square">Sharp square</option>
+                    <option value="badge">Badge frame</option>
+                    <option value="wordmark">Wide wordmark</option>
+                  </Select>
+                </Field>
                 <Field label="Layout density">
                   <Select value={appearance.headerLayout} onChange={(e) => update({ headerLayout: e.target.value as AppearanceSettings["headerLayout"] })}>
                     <option value="expanded">Expanded</option>
@@ -163,6 +270,15 @@ export function MenuDesigner() {
                   <Select value={appearance.headerAlign ?? "left"} onChange={(e) => update({ headerAlign: e.target.value as AppearanceSettings["headerAlign"] })}>
                     <option value="left">Left</option>
                     <option value="center">Centered</option>
+                  </Select>
+                </Field>
+                <Field label="Open / closed badge">
+                  <Select value={appearance.openStatusStyle ?? "pill"} onChange={(e) => update({ openStatusStyle: e.target.value as AppearanceSettings["openStatusStyle"] })}>
+                    <option value="pill">Pill with time</option>
+                    <option value="compact">Compact status</option>
+                    <option value="outline">Outlined</option>
+                    <option value="card">Small card</option>
+                    <option value="banner">Filled banner</option>
                   </Select>
                 </Field>
                 <Field label="Header background">
@@ -189,23 +305,79 @@ export function MenuDesigner() {
             </Card>
 
             <Card>
+              <CardHeader><CardTitle>Hours &amp; Contact Links</CardTitle></CardHeader>
+              <CardContent className="grid gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Open time">
+                    <Select value={String(general.openHour ?? 9)} onChange={(e) => setGeneral({ ...general, openHour: Number(e.target.value) })}>
+                      {HOUR_OPTIONS.map((hour) => <option key={hour} value={hour}>{formatHourLabel(hour)}</option>)}
+                    </Select>
+                  </Field>
+                  <Field label="Close time">
+                    <Select value={String(general.closeHour ?? 23)} onChange={(e) => setGeneral({ ...general, closeHour: Number(e.target.value) })}>
+                      {HOUR_OPTIONS.map((hour) => <option key={hour} value={hour}>{formatHourLabel(hour)}</option>)}
+                    </Select>
+                  </Field>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Phone number"><Input value={general.phone || ""} onChange={(e) => setGeneral({ ...general, phone: e.target.value })} /></Field>
+                  <Field label="WhatsApp"><Input value={general.whatsapp || ""} onChange={(e) => setGeneral({ ...general, whatsapp: e.target.value })} /></Field>
+                  <Field label="Instagram"><Input value={general.socialLinks?.instagram || ""} onChange={(e) => setGeneral({ ...general, socialLinks: { ...general.socialLinks, instagram: e.target.value } })} /></Field>
+                  <Field label="Map URL"><Input value={general.googleMapsUrl || ""} onChange={(e) => setGeneral({ ...general, googleMapsUrl: e.target.value })} /></Field>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Field label="Contact layout">
+                    <Select value={appearance.contactLayout ?? "inline"} onChange={(e) => update({ contactLayout: e.target.value as AppearanceSettings["contactLayout"] })}>
+                      <option value="inline">Inline row</option>
+                      <option value="centered">Centered row</option>
+                      <option value="stacked">Stacked list</option>
+                      <option value="grid">Grid</option>
+                    </Select>
+                  </Field>
+                  <Field label="Contact chip design">
+                    <Select value={appearance.contactChipStyle ?? "pill"} onChange={(e) => update({ contactChipStyle: e.target.value as AppearanceSettings["contactChipStyle"] })}>
+                      <option value="pill">Pill</option>
+                      <option value="soft">Soft filled</option>
+                      <option value="outline">Primary outline</option>
+                      <option value="square">Square</option>
+                      <option value="iconOnly">Icon only</option>
+                    </Select>
+                  </Field>
+                  <Field label="Social button design">
+                    <Select value={appearance.socialLinkStyle ?? "icons"} onChange={(e) => update({ socialLinkStyle: e.target.value as AppearanceSettings["socialLinkStyle"] })}>
+                      <option value="icons">Circle icons</option>
+                      <option value="soft">Soft with label</option>
+                      <option value="outline">Outline with label</option>
+                      <option value="square">Square with label</option>
+                    </Select>
+                  </Field>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
               <CardHeader><CardTitle>Search Bar</CardTitle></CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
+              <CardContent className="grid gap-4 md:grid-cols-3">
                 <Field label="Shape">
                   <Select value={appearance.searchShape ?? "pill"} onChange={(e) => update({ searchShape: e.target.value as AppearanceSettings["searchShape"] })}>
                     <option value="pill">Pill</option>
                     <option value="rounded">Rounded</option>
                     <option value="square">Square</option>
+                    <option value="soft">Soft large radius</option>
                   </Select>
                 </Field>
                 <Field label="Fill">
                   <Select value={appearance.searchStyle ?? "outlined"} onChange={(e) => update({ searchStyle: e.target.value as AppearanceSettings["searchStyle"] })}>
                     <option value="outlined">Outlined</option>
                     <option value="filled">Filled</option>
+                    <option value="glass">Glass</option>
+                    <option value="underline">Underline</option>
+                    <option value="shadow">Floating shadow</option>
                   </Select>
                 </Field>
                 <Field label="Size">
                   <Select value={appearance.searchSize ?? "normal"} onChange={(e) => update({ searchSize: e.target.value as AppearanceSettings["searchSize"] })}>
+                    <option value="compact">Compact</option>
                     <option value="normal">Normal</option>
                     <option value="large">Large</option>
                   </Select>
@@ -216,6 +388,24 @@ export function MenuDesigner() {
                     <option value="sticky">Docked with categories</option>
                   </Select>
                 </Field>
+                <Field label="Icon position">
+                  <Select value={appearance.searchIconPosition ?? "left"} onChange={(e) => update({ searchIconPosition: e.target.value as AppearanceSettings["searchIconPosition"] })}>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                    <option value="none">No icon</option>
+                  </Select>
+                </Field>
+                <Field label="Width">
+                  <Select value={appearance.searchWidth ?? "wide"} onChange={(e) => update({ searchWidth: e.target.value as AppearanceSettings["searchWidth"] })}>
+                    <option value="normal">Normal</option>
+                    <option value="wide">Wide</option>
+                    <option value="full">Full width</option>
+                  </Select>
+                </Field>
+                <div className="flex items-center justify-between gap-3 rounded-md border p-3 md:col-span-3">
+                  <span className="text-sm font-medium">Show search label</span>
+                  <Switch label="Show search label" checked={appearance.searchShowLabel === true} onCheckedChange={(v) => update({ searchShowLabel: v })} />
+                </div>
               </CardContent>
             </Card>
 
@@ -247,6 +437,10 @@ export function MenuDesigner() {
                     <option value="pills">Pill tabs</option>
                     <option value="underline">Underline tabs</option>
                     <option value="cards">Category cards</option>
+                    <option value="segmented">Segmented control</option>
+                    <option value="minimal">Minimal text</option>
+                    <option value="iconOnly">Icon only</option>
+                    <option value="bubble">Bubble chips</option>
                   </Select>
                 </Field>
                 <Field label="Section header style">
@@ -255,6 +449,10 @@ export function MenuDesigner() {
                     <option value="divider">Centered with dividers</option>
                     <option value="banner">Filled banner</option>
                     <option value="centered">Centered</option>
+                    <option value="boxed">Boxed</option>
+                    <option value="accent">Accent bar</option>
+                    <option value="numbered">Numbered</option>
+                    <option value="overline">Overline</option>
                   </Select>
                 </Field>
               </CardContent>
@@ -308,10 +506,11 @@ export function MenuDesigner() {
                     <option value="solid">Solid color</option>
                     <option value="gradient">Gradient</option>
                     <option value="image">Uploaded image</option>
+                    <option value="pattern">Pattern design</option>
                   </Select>
                 </Field>
 
-                {backgroundType === "solid" ? (
+                {(backgroundType === "solid" || backgroundType === "pattern") ? (
                   <Field label="Background color"><Input type="color" value={appearance.backgroundColor || "#ffffff"} onChange={(e) => update({ backgroundColor: e.target.value })} /></Field>
                 ) : null}
 
@@ -331,6 +530,14 @@ export function MenuDesigner() {
                       onUploaded={(result) => update({ backgroundImageUrl: result.imageUrl, backgroundImagePath: result.imagePath })}
                       onRemoved={() => update({ backgroundImageUrl: undefined, backgroundImagePath: undefined })}
                     />
+                    <Field label="Image design">
+                      <Select value={appearance.backgroundImageStyle ?? "cover"} onChange={(e) => update({ backgroundImageStyle: e.target.value as AppearanceSettings["backgroundImageStyle"] })}>
+                        <option value="cover">Cover full screen</option>
+                        <option value="contain">Contain full image</option>
+                        <option value="tile">Tile pattern</option>
+                        <option value="fixed">Fixed cover</option>
+                      </Select>
+                    </Field>
                     <Field label={`Darken for readability (${appearance.backgroundOverlay ?? 45}%)`}>
                       <input
                         type="range"
@@ -341,6 +548,30 @@ export function MenuDesigner() {
                         className="w-full"
                       />
                     </Field>
+                  </div>
+                ) : null}
+
+                {backgroundType === "pattern" ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label="Pattern">
+                      <Select value={appearance.backgroundPattern ?? "dots"} onChange={(e) => update({ backgroundPattern: e.target.value as AppearanceSettings["backgroundPattern"] })}>
+                        <option value="none">None</option>
+                        <option value="cafe">Floating cafe icons</option>
+                        <option value="dots">Dots</option>
+                        <option value="grid">Grid</option>
+                        <option value="diagonal">Diagonal lines</option>
+                        <option value="waves">Waves</option>
+                        <option value="checker">Checker</option>
+                        <option value="confetti">Confetti</option>
+                        <option value="stars">Stars</option>
+                        <option value="mesh">Soft mesh</option>
+                      </Select>
+                    </Field>
+                    <Field label="Pattern color"><Input type="color" value={appearance.backgroundPatternColor || "#3f8a49"} onChange={(e) => update({ backgroundPatternColor: e.target.value })} /></Field>
+                    <div className="flex items-center justify-between gap-3 rounded-md border p-3 md:col-span-2">
+                      <span className="text-sm font-medium">Animate pattern</span>
+                      <Switch label="Animate pattern" checked={appearance.backgroundPatternAnimated !== false} onCheckedChange={(v) => update({ backgroundPatternAnimated: v })} />
+                    </div>
                   </div>
                 ) : null}
 
@@ -385,8 +616,39 @@ function previewBackgroundStyle(appearance: AppearanceSettings): React.CSSProper
   const type = appearance.backgroundType ?? "preset";
   if (type === "solid") return { backgroundColor: appearance.backgroundColor || "#ffffff" };
   if (type === "gradient") return { backgroundImage: `linear-gradient(to bottom, ${appearance.backgroundGradientFrom || "#ecfdf5"}, ${appearance.backgroundGradientTo || "#ffffff"})` };
-  if (type === "image" && appearance.backgroundImageUrl) return { backgroundImage: `url(${appearance.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" };
+  if (type === "image" && appearance.backgroundImageUrl) {
+    const imageStyle = appearance.backgroundImageStyle ?? "cover";
+    return {
+      backgroundImage: `url(${appearance.backgroundImageUrl})`,
+      backgroundSize: imageStyle === "tile" ? "120px auto" : imageStyle,
+      backgroundPosition: "center",
+      backgroundRepeat: imageStyle === "tile" ? "repeat" : "no-repeat"
+    };
+  }
+  if (type === "pattern") {
+    return {
+      backgroundColor: appearance.backgroundColor || "#ffffff",
+      ...designerPatternStyle(appearance.backgroundPattern ?? "dots", appearance.backgroundPatternColor || "#3f8a49")
+    };
+  }
   return { backgroundImage: "linear-gradient(to bottom, #ecfdf5, #ffffff)" };
+}
+
+function formatHourLabel(hour: number) {
+  if (hour === 24) return "24:00";
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function designerPatternStyle(pattern: string, color: string): React.CSSProperties {
+  const base: React.CSSProperties = { color, opacity: 0.2 };
+  if (pattern === "grid") return { ...base, backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)", backgroundSize: "28px 28px" };
+  if (pattern === "diagonal") return { ...base, backgroundImage: "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 16px)" };
+  if (pattern === "waves") return { ...base, backgroundImage: "radial-gradient(70% 60% at 50% 100%, transparent 58%, currentColor 60%, transparent 62%)", backgroundSize: "42px 24px" };
+  if (pattern === "checker") return { ...base, backgroundImage: "linear-gradient(45deg, currentColor 25%, transparent 25%), linear-gradient(-45deg, currentColor 25%, transparent 25%)", backgroundSize: "24px 24px" };
+  if (pattern === "confetti") return { ...base, backgroundImage: "radial-gradient(circle at 20% 30%, currentColor 0 2px, transparent 2px), radial-gradient(circle at 70% 65%, currentColor 0 1.5px, transparent 1.5px)", backgroundSize: "54px 54px" };
+  if (pattern === "stars") return { ...base, backgroundImage: "radial-gradient(circle at 50% 50%, currentColor 0 1.4px, transparent 1.6px), radial-gradient(circle at 15% 20%, currentColor 0 1px, transparent 1.2px)", backgroundSize: "38px 38px" };
+  if (pattern === "mesh") return { ...base, opacity: 0.28, backgroundImage: "radial-gradient(circle at 20% 20%, currentColor, transparent 30%), radial-gradient(circle at 80% 30%, currentColor, transparent 28%)", backgroundSize: "260px 260px" };
+  return { ...base, backgroundImage: "radial-gradient(currentColor 1.5px, transparent 1.5px)", backgroundSize: "20px 20px" };
 }
 
 // Lightweight sample of the menu (header + background + two cards) rendered with
@@ -417,7 +679,8 @@ function DesignPreview({ appearance, general }: { appearance: AppearanceSettings
   const locale = useMemo(() => "en" as const, []);
 
   return (
-    <div className={isDark ? "dark" : undefined}>
+    <div className={cn("space-y-4", isDark && "dark")}>
+      <WelcomePreview appearance={appearance} general={general} />
       <div className="relative overflow-hidden rounded-xl border" style={{ ...menuThemeStyle(appearance) }}>
         <div className="absolute inset-0" style={previewBackgroundStyle(appearance)} aria-hidden />
         {overlay ? <div className="absolute inset-0 bg-black" style={{ opacity: overlay }} aria-hidden /> : null}
@@ -449,4 +712,84 @@ function DesignPreview({ appearance, general }: { appearance: AppearanceSettings
       </div>
     </div>
   );
+}
+
+function WelcomePreview({ appearance, general }: { appearance: AppearanceSettings; general: GeneralSettings }) {
+  const accent = appearance.welcomeAccentColor || appearance.primaryColor || "#A4D8A6";
+  const name = general.restaurantName.en || "Cafe";
+  const header = general.welcomeHeader?.en || "Welcome to";
+  const pattern = appearance.welcomeBackgroundPattern ?? "cafe";
+  const cardPattern = appearance.welcomeCardPattern ?? "none";
+  const foreground = appearance.welcomeFormTextColor || undefined;
+  const previewThemeStyle = menuThemeStyle({ ...appearance, primaryColor: accent });
+
+  return (
+    <div className="relative h-80 overflow-hidden rounded-xl border p-4" style={{ ...previewThemeStyle, ...welcomePreviewBackgroundStyle(appearance) }}>
+      {pattern !== "none" ? <div className="absolute inset-0" style={welcomePreviewPatternStyle(pattern, appearance.welcomeBackgroundPatternColor || accent, pattern === "cafe" ? 0.14 : 0.2)} aria-hidden /> : null}
+      <div
+        className={cn("relative mx-auto mt-5 max-w-[260px] overflow-hidden p-5 text-center", welcomePreviewCardClass(appearance))}
+        style={{
+          backgroundColor: appearance.welcomeFormColor || undefined,
+          borderColor: appearance.welcomeFormBorderColor || undefined,
+          color: foreground
+        }}
+      >
+        {cardPattern !== "none" ? <div className="absolute inset-0" style={welcomePreviewPatternStyle(cardPattern, appearance.welcomeBackgroundPatternColor || accent, 0.08)} aria-hidden /> : null}
+        <div className="relative space-y-3">
+          <div className="absolute right-0 top-0 h-8 w-8 rounded-full border bg-background/80" />
+          <p className="pr-10 text-sm font-bold" style={{ color: accent }}>{header}</p>
+          <div className="mx-auto h-16 w-16 rounded-full bg-primary/20 ring-4 ring-white/60" />
+          <h3 className="text-xl font-bold" style={{ color: foreground }}>{name}</h3>
+          <div className="mx-auto h-3 w-28 rounded-full bg-muted" />
+          <div className={cn("mx-auto flex justify-center gap-1.5", (appearance.welcomeLanguageStyle ?? "buttons") === "cards" && "grid w-full grid-cols-3")}>
+            {["کوردی", "العربية", "EN"].map((label, index) => (
+              <span
+                key={label}
+                className={cn(
+                  "rounded-full border px-2 py-1 text-[10px] font-semibold",
+                  index === 0 ? "bg-primary text-primary-foreground" : "bg-background/70 text-muted-foreground",
+                  (appearance.welcomeLanguageStyle ?? "buttons") === "cards" && "rounded-lg py-2"
+                )}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+          <div className="h-9 rounded-full bg-primary" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function welcomePreviewBackgroundStyle(appearance: AppearanceSettings): React.CSSProperties {
+  const style = appearance.welcomeBackgroundStyle ?? "gradient";
+  if (style === "solid" || style === "pattern") return { backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8" };
+  return {
+    backgroundImage: `linear-gradient(135deg, ${appearance.welcomeBackgroundGradientFrom || "#d7efd8"}, ${appearance.welcomeAccentColor || "#A4D8A6"}, ${appearance.welcomeBackgroundGradientTo || "#86cc8a"})`
+  };
+}
+
+function welcomePreviewCardClass(appearance: AppearanceSettings) {
+  const style = appearance.welcomeCardStyle ?? "glass";
+  if (style === "solid") return "rounded-2xl border bg-card shadow-xl";
+  if (style === "outlined") return "rounded-2xl border-2 border-primary/35 bg-background/80 shadow-xl backdrop-blur";
+  if (style === "floating") return "rounded-[2rem] border bg-card shadow-2xl shadow-primary/20";
+  return "rounded-3xl border border-primary/35 bg-card/85 shadow-2xl backdrop-blur-xl";
+}
+
+function welcomePreviewPatternStyle(pattern: string, color: string, opacity: number): React.CSSProperties {
+  const base: React.CSSProperties = { color, opacity };
+  if (pattern === "cafe") {
+    return {
+      ...base,
+      backgroundImage: "radial-gradient(currentColor 2px, transparent 2px), radial-gradient(currentColor 1.5px, transparent 1.5px)",
+      backgroundPosition: "0 0, 24px 24px",
+      backgroundSize: "48px 48px"
+    };
+  }
+  if (pattern === "dots") return { ...base, backgroundImage: "radial-gradient(currentColor 1.4px, transparent 1.4px)", backgroundSize: "18px 18px" };
+  if (pattern === "grid") return { ...base, backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)", backgroundSize: "28px 28px" };
+  if (pattern === "diagonal") return { ...base, backgroundImage: "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 16px)" };
+  return { ...base, backgroundImage: "radial-gradient(70% 60% at 50% 100%, transparent 58%, currentColor 60%, transparent 62%)", backgroundSize: "42px 24px" };
 }

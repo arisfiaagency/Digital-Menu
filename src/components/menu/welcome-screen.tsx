@@ -21,7 +21,8 @@ import { defaultAppData } from "@/data/default-data";
 import { cn } from "@/lib/utils/cn";
 import { SocialLinks } from "@/components/menu/social-links";
 import { BrandCredit } from "@/components/brand-credit";
-import type { GeneralSettings } from "@/types/models";
+import { hexToHslVar, readableForegroundHslVar } from "@/lib/utils/color";
+import type { AppearanceSettings, GeneralSettings, WelcomePattern } from "@/types/models";
 
 // The welcome screen always opens in this language, regardless of any previously
 // stored public locale.
@@ -30,10 +31,12 @@ const WELCOME_DEFAULT_LOCALE = "ckb";
 export function WelcomeScreen({
   initialGeneral,
   initialSocial,
+  initialAppearance,
   menuHref = "/menu"
 }: {
   initialGeneral?: GeneralSettings;
   initialSocial?: GeneralSettings["socialLinks"];
+  initialAppearance?: AppearanceSettings;
   menuHref?: string;
 }) {
   const { locale, setLocale, dir: textDir } = useLocale(WELCOME_DEFAULT_LOCALE, {
@@ -41,7 +44,9 @@ export function WelcomeScreen({
     readStored: false
   });
   const general = initialGeneral ?? defaultAppData.general;
+  const appearance = initialAppearance ?? defaultAppData.appearance;
   const restaurantName = localized(general.restaurantName, locale);
+  const welcomeHeader = localized(general.welcomeHeader, locale, translate(locale, "welcome.greeting"));
   const logoUrl = general.logoUrl;
 
   // Live social links come from the server (falls back to default data). No
@@ -51,11 +56,11 @@ export function WelcomeScreen({
   // Brand mint #A4D8A6 (HSL 122 40% 75%) as the accent. Deep-green foreground
   // keeps text legible on the light mint. Scoped to this subtree so the shared
   // Button / selectors recolor here without affecting /menu or /admin.
-  const accentStyle = {
-    "--primary": "122 40% 75%",
-    "--primary-foreground": "128 44% 14%",
-    "--ring": "122 40% 75%"
-  } as CSSProperties;
+  const accentColor = appearance.welcomeAccentColor || appearance.primaryColor || "#A4D8A6";
+  const accentStyle = welcomeThemeStyle(accentColor);
+  const mainStyle = { ...accentStyle, ...welcomeBackgroundStyle(appearance) } as CSSProperties;
+  const formTextStyle = appearance.welcomeFormTextColor ? { color: appearance.welcomeFormTextColor } : undefined;
+  const mutedTextStyle = appearance.welcomeFormTextColor ? { color: appearance.welcomeFormTextColor, opacity: 0.72 } : undefined;
 
   // The welcome always shows Kurdish by default, but the menu reads the persisted
   // locale (`stone-cafe-menu-locale`). Without syncing, a previously chosen language
@@ -90,27 +95,41 @@ export function WelcomeScreen({
   return (
     <main
       dir="ltr"
-      style={accentStyle}
-      className="no-select fixed inset-0 flex touch-none items-center justify-center overflow-hidden overscroll-none bg-gradient-to-br from-[#d7efd8] via-[#A4D8A6] to-[#86cc8a] p-4 dark:from-[#0c1810] dark:via-[#10210f] dark:to-[#0a140b]"
+      style={mainStyle}
+      className="no-select fixed inset-0 flex touch-none items-center justify-center overflow-hidden overscroll-none p-4"
     >
-      <CoffeeBackground />
+      <WelcomeBackgroundPattern appearance={appearance} />
 
-      <section className="relative z-10 w-full max-w-md rounded-3xl border border-[#86cc8a]/60 bg-card/85 p-6 text-center shadow-2xl backdrop-blur-xl dark:border-[#2b3a25]/60 sm:p-8">
+      <section
+        className={cn("relative z-10 w-full max-w-md overflow-hidden p-6 text-center sm:p-8", welcomeCardClass(appearance))}
+        style={welcomeCardStyle(appearance)}
+      >
+        <WelcomePatternLayer
+          pattern={appearance.welcomeCardPattern ?? "none"}
+          color={appearance.welcomeBackgroundPatternColor || accentColor}
+          opacity={0.08}
+        />
+        <div className="relative z-10">
         {/* Fixed physical corner (right) so it doesn't move when the selected
             language flips the page direction. */}
-        <ThemeToggle className="absolute right-4 top-4 z-20 h-11 w-11 border-[#86cc8a]/60 bg-background/70 shadow-sm backdrop-blur hover:bg-muted dark:border-[#2b3a25]/60" />
+        <ThemeToggle
+          presentation={appearance.welcomeThemeToggleStyle ?? "circle"}
+          iconStyle={appearance.welcomeThemeIconStyle ?? "sunMoon"}
+          className="absolute right-4 top-4 z-20 border-primary/35 bg-background/70 shadow-sm backdrop-blur hover:bg-muted"
+        />
 
         <p
           dir={textDir}
+          style={{ color: accentColor }}
           className={cn(
-            "font-bold text-[#2f7a3b] dark:text-[#A4D8A6]",
+            "font-bold",
             // Arabic/Kurdish letters join up, so letter-spacing looks broken —
             // drop it there and make the greeting larger. English keeps the
             // uppercase tracked-label look.
             textDir === "rtl" ? "text-2xl tracking-normal" : "text-sm uppercase tracking-[0.2em]"
           )}
         >
-          {translate(locale, "welcome.greeting")}
+          {welcomeHeader}
         </p>
 
         {/* Logo (placeholder steaming cup when no logo is set) */}
@@ -143,12 +162,10 @@ export function WelcomeScreen({
           ) : null}
         </div>
 
-        {!logoUrl ? (
-          <h1 dir={textDir} className="text-3xl font-bold text-foreground">
-            {restaurantName}
-          </h1>
-        ) : null}
-        <p dir={textDir} className="text-sm text-muted-foreground">
+        <h1 dir={textDir} className="text-3xl font-bold text-foreground" style={formTextStyle}>
+          {restaurantName}
+        </h1>
+        <p dir={textDir} className="text-sm text-muted-foreground" style={mutedTextStyle}>
           {translate(locale, "welcome.tagline")}
         </p>
 
@@ -162,13 +179,14 @@ export function WelcomeScreen({
               // break the glyphs, so only the Latin (English) label gets them.
               textDir === "rtl" ? "text-sm tracking-normal" : "text-xs uppercase tracking-wide"
             )}
+            style={mutedTextStyle}
           >
             {translate(locale, "welcome.chooseLanguage")}
           </p>
           {/* Fixed ltr order so the buttons keep their position when the
               selected language flips the page between rtl and ltr. */}
           <div className="flex justify-center" dir="ltr">
-            <LanguageSelector locale={locale} onChange={setLocale} />
+            <LanguageSelector locale={locale} onChange={setLocale} variant={appearance.welcomeLanguageStyle ?? "buttons"} />
           </div>
         </div>
 
@@ -187,12 +205,13 @@ export function WelcomeScreen({
 
         {social && Object.values(social).some((value) => value?.trim()) ? (
           <div className="mt-6 space-y-2">
-            <p dir={textDir} className="text-xs font-medium text-muted-foreground">
+            <p dir={textDir} className="text-xs font-medium text-muted-foreground" style={mutedTextStyle}>
               {translate(locale, "welcome.findUsSocial")}
             </p>
             <SocialLinks social={social} className="justify-center" />
           </div>
         ) : null}
+        </div>
       </section>
 
       <BrandCredit className="absolute inset-x-0 bottom-4 z-10 text-[#2f7a3b]/80 dark:text-[#A4D8A6]/70" />
@@ -221,7 +240,101 @@ function SteamingCup() {
   );
 }
 
-function CoffeeBackground() {
+function welcomeThemeStyle(accentColor: string): CSSProperties {
+  const primary = hexToHslVar(accentColor) || "122 40% 75%";
+  return {
+    "--primary": primary,
+    "--primary-foreground": readableForegroundHslVar(accentColor) || "128 44% 14%",
+    "--ring": primary
+  } as CSSProperties;
+}
+
+function welcomeBackgroundStyle(appearance: AppearanceSettings): CSSProperties {
+  const design = appearance.welcomeBackgroundStyle ?? "gradient";
+  if (design === "solid" || design === "pattern") {
+    return { backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8" };
+  }
+  return {
+    backgroundImage: `linear-gradient(135deg, ${appearance.welcomeBackgroundGradientFrom || "#d7efd8"}, ${appearance.welcomeAccentColor || "#A4D8A6"}, ${appearance.welcomeBackgroundGradientTo || "#86cc8a"})`
+  };
+}
+
+function welcomeCardClass(appearance: AppearanceSettings) {
+  const style = appearance.welcomeCardStyle ?? "glass";
+  if (style === "solid") return "rounded-2xl border border-border bg-card shadow-xl";
+  if (style === "outlined") return "rounded-2xl border-2 border-primary/35 bg-background/80 shadow-xl backdrop-blur";
+  if (style === "floating") return "rounded-[2rem] border border-white/50 bg-card shadow-2xl shadow-primary/20";
+  return "rounded-3xl border border-primary/35 bg-card/85 shadow-2xl backdrop-blur-xl";
+}
+
+function welcomeCardStyle(appearance: AppearanceSettings): CSSProperties {
+  const style: CSSProperties = {};
+  if (appearance.welcomeFormColor) style.backgroundColor = appearance.welcomeFormColor;
+  if (appearance.welcomeFormTextColor) style.color = appearance.welcomeFormTextColor;
+  if (appearance.welcomeFormBorderColor) style.borderColor = appearance.welcomeFormBorderColor;
+  return style;
+}
+
+function WelcomeBackgroundPattern({ appearance }: { appearance: AppearanceSettings }) {
+  const pattern = appearance.welcomeBackgroundPattern ?? "cafe";
+  const color = appearance.welcomeBackgroundPatternColor || appearance.welcomeAccentColor || "#3f8a49";
+  if (pattern === "none") return null;
+  if (pattern === "cafe") return <CoffeeBackground color={color} />;
+  return <WelcomePatternLayer pattern={pattern} color={color} opacity={0.16} />;
+}
+
+function WelcomePatternLayer({
+  pattern,
+  color,
+  opacity
+}: {
+  pattern: WelcomePattern;
+  color: string;
+  opacity: number;
+}) {
+  if (pattern === "none" || pattern === "cafe") return null;
+  return (
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={welcomePatternStyle(pattern, color, opacity)}
+      aria-hidden
+    />
+  );
+}
+
+function welcomePatternStyle(pattern: WelcomePattern, color: string, opacity: number): CSSProperties {
+  const base: CSSProperties = {
+    color,
+    opacity
+  };
+  if (pattern === "dots") {
+    return {
+      ...base,
+      backgroundImage: "radial-gradient(currentColor 1.4px, transparent 1.4px)",
+      backgroundSize: "18px 18px"
+    };
+  }
+  if (pattern === "grid") {
+    return {
+      ...base,
+      backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)",
+      backgroundSize: "28px 28px"
+    };
+  }
+  if (pattern === "diagonal") {
+    return {
+      ...base,
+      backgroundImage: "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 16px)"
+    };
+  }
+  return {
+    ...base,
+    backgroundImage: "radial-gradient(70% 60% at 50% 100%, transparent 58%, currentColor 60%, transparent 62%)",
+    backgroundSize: "42px 24px"
+  };
+}
+
+function CoffeeBackground({ color }: { color?: string }) {
   // Floating figures representing the cafe menu: coffee, mocktails, other
   // non-alcoholic drinks, cinnamon rolls, trileçe (tralicha), and mini pizza.
   const figures = [
@@ -252,8 +365,8 @@ function CoffeeBackground() {
       {figures.map(({ Icon, ...figure }, index) => (
         <span
           key={index}
-          className="bean-float absolute text-[#3f8a49] dark:text-[#A4D8A6]"
-          style={{ top: figure.top, left: figure.left, animationDelay: figure.delay, opacity: figure.opacity }}
+          className="bean-float absolute"
+          style={{ top: figure.top, left: figure.left, animationDelay: figure.delay, opacity: figure.opacity, color: color || "#3f8a49" }}
         >
           <Icon style={{ width: figure.size, height: figure.size }} aria-hidden />
         </span>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getOpenState } from "@/lib/business-hours";
 import { translate } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils/cn";
-import type { Locale } from "@/types/models";
+import type { Locale, OpenStatusStyle } from "@/types/models";
 
 // Live Open / Closed pill driven by the café's hours. Ticks every minute so it
 // flips on its own. Green pulsing dot = open ("until <close time>"); muted =
@@ -14,12 +14,14 @@ export function OpenStatusBadge({
   textDir,
   openHour,
   closeHour,
+  style = "pill",
   className
 }: {
   locale: Locale;
   textDir: "ltr" | "rtl";
   openHour?: number;
   closeHour?: number;
+  style?: OpenStatusStyle;
   className?: string;
 }) {
   const [now, setNow] = useState<Date | null>(null);
@@ -39,12 +41,14 @@ export function OpenStatusBadge({
   const timeText = changeAt.toLocaleTimeString(timeLocale, { hour: "numeric", minute: "2-digit" });
   const statusLabel = translate(locale, isOpen ? "menu.openNow" : "menu.closedNow");
   const detail = `${translate(locale, isOpen ? "menu.closes" : "menu.opens")} ${timeText}`;
+  const statusClass = openStatusClass(style, isOpen);
+  const showDetail = style !== "compact";
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium",
-        isOpen ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+        "inline-flex items-center gap-1.5 text-sm font-medium",
+        statusClass,
         className
       )}
     >
@@ -53,7 +57,16 @@ export function OpenStatusBadge({
         aria-hidden
       />
       <span dir={textDir} className="font-semibold">{statusLabel}</span>
-      <span dir={textDir} className="text-xs opacity-80">· {detail}</span>
+      {showDetail ? <span dir={textDir} className="text-xs opacity-80">· {detail}</span> : null}
     </span>
   );
+}
+
+function openStatusClass(style: OpenStatusStyle, isOpen: boolean) {
+  const tone = isOpen ? "text-primary" : "text-muted-foreground";
+  if (style === "compact") return cn("rounded-md px-2 py-1", isOpen ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground");
+  if (style === "outline") return cn("rounded-full border bg-card px-3 py-1.5", isOpen ? "border-primary/40 text-primary" : "border-border text-muted-foreground");
+  if (style === "card") return cn("rounded-lg border bg-card px-3 py-2 shadow-sm", tone);
+  if (style === "banner") return cn("rounded-md px-3 py-2", isOpen ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground");
+  return cn("rounded-full px-3 py-1.5", isOpen ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground");
 }

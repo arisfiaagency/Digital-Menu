@@ -192,6 +192,16 @@ body.overflow-lock {
   animation: bean-float 8s ease-in-out infinite;
 }
 
+@keyframes menu-pattern-pan {
+  0% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-32px, 18px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.menu-pattern-pan {
+  animation: menu-pattern-pan 22s linear infinite;
+}
+
 @keyframes aroma-pan {
   0% { transform: translate(0, 0); }
   50% { transform: translate(-14px, 10px); }
@@ -771,6 +781,7 @@ body.overflow-lock {
   }
   .steam-wisp,
   .bean-float,
+  .menu-pattern-pan,
   .aroma-pan,
   .cup-bob,
   .globe-spin,

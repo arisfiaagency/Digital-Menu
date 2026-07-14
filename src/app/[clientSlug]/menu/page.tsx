@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { MenuApp } from "@/components/menu/menu-app";
 import { getPublicAppDataRest, getPublicClientRest } from "@/lib/firebase/rest";
 
-export const revalidate = 60;
+export const revalidate = 20;
 
 export default async function ClientMenuPage({ params }: { params: Promise<{ clientSlug: string }> }) {
   const { clientSlug } = await params;

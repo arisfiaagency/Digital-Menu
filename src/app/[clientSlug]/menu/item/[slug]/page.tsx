@@ -3,7 +3,7 @@ import { MenuItemDetail } from "@/components/menu/menu-item-detail";
 import { getPublicAppDataRest, getPublicClientRest } from "@/lib/firebase/rest";
 import { clientMenuPath } from "@/lib/tenant";
 
-export const revalidate = 60;
+export const revalidate = 20;
 
 export default async function ClientItemPage({ params }: { params: Promise<{ clientSlug: string; slug: string }> }) {
   const { clientSlug, slug } = await params;

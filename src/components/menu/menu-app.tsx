@@ -29,7 +29,7 @@ import { effectiveItemPrice, formatMoney, normalizeSearch, serviceFeeAmount } fr
 import { cn } from "@/lib/utils/cn";
 import { menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
 import { useLocale } from "@/hooks/use-locale";
-import type { AppData, Category, CategoryNavStyle, Locale, MenuItem, MenuSettings, SectionHeaderStyle } from "@/types/models";
+import type { AppData, Category, CategoryNavStyle, ContactChipStyle, ContactLayout, Locale, MenuItem, MenuLogoStyle, MenuSettings, SearchStyle, SectionHeaderStyle } from "@/types/models";
 
 export function MenuApp({
   initialCategorySlug,
@@ -180,19 +180,39 @@ export function MenuApp({
         ? { backgroundImage: `linear-gradient(to bottom, ${appearance.headerGradientFrom || "#ecfdf5"}, ${appearance.headerGradientTo || "#ffffff"})` }
         : undefined;
   const showContactRow = appearance.showContactRow !== false;
+  const logoStyle = appearance.menuLogoStyle ?? "rounded";
+  const contactChipStyle = appearance.contactChipStyle ?? "pill";
+  const contactLayout = appearance.contactLayout ?? "inline";
+  const contactButtonClass = menuContactButtonClass(contactChipStyle);
+  const contactShowText = contactChipStyle !== "iconOnly";
 
   // --- Search customization ---
   const searchEnabled = data.menu.enableSearch;
   const searchPlacement = appearance.searchPlacement ?? "header";
+  const searchIconPosition = appearance.searchIconPosition ?? "left";
+  const searchWidth = appearance.searchWidth ?? "wide";
   const searchInputClass = cn(
-    "w-full ps-10",
-    (appearance.searchSize ?? "normal") === "large" ? "h-14 text-base" : "h-12",
-    (appearance.searchShape ?? "pill") === "pill" ? "rounded-full" : appearance.searchShape === "square" ? "rounded-none" : "rounded-lg",
-    (appearance.searchStyle ?? "outlined") === "filled" ? "border-transparent bg-muted" : ""
+    "w-full",
+    searchIconPosition === "left" && "ps-10",
+    searchIconPosition === "right" && "pe-10",
+    (appearance.searchSize ?? "normal") === "large" ? "h-14 text-base" : appearance.searchSize === "compact" ? "h-10 text-sm" : "h-12",
+    searchShapeClass(appearance.searchShape ?? "pill"),
+    searchStyleClass(appearance.searchStyle ?? "outlined")
+  );
+  const searchWrapperClass = cn(
+    "relative block w-full",
+    searchWidth === "normal" ? "max-w-md" : searchWidth === "full" ? "max-w-none" : "max-w-2xl",
+    headerAlign === "center" && "mx-auto"
   );
   const searchField = searchEnabled ? (
-    <label className={cn("relative block w-full max-w-2xl", headerAlign === "center" && "mx-auto")}>
-      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+    <label className={searchWrapperClass}>
+      {appearance.searchShowLabel ? <span dir={textDir} className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">{translate(locale, "menu.search")}</span> : null}
+      {searchIconPosition !== "none" ? (
+        <Search
+          className={cn("pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground", searchIconPosition === "right" ? "end-3" : "start-3", appearance.searchShowLabel && "mt-2.5")}
+          aria-hidden
+        />
+      ) : null}
       <Input className={searchInputClass} dir={textDir} placeholder={translate(locale, "menu.search")} value={query} onChange={(event) => setQuery(event.target.value)} />
     </label>
   ) : null;
@@ -204,7 +224,7 @@ export function MenuApp({
 
   // Reusable header pieces (shared by the left and centered layouts).
   const brandLogo = (
-    <div className={cn("relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary font-bold text-primary-foreground shadow-md ring-1 ring-primary/20", headerCompact ? "h-12 w-12 text-base" : "h-14 w-14 text-lg sm:h-16 sm:w-16 sm:text-xl")}>
+    <div className={cn("relative flex shrink-0 items-center justify-center overflow-hidden bg-primary font-bold text-primary-foreground shadow-md ring-1 ring-primary/20", logoClass(logoStyle, headerCompact))}>
       {logoUrl ? <Image src={logoUrl} alt={restaurantName} width={64} height={64} className="h-full w-full object-cover" priority /> : restaurantName.slice(0, 2)}
     </div>
   );
@@ -222,12 +242,13 @@ export function MenuApp({
     </div>
   );
   const contactRow = (
-    <div className={cn("flex max-w-full flex-wrap items-center gap-2 text-sm", headerAlign === "center" && "justify-center")}>
-      <OpenStatusBadge locale={locale} textDir={textDir} openHour={data.general.openHour} closeHour={data.general.closeHour} />
+    <div className={cn(contactLayoutClass(contactLayout), headerAlign === "center" && contactLayout === "inline" && "justify-center")}>
+      <OpenStatusBadge locale={locale} textDir={textDir} openHour={data.general.openHour} closeHour={data.general.closeHour} style={appearance.openStatusStyle ?? "pill"} />
       {data.general.phone ? (
         <button
           type="button"
-          className="focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted"
+          title={data.general.phone}
+          className={contactButtonClass}
           onClick={() =>
             setContactPrompt({
               title: translate(locale, "menu.callConfirmTitle"),
@@ -239,13 +260,14 @@ export function MenuApp({
           }
         >
           <PhoneSignalIcon className="h-4 w-4 text-primary" />
-          <span className="truncate">{data.general.phone}</span>
+          {contactShowText ? <span className="truncate">{data.general.phone}</span> : null}
         </button>
       ) : null}
       {data.general.whatsapp ? (
         <button
           type="button"
-          className="focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted"
+          title={translate(locale, "menu.whatsapp")}
+          className={contactButtonClass}
           onClick={() =>
             setContactPrompt({
               title: translate(locale, "menu.whatsappConfirmTitle"),
@@ -257,13 +279,14 @@ export function MenuApp({
           }
         >
           <WhatsappSendIcon className="h-4 w-4 text-primary" />
-          <span dir={textDir}>{translate(locale, "menu.whatsapp")}</span>
+          {contactShowText ? <span dir={textDir}>{translate(locale, "menu.whatsapp")}</span> : null}
         </button>
       ) : null}
       {data.general.googleMapsUrl ? (
         <button
           type="button"
-          className="focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted"
+          title={translate(locale, "menu.openMaps")}
+          className={contactButtonClass}
           onClick={() =>
             setContactPrompt({
               title: translate(locale, "menu.mapsConfirmTitle"),
@@ -275,10 +298,10 @@ export function MenuApp({
           }
         >
           <LocationPinIcon className="h-4 w-4 text-primary" />
-          <span dir={textDir}>{translate(locale, "menu.openMaps")}</span>
+          {contactShowText ? <span dir={textDir}>{translate(locale, "menu.openMaps")}</span> : null}
         </button>
       ) : null}
-      <SocialLinks social={data.general.socialLinks} className="ms-1" />
+      <SocialLinks social={data.general.socialLinks} className={cn(contactLayout === "inline" && "ms-1")} style={appearance.socialLinkStyle ?? "icons"} />
     </div>
   );
 
@@ -350,7 +373,7 @@ export function MenuApp({
         {searchPlacement === "sticky" && searchField ? (
           <div className="container pt-3">{searchField}</div>
         ) : null}
-        <div className="container flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className={cn("container flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", categoryNavStyle === "segmented" && "rounded-lg bg-muted/40")}>
           <CategoryNavItem style={categoryNavStyle} active={activeCategoryId === "all"} onClick={() => scrollToCategory("all")} slug="all" textDir={textDir}>
             {translate(locale, "menu.all")}
           </CategoryNavItem>
@@ -385,6 +408,7 @@ export function MenuApp({
                     slug={section.category.slug}
                     icon={section.category.icon}
                     textDir={textDir}
+                    index={sectionIndex + 1}
                   />
                   <div className={itemsGridClass}>
                     {section.items.map((item, itemIndex) => (
@@ -497,6 +521,45 @@ export function MenuApp({
   );
 }
 
+function logoClass(style: MenuLogoStyle, compact: boolean) {
+  const size = compact ? "h-12 w-12 text-base" : "h-14 w-14 text-lg sm:h-16 sm:w-16 sm:text-xl";
+  if (style === "circle") return cn(size, "rounded-full");
+  if (style === "square") return cn(size, "rounded-md");
+  if (style === "badge") return cn(size, "rounded-3xl border-4 border-background shadow-xl");
+  if (style === "wordmark") return compact ? "h-12 w-24 rounded-xl text-base" : "h-14 w-28 rounded-2xl text-lg sm:h-16 sm:w-32";
+  return cn(size, "rounded-2xl");
+}
+
+function searchShapeClass(shape: string) {
+  if (shape === "square") return "rounded-none";
+  if (shape === "rounded") return "rounded-lg";
+  if (shape === "soft") return "rounded-2xl";
+  return "rounded-full";
+}
+
+function searchStyleClass(style: SearchStyle) {
+  if (style === "filled") return "border-transparent bg-muted";
+  if (style === "glass") return "border-white/40 bg-background/70 shadow-sm backdrop-blur";
+  if (style === "underline") return "rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none focus-visible:ring-offset-0";
+  if (style === "shadow") return "border-transparent bg-card shadow-lg shadow-primary/10";
+  return "bg-background";
+}
+
+function contactLayoutClass(layout: ContactLayout) {
+  if (layout === "stacked") return "grid max-w-full gap-2 text-sm sm:max-w-md";
+  if (layout === "grid") return "grid max-w-full grid-cols-2 gap-2 text-sm sm:inline-grid sm:grid-cols-4";
+  if (layout === "centered") return "flex max-w-full flex-wrap items-center justify-center gap-2 text-sm";
+  return "flex max-w-full flex-wrap items-center gap-2 text-sm";
+}
+
+function menuContactButtonClass(style: ContactChipStyle) {
+  if (style === "iconOnly") return "focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-card transition-colors hover:bg-muted";
+  if (style === "soft") return "focus-ring inline-flex max-w-full items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-primary transition-colors hover:bg-primary/15";
+  if (style === "outline") return "focus-ring inline-flex max-w-full items-center gap-2 rounded-full border border-primary/30 bg-card px-3 py-1.5 transition-colors hover:bg-primary/10";
+  if (style === "square") return "focus-ring inline-flex max-w-full items-center gap-2 rounded-md border bg-card px-3 py-1.5 transition-colors hover:bg-muted";
+  return "focus-ring inline-flex max-w-full items-center gap-2 rounded-full border bg-card px-3 py-1.5 transition-colors hover:bg-muted";
+}
+
 // One category button in the sticky nav. Three presentation styles share the
 // same behavior (scroll to the section) so the scroll-spy logic is untouched.
 function CategoryNavItem({
@@ -550,6 +613,71 @@ function CategoryNavItem({
     );
   }
 
+  if (style === "segmented") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "focus-ring inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+          active ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" />
+        <span dir={textDir}>{children}</span>
+      </button>
+    );
+  }
+
+  if (style === "minimal") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "focus-ring inline-flex items-center gap-2 whitespace-nowrap px-2 py-2 text-sm font-semibold underline-offset-8 transition-colors",
+          active ? "text-primary underline decoration-2" : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <span dir={textDir}>{children}</span>
+      </button>
+    );
+  }
+
+  if (style === "iconOnly") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        title={typeof children === "string" ? children : slug}
+        className={cn(
+          "focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors",
+          active ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+        )}
+      >
+        <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
+      </button>
+    );
+  }
+
+  if (style === "bubble") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "focus-ring inline-flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2 text-sm font-bold transition-all",
+          active ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-accent text-accent-foreground hover:bg-accent/80"
+        )}
+      >
+        <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-full", active ? "bg-white/20" : "bg-background/70")}>
+          <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" />
+        </span>
+        <span dir={textDir}>{children}</span>
+      </button>
+    );
+  }
+
   // Default: pills.
   return (
     <button
@@ -572,13 +700,15 @@ function SectionHeader({
   title,
   slug,
   icon,
-  textDir
+  textDir,
+  index
 }: {
   style: SectionHeaderStyle;
   title: string;
   slug: string;
   icon?: string;
   textDir: "ltr" | "rtl";
+  index: number;
 }) {
   const iconChip = (
     <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -612,6 +742,47 @@ function SectionHeader({
           <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
         </span>
         <h2 className="text-lg font-bold sm:text-xl">{title}</h2>
+      </div>
+    );
+  }
+
+  if (style === "boxed") {
+    return (
+      <div dir={textDir} className="rounded-xl border bg-card px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          {iconChip}
+          <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (style === "accent") {
+    return (
+      <div dir={textDir} className="flex items-center gap-3 border-s-4 border-primary bg-primary/5 px-4 py-3">
+        {iconChip}
+        <h2 className="text-xl font-bold text-primary sm:text-2xl">{title}</h2>
+      </div>
+    );
+  }
+
+  if (style === "numbered") {
+    return (
+      <div dir={textDir} className="flex items-center gap-3">
+        <span className="inline-flex h-10 min-w-10 items-center justify-center rounded-full bg-primary text-sm font-black text-primary-foreground">
+          {String(index).padStart(2, "0")}
+        </span>
+        <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+        <span className="h-px flex-1 bg-border" aria-hidden />
+      </div>
+    );
+  }
+
+  if (style === "overline") {
+    return (
+      <div dir={textDir} className="grid gap-1">
+        <span className="h-1 w-12 rounded-full bg-primary" aria-hidden />
+        <h2 className="text-2xl font-black uppercase tracking-wide sm:text-3xl">{title}</h2>
       </div>
     );
   }

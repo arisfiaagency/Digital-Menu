@@ -24,7 +24,7 @@ const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 
 // How long a cached snapshot is served before it's refreshed. Admin menu edits
 // appear to customers within this window (see revalidatePublicData()).
-const REVALIDATE_SECONDS = 60;
+const REVALIDATE_SECONDS = 20;
 export const PUBLIC_DATA_TAG = "public-app-data";
 
 const DOCUMENTS_BASE = PROJECT_ID

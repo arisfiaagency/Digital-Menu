@@ -72,6 +72,8 @@ export type GeneralSettings = {
   coverImagePath?: string;
   // Optional announcement shown in the "promo" above-category strip.
   promoText?: OptionalLocalizedText;
+  // Optional headline on the public welcome page, e.g. "Welcome to".
+  welcomeHeader?: OptionalLocalizedText;
   phone?: string;
   whatsapp?: string;
   email?: string;
@@ -229,16 +231,31 @@ export type PosState = {
 };
 
 export type MenuCardDesign = "classic" | "compact" | "overlay";
-export type CategoryNavStyle = "pills" | "underline" | "cards";
-export type SectionHeaderStyle = "plain" | "divider" | "banner" | "centered";
-export type MenuBackgroundType = "preset" | "solid" | "gradient" | "image";
+export type CategoryNavStyle = "pills" | "underline" | "cards" | "segmented" | "minimal" | "iconOnly" | "bubble";
+export type SectionHeaderStyle = "plain" | "divider" | "banner" | "centered" | "boxed" | "accent" | "numbered" | "overline";
+export type MenuBackgroundType = "preset" | "solid" | "gradient" | "image" | "pattern";
 export type HeaderAlign = "left" | "center";
 export type HeaderBackgroundType = "theme" | "solid" | "gradient";
-export type SearchShape = "pill" | "rounded" | "square";
-export type SearchStyle = "filled" | "outlined";
-export type SearchSize = "normal" | "large";
+export type SearchShape = "pill" | "rounded" | "square" | "soft";
+export type SearchStyle = "filled" | "outlined" | "glass" | "underline" | "shadow";
+export type SearchSize = "compact" | "normal" | "large";
 export type SearchPlacement = "header" | "sticky";
 export type AboveCategoryRegion = "none" | "cover" | "promo" | "featured";
+export type MenuLogoStyle = "rounded" | "circle" | "square" | "badge" | "wordmark";
+export type OpenStatusStyle = "pill" | "compact" | "outline" | "card" | "banner";
+export type ContactLayout = "inline" | "centered" | "stacked" | "grid";
+export type ContactChipStyle = "pill" | "soft" | "outline" | "square" | "iconOnly";
+export type SocialLinkStyle = "icons" | "soft" | "outline" | "square";
+export type SearchIconPosition = "left" | "right" | "none";
+export type SearchWidth = "normal" | "wide" | "full";
+export type MenuBackgroundPattern = "none" | "cafe" | "dots" | "grid" | "diagonal" | "waves" | "checker" | "confetti" | "stars" | "mesh";
+export type MenuBackgroundImageStyle = "cover" | "contain" | "tile" | "fixed";
+export type WelcomeThemeToggleStyle = "circle" | "pill" | "segmented";
+export type WelcomeThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "contrast";
+export type WelcomeLanguageStyle = "buttons" | "segmented" | "cards" | "minimal";
+export type WelcomeCardStyle = "glass" | "solid" | "outlined" | "floating";
+export type WelcomePattern = "none" | "cafe" | "dots" | "grid" | "diagonal" | "waves";
+export type WelcomeBackgroundStyle = "gradient" | "solid" | "pattern";
 
 export type AppearanceSettings = {
   primaryColor: string;
@@ -263,11 +280,15 @@ export type AppearanceSettings = {
   backgroundGradientTo?: string;
   backgroundImageUrl?: string;
   backgroundImagePath?: string;
+  backgroundImageStyle?: MenuBackgroundImageStyle;
   // Dark scrim over an image background, 0–100 (%). Keeps menu text readable.
   backgroundOverlay?: number;
   // Which built-in preset when backgroundType === "preset". "cafe" = the
   // original animated food-icon layer.
   backgroundPreset?: string;
+  backgroundPattern?: MenuBackgroundPattern;
+  backgroundPatternColor?: string;
+  backgroundPatternAnimated?: boolean;
   // Header (logo/name/description/contact row). `headerLayout` above controls
   // density; these control alignment, background, and the contact-chips row.
   headerAlign?: HeaderAlign;
@@ -276,14 +297,38 @@ export type AppearanceSettings = {
   headerGradientFrom?: string;
   headerGradientTo?: string;
   showContactRow?: boolean;
+  menuLogoStyle?: MenuLogoStyle;
+  openStatusStyle?: OpenStatusStyle;
+  contactLayout?: ContactLayout;
+  contactChipStyle?: ContactChipStyle;
+  socialLinkStyle?: SocialLinkStyle;
   // Search bar presentation.
   searchShape?: SearchShape;
   searchStyle?: SearchStyle;
   searchSize?: SearchSize;
   searchPlacement?: SearchPlacement;
+  searchIconPosition?: SearchIconPosition;
+  searchWidth?: SearchWidth;
+  searchShowLabel?: boolean;
   // Region shown between the header and the sticky category nav.
   aboveCategory?: AboveCategoryRegion;
   promoColor?: string;
+  // Welcome page presentation at /{clientSlug}.
+  welcomeAccentColor?: string;
+  welcomeThemeToggleStyle?: WelcomeThemeToggleStyle;
+  welcomeThemeIconStyle?: WelcomeThemeIconStyle;
+  welcomeLanguageStyle?: WelcomeLanguageStyle;
+  welcomeCardStyle?: WelcomeCardStyle;
+  welcomeCardPattern?: WelcomePattern;
+  welcomeFormColor?: string;
+  welcomeFormTextColor?: string;
+  welcomeFormBorderColor?: string;
+  welcomeBackgroundStyle?: WelcomeBackgroundStyle;
+  welcomeBackgroundColor?: string;
+  welcomeBackgroundGradientFrom?: string;
+  welcomeBackgroundGradientTo?: string;
+  welcomeBackgroundPattern?: WelcomePattern;
+  welcomeBackgroundPatternColor?: string;
   updatedAt?: Timestamp;
 };
 
