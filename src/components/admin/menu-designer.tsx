@@ -16,7 +16,22 @@ import { hexToRgba, menuThemeStyle, readableForegroundHslVar } from "@/lib/utils
 import { getAdminAppData, listClients, saveSettings } from "@/lib/firebase/firestore";
 import { setActiveClientSlug } from "@/lib/tenant";
 import { defaultAppearanceSettings, defaultGeneralSettings, defaultMenuItems, defaultMenuSettings } from "@/data/default-data";
-import type { AppearanceSettings, ClientAccount, GeneralSettings, MenuSettings } from "@/types/models";
+import { localeLabels } from "@/lib/i18n/config";
+import type { AppearanceSettings, ClientAccount, GeneralSettings, Locale, MenuSettings } from "@/types/models";
+
+const MENU_SETTING_LABELS: Record<string, string> = {
+  showImages: "Show item photos",
+  showPrices: "Show prices & cart",
+  showCalories: "Show calories",
+  showIngredients: "Show ingredients",
+  showAllergens: "Show allergens",
+  showSoldOutItems: "Show sold-out items",
+  enableSearch: "Enable search bar",
+  enableDarkMode: "Enable dark mode"
+};
+
+const ALL_LOCALES: Locale[] = ["ckb", "ar", "en"];
+const CURRENCIES = ["IQD", "USD", "EUR", "TRY"] as const;
 
 const SAMPLE_ITEMS = defaultMenuItems.slice(0, 2);
 const HOUR_OPTIONS = Array.from({ length: 25 }, (_, hour) => hour);
@@ -91,6 +106,15 @@ export function MenuDesigner() {
   const update = (patch: Partial<AppearanceSettings>) => setAppearance((prev) => ({ ...prev, ...patch }));
   const updateMenu = (patch: Partial<MenuSettings>) => setMenu((prev) => ({ ...prev, ...patch }));
   const backgroundType = appearance.backgroundType ?? "preset";
+
+  function toggleEnabledLanguage(entry: Locale) {
+    const current = general.enabledLanguages?.length ? general.enabledLanguages : ALL_LOCALES;
+    const next = current.includes(entry) ? current.filter((locale) => locale !== entry) : [...current, entry];
+    if (!next.length) return;
+    setGeneral({ ...general, enabledLanguages: next });
+  }
+
+  const enabledLanguageList = general.enabledLanguages?.length ? general.enabledLanguages : ALL_LOCALES;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -171,6 +195,68 @@ export function MenuDesigner() {
                     <Field label="Tagline (Arabic)"><Input dir="rtl" value={general.welcomeTagline?.ar || ""} placeholder="قهوة طازجة، خصيصاً لك" onChange={(e) => setGeneral({ ...general, welcomeTagline: { ...general.welcomeTagline, ar: e.target.value } })} /></Field>
                     <Field label="Tagline (Kurdish)"><Input dir="rtl" value={general.welcomeTagline?.ckb || ""} placeholder="قاوەی تازە، تایبەت بۆ تۆ" onChange={(e) => setGeneral({ ...general, welcomeTagline: { ...general.welcomeTagline, ckb: e.target.value } })} /></Field>
                   </div>
+                </section>
+
+                <section className="grid gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">Logo</h3>
+                    <p className="text-sm text-muted-foreground">Shown on the welcome card before guests enter the menu.</p>
+                  </div>
+                  <ImageUploadField
+                    label="Welcome logo"
+                    path={`clients/${slug}/logo`}
+                    imageUrl={general.logoUrl}
+                    onUploaded={(result) => setGeneral({ ...general, logoUrl: result.imageUrl, logoPath: result.imagePath })}
+                    onRemoved={() => setGeneral({ ...general, logoUrl: undefined, logoPath: undefined })}
+                  />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label="Logo shape">
+                      <Select value={appearance.welcomeLogoStyle ?? "circle"} onChange={(e) => update({ welcomeLogoStyle: e.target.value as AppearanceSettings["welcomeLogoStyle"] })}>
+                        <option value="circle">Circle</option>
+                        <option value="rounded">Rounded square</option>
+                        <option value="square">Square</option>
+                      </Select>
+                    </Field>
+                    <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+                      <div>
+                        <p className="text-sm font-medium">Show social links</p>
+                        <p className="text-xs text-muted-foreground">Hide the social row on the welcome screen.</p>
+                      </div>
+                      <Switch label="Show social links on welcome" checked={appearance.welcomeShowSocialLinks !== false} onCheckedChange={(v) => update({ welcomeShowSocialLinks: v })} />
+                    </div>
+                  </div>
+                </section>
+
+                <section className="grid gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">Languages on welcome</h3>
+                    <p className="text-sm text-muted-foreground">Choose which languages guests can pick before entering the menu.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_LOCALES.map((entry) => {
+                      const active = enabledLanguageList.includes(entry);
+                      return (
+                        <button
+                          key={entry}
+                          type="button"
+                          onClick={() => toggleEnabledLanguage(entry)}
+                          className={cn(
+                            "rounded-full border px-4 py-2 text-sm font-medium transition-colors",
+                            active ? "border-primary bg-primary text-primary-foreground" : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {localeLabels[entry]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Field label="Default menu language">
+                    <Select value={general.defaultLanguage} onChange={(e) => setGeneral({ ...general, defaultLanguage: e.target.value as GeneralSettings["defaultLanguage"] })}>
+                      {enabledLanguageList.map((entry) => (
+                        <option key={entry} value={entry}>{localeLabels[entry]}</option>
+                      ))}
+                    </Select>
+                  </Field>
                 </section>
 
                 <section className="grid gap-4 md:grid-cols-2">
@@ -288,22 +374,96 @@ export function MenuDesigner() {
                     <Field label="Gradient end"><Input type="color" value={appearance.welcomeBackgroundGradientTo || "#86cc8a"} onChange={(e) => update({ welcomeBackgroundGradientTo: e.target.value })} /></Field>
                   </div>
                   {(appearance.welcomeBackgroundStyle ?? "gradient") === "image" ? (
-                    <ImageUploadField
-                      label="Welcome background image or video"
-                      path={`clients/${slug}/welcome-background`}
-                      imageUrl={appearance.welcomeBackgroundImageUrl}
-                      mediaType={appearance.welcomeBackgroundMediaType}
-                      helpText={WELCOME_BACKGROUND_MEDIA_HINT}
-                      inputHint="Images or MP4/WebM videos up to 100 MB."
-                      accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-                      allowVideo
-                      maxBytes={WELCOME_BACKGROUND_MEDIA_MAX_BYTES}
-                      maxBytesLabel="100 MB"
-                      onUploaded={(result) => update({ welcomeBackgroundImageUrl: result.imageUrl, welcomeBackgroundImagePath: result.imagePath, welcomeBackgroundMediaType: result.mediaType ?? "image" })}
-                      onRemoved={() => update({ welcomeBackgroundImageUrl: undefined, welcomeBackgroundImagePath: undefined, welcomeBackgroundMediaType: undefined })}
-                    />
+                    <>
+                      <ImageUploadField
+                        label="Welcome background image or video"
+                        path={`clients/${slug}/welcome-background`}
+                        imageUrl={appearance.welcomeBackgroundImageUrl}
+                        mediaType={appearance.welcomeBackgroundMediaType}
+                        helpText={WELCOME_BACKGROUND_MEDIA_HINT}
+                        inputHint="Images or MP4/WebM videos up to 100 MB."
+                        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
+                        allowVideo
+                        maxBytes={WELCOME_BACKGROUND_MEDIA_MAX_BYTES}
+                        maxBytesLabel="100 MB"
+                        onUploaded={(result) => update({ welcomeBackgroundImageUrl: result.imageUrl, welcomeBackgroundImagePath: result.imagePath, welcomeBackgroundMediaType: result.mediaType ?? "image" })}
+                        onRemoved={() => update({ welcomeBackgroundImageUrl: undefined, welcomeBackgroundImagePath: undefined, welcomeBackgroundMediaType: undefined })}
+                      />
+                      <Field label={`Background darken overlay (${appearance.welcomeBackgroundOverlay ?? 15}%)`}>
+                        <input
+                          type="range"
+                          min={0}
+                          max={80}
+                          step={1}
+                          value={appearance.welcomeBackgroundOverlay ?? 15}
+                          onChange={(e) => update({ welcomeBackgroundOverlay: Number(e.target.value) })}
+                          className="w-full accent-primary"
+                        />
+                      </Field>
+                    </>
                   ) : null}
                 </section>
+              </CardContent>
+            </Card>
+
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
+              <CardHeader><CardTitle>Menu Display &amp; Behavior</CardTitle></CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(menu)
+                  .filter(([key]) => key !== "updatedAt" && key !== "enableFilters")
+                  .map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between rounded-md border p-3">
+                      <span className="text-sm font-medium">{MENU_SETTING_LABELS[key] || key}</span>
+                      <Switch
+                        label={MENU_SETTING_LABELS[key] || key}
+                        checked={Boolean(value)}
+                        onCheckedChange={(checked) => updateMenu({ [key]: checked } as Partial<MenuSettings>)}
+                      />
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
+              <CardHeader><CardTitle>Languages &amp; Currency</CardTitle></CardHeader>
+              <CardContent className="grid gap-4">
+                <div>
+                  <p className="mb-2 text-sm font-medium">Enabled menu languages</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_LOCALES.map((entry) => {
+                      const active = enabledLanguageList.includes(entry);
+                      return (
+                        <button
+                          key={entry}
+                          type="button"
+                          onClick={() => toggleEnabledLanguage(entry)}
+                          className={cn(
+                            "rounded-full border px-4 py-2 text-sm font-medium transition-colors",
+                            active ? "border-primary bg-primary text-primary-foreground" : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {localeLabels[entry]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Default language">
+                    <Select value={general.defaultLanguage} onChange={(e) => setGeneral({ ...general, defaultLanguage: e.target.value as GeneralSettings["defaultLanguage"] })}>
+                      {enabledLanguageList.map((entry) => (
+                        <option key={entry} value={entry}>{localeLabels[entry]}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Default currency">
+                    <Select value={general.defaultCurrency} onChange={(e) => setGeneral({ ...general, defaultCurrency: e.target.value as GeneralSettings["defaultCurrency"] })}>
+                      {CURRENCIES.map((entry) => (
+                        <option key={entry} value={entry}>{entry}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
               </CardContent>
             </Card>
 
@@ -341,6 +501,31 @@ export function MenuDesigner() {
             </Card>
 
             <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
+              <CardHeader><CardTitle>Layout</CardTitle></CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <Field label="Menu layout">
+                  <Select value={appearance.menuLayout} onChange={(e) => update({ menuLayout: e.target.value as AppearanceSettings["menuLayout"] })}>
+                    <option value="list">List</option>
+                    <option value="grid">Grid</option>
+                  </Select>
+                </Field>
+                <Field label="Header density">
+                  <Select value={appearance.headerLayout} onChange={(e) => update({ headerLayout: e.target.value as AppearanceSettings["headerLayout"] })}>
+                    <option value="expanded">Expanded</option>
+                    <option value="compact">Compact</option>
+                  </Select>
+                </Field>
+                <div className="flex items-center justify-between gap-3 rounded-md border p-3 md:col-span-2">
+                  <div>
+                    <p className="text-sm font-medium">Show description under cafe name</p>
+                    <p className="text-xs text-muted-foreground">Uses the multilingual description from Branding.</p>
+                  </div>
+                  <Switch label="Show header description" checked={appearance.showHeaderDescription !== false} onCheckedChange={(v) => update({ showHeaderDescription: v })} />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Header</CardTitle></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="Logo design">
@@ -350,12 +535,6 @@ export function MenuDesigner() {
                     <option value="square">Sharp square</option>
                     <option value="badge">Badge frame</option>
                     <option value="wordmark">Wide wordmark</option>
-                  </Select>
-                </Field>
-                <Field label="Layout density">
-                  <Select value={appearance.headerLayout} onChange={(e) => update({ headerLayout: e.target.value as AppearanceSettings["headerLayout"] })}>
-                    <option value="expanded">Expanded</option>
-                    <option value="compact">Compact</option>
                   </Select>
                 </Field>
                 <Field label="Alignment">
@@ -414,8 +593,15 @@ export function MenuDesigner() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Phone number"><Input value={general.phone || ""} onChange={(e) => setGeneral({ ...general, phone: e.target.value })} /></Field>
                   <Field label="WhatsApp"><Input value={general.whatsapp || ""} onChange={(e) => setGeneral({ ...general, whatsapp: e.target.value })} /></Field>
-                  <Field label="Instagram"><Input value={general.socialLinks?.instagram || ""} onChange={(e) => setGeneral({ ...general, socialLinks: { ...general.socialLinks, instagram: e.target.value } })} /></Field>
+                  <Field label="Email"><Input type="email" value={general.email || ""} onChange={(e) => setGeneral({ ...general, email: e.target.value })} /></Field>
+                  <Field label="Address"><Input value={general.address || ""} onChange={(e) => setGeneral({ ...general, address: e.target.value })} /></Field>
                   <Field label="Map URL"><Input value={general.googleMapsUrl || ""} onChange={(e) => setGeneral({ ...general, googleMapsUrl: e.target.value })} /></Field>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Facebook"><Input value={general.socialLinks?.facebook || ""} onChange={(e) => setGeneral({ ...general, socialLinks: { ...general.socialLinks, facebook: e.target.value } })} /></Field>
+                  <Field label="Instagram"><Input value={general.socialLinks?.instagram || ""} onChange={(e) => setGeneral({ ...general, socialLinks: { ...general.socialLinks, instagram: e.target.value } })} /></Field>
+                  <Field label="TikTok"><Input value={general.socialLinks?.tiktok || ""} onChange={(e) => setGeneral({ ...general, socialLinks: { ...general.socialLinks, tiktok: e.target.value } })} /></Field>
+                  <Field label="Snapchat"><Input value={general.socialLinks?.snapchat || ""} onChange={(e) => setGeneral({ ...general, socialLinks: { ...general.socialLinks, snapchat: e.target.value } })} /></Field>
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">
                   <Field label="Contact layout">
@@ -809,7 +995,7 @@ function DesignPreview({
             <div className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">Coffee</div>
             <div className={gridClass}>
               {SAMPLE_ITEMS.map((item) => (
-                <MenuItemCard key={item.id} item={item} locale={locale} settings={defaultMenuSettings} appearance={appearance} />
+                <MenuItemCard key={item.id} item={item} locale={locale} settings={menu} appearance={appearance} />
               ))}
             </div>
           </div>
@@ -849,7 +1035,7 @@ function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceS
         <div className="relative space-y-3">
           {menu.enableDarkMode !== false ? <div className="absolute right-0 top-0 h-8 w-8 rounded-full border bg-background/80" /> : null}
           <p className={cn("text-sm font-bold", menu.enableDarkMode !== false && "pr-10")} style={{ color: headerColor }}>{header}</p>
-          <div className="mx-auto h-16 w-16 rounded-full bg-primary/20 ring-4 ring-white/60" />
+          <div className="mx-auto h-16 w-16 rounded-full bg-primary/20 ring-4 ring-white/60" style={welcomePreviewLogoStyle(appearance)} />
           <h3 className="text-xl font-bold" style={{ color: foreground }}>{name}</h3>
           <p className="text-xs text-muted-foreground" style={helperStyle}>{tagline}</p>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground" style={helperStyle}>Choose your language</p>
@@ -875,12 +1061,20 @@ function WelcomePreview({ appearance, general, menu }: { appearance: AppearanceS
   );
 }
 
+function welcomePreviewLogoStyle(appearance: AppearanceSettings): React.CSSProperties {
+  const style = appearance.welcomeLogoStyle ?? "circle";
+  if (style === "square") return { borderRadius: "0.5rem" };
+  if (style === "rounded") return { borderRadius: "1rem" };
+  return { borderRadius: "9999px" };
+}
+
 function welcomePreviewBackgroundStyle(appearance: AppearanceSettings): React.CSSProperties {
   const style = appearance.welcomeBackgroundStyle ?? "gradient";
+  const overlay = Math.min(100, Math.max(0, appearance.welcomeBackgroundOverlay ?? 15)) / 100;
   if (style === "image" && appearance.welcomeBackgroundImageUrl && !isWelcomePreviewBackgroundVideo(appearance)) {
     return {
       backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8",
-      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), url(${appearance.welcomeBackgroundImageUrl})`,
+      backgroundImage: `linear-gradient(rgba(0, 0, 0, ${overlay}), rgba(0, 0, 0, ${overlay})), url(${appearance.welcomeBackgroundImageUrl})`,
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
       backgroundSize: "cover"
@@ -907,7 +1101,7 @@ function WelcomePreviewBackgroundVideo({ appearance }: { appearance: AppearanceS
         preload="metadata"
         aria-hidden
       />
-      <div className="pointer-events-none absolute inset-0 bg-black/15" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: Math.min(100, Math.max(0, appearance.welcomeBackgroundOverlay ?? 15)) / 100 }} aria-hidden />
     </>
   );
 }

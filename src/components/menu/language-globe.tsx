@@ -34,12 +34,15 @@ function randomGlobeGlyph(): GlobeGlyph {
 export function LanguageGlobe({
   locale,
   onChange,
-  menuAlign = "right"
+  menuAlign = "right",
+  availableLocales = locales
 }: {
   locale: Locale;
   onChange: (locale: Locale) => void;
   menuAlign?: "left" | "right";
+  availableLocales?: Locale[];
 }) {
+  const options = availableLocales.length ? availableLocales : locales;
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 160 });
   const [globeGlyph, setGlobeGlyph] = useState(defaultGlobeGlyph);
@@ -52,7 +55,7 @@ export function LanguageGlobe({
 
     const viewportPadding = 12;
     const menuWidth = Math.min(176, window.innerWidth - viewportPadding * 2);
-    const menuHeight = locales.length * 42 + 12;
+    const menuHeight = options.length * 42 + 12;
     const rect = trigger.getBoundingClientRect();
     const preferredLeft = menuAlign === "left" ? rect.left : rect.right - menuWidth;
     const left = Math.min(Math.max(preferredLeft, viewportPadding), window.innerWidth - menuWidth - viewportPadding);
@@ -124,7 +127,7 @@ export function LanguageGlobe({
           style={{ left: menuPosition.left, top: menuPosition.top, width: menuPosition.width }}
           className={cn("pop-in fixed z-50 overflow-hidden rounded-2xl border bg-card p-1.5 shadow-xl")}
         >
-          {locales.map((entry) => {
+          {options.map((entry) => {
             const active = entry === locale;
             return (
               <button

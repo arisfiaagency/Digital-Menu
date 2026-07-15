@@ -110,7 +110,11 @@ export const defaultAppearanceSettings = {
   welcomeBackgroundImagePath: "",
   welcomeBackgroundMediaType: "image" as const,
   welcomeBackgroundPattern: "cafe" as const,
-  welcomeBackgroundPatternColor: "#3f8a49"
+  welcomeBackgroundPatternColor: "#3f8a49",
+  welcomeBackgroundOverlay: 15,
+  welcomeLogoStyle: "circle" as const,
+  welcomeShowSocialLinks: true,
+  showHeaderDescription: true
 };
 
 export const defaultQrSettings = {

@@ -11,6 +11,8 @@ Multi-tenant digital menu platform for cafes and restaurants. Built with Next.js
 | Cafe staff admin | `/{clientSlug}/admin` |
 | Platform supervisor | `/admin` |
 
+The root URL `/` returns **404** — guests must use a cafe slug (e.g. `/your-cafe`).
+
 Public menu languages: English, Arabic, Kurdish Sorani (RTL for Arabic and Kurdish).
 
 Without Firebase Web config (or when the `demo` tenant is missing), `/demo` and `/demo/menu` serve local sample data for previews and e2e.

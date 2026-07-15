@@ -24,7 +24,7 @@ import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
 import { SocialLinks } from "@/components/menu/social-links";
 import { BrandCredit } from "@/components/brand-credit";
 import { defaultAppData } from "@/data/default-data";
-import { localized, translate } from "@/lib/i18n/config";
+import { localized, translate, locales } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney, normalizeSearch, serviceFeeAmount } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import { menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
@@ -163,6 +163,8 @@ export function MenuApp({
   const darkModeEnabled = data.menu.enableDarkMode !== false;
 
   const appearance = data.appearance;
+  const enabledLocales = data.general.enabledLanguages?.length ? data.general.enabledLanguages : locales;
+  const showHeaderDescription = appearance.showHeaderDescription !== false;
   const cardDesign = appearance.cardDesign ?? "classic";
   // Compact cards are horizontal, so they read best in a 1–2 column list; the
   // image-forward classic/overlay designs use the wider grid.
@@ -232,14 +234,14 @@ export function MenuApp({
   const brandText = (
     <div className="min-w-0" dir={textDir}>
       <h1 className={cn("truncate font-bold", headerCompact ? "text-lg sm:text-2xl" : "text-xl sm:text-3xl")}>{restaurantName}</h1>
-      {description ? <p className="line-clamp-2 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
+      {showHeaderDescription && description ? <p className="line-clamp-2 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
     </div>
   );
   const actionButtons = (
     <div className="flex shrink-0 items-center justify-end gap-2">
       {data.menu.showPrices ? <CartIconButton count={cart.totalQuantity} locale={locale} onClick={() => setCartOpen(true)} /> : null}
       {darkModeEnabled ? <ThemeToggle /> : null}
-      <LanguageGlobe locale={locale} onChange={setLocale} />
+      <LanguageGlobe locale={locale} onChange={setLocale} availableLocales={enabledLocales} />
     </div>
   );
   const contactRow = (
@@ -344,7 +346,7 @@ export function MenuApp({
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
           <div className="container absolute inset-x-0 bottom-0 pb-4" dir={textDir}>
             <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">{restaurantName}</h2>
-            {description ? <p className="line-clamp-2 max-w-xl text-sm text-white/85">{description}</p> : null}
+            {showHeaderDescription && description ? <p className="line-clamp-2 max-w-xl text-sm text-white/85">{description}</p> : null}
           </div>
         </section>
       ) : null}

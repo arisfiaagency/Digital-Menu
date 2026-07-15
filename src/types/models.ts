@@ -252,6 +252,7 @@ export type SearchIconPosition = "left" | "right" | "none";
 export type SearchWidth = "normal" | "wide" | "full";
 export type MenuBackgroundPattern = "none" | "cafe" | "dots" | "grid" | "diagonal" | "waves" | "checker" | "confetti" | "stars" | "mesh";
 export type MenuBackgroundImageStyle = "cover" | "contain" | "tile" | "fixed";
+export type WelcomeLogoStyle = "circle" | "rounded" | "square";
 export type WelcomeThemeToggleStyle = "circle" | "pill" | "segmented";
 export type WelcomeThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "contrast";
 export type WelcomeLanguageStyle = "buttons" | "segmented" | "cards" | "minimal";
@@ -338,6 +339,10 @@ export type AppearanceSettings = {
   welcomeBackgroundMediaType?: "image" | "video";
   welcomeBackgroundPattern?: WelcomePattern;
   welcomeBackgroundPatternColor?: string;
+  welcomeBackgroundOverlay?: number;
+  welcomeLogoStyle?: WelcomeLogoStyle;
+  welcomeShowSocialLinks?: boolean;
+  showHeaderDescription?: boolean;
   updatedAt?: Timestamp;
 };
 

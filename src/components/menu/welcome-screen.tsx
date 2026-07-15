@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/menu/language-selector";
 import { ThemeToggle } from "@/components/menu/theme-toggle";
 import { useLocale, publicLocaleChangeEvent, publicLocaleStorageKey } from "@/hooks/use-locale";
-import { localized, translate } from "@/lib/i18n/config";
+import { localized, translate, locales } from "@/lib/i18n/config";
 import { defaultAppData } from "@/data/default-data";
 import { cn } from "@/lib/utils/cn";
 import { SocialLinks } from "@/components/menu/social-links";
@@ -56,6 +56,8 @@ export function WelcomeScreen({
   // Live social links come from the server (falls back to default data). No
   // client Firebase fetch — the welcome page ships zero Firebase.
   const social = initialSocial ?? general.socialLinks;
+  const enabledLocales = general.enabledLanguages?.length ? general.enabledLanguages : locales;
+  const welcomeLogoShape = appearance.welcomeLogoStyle ?? "circle";
 
   // Brand mint #A4D8A6 (HSL 122 40% 75%) as the accent. Deep-green foreground
   // keeps text legible on the light mint. Scoped to this subtree so the shared
@@ -145,7 +147,8 @@ export function WelcomeScreen({
         <div className="mx-auto my-4 flex flex-col items-center gap-2">
           <div
             className={cn(
-              "relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-full shadow-lg ring-4",
+              "relative flex h-28 w-28 items-center justify-center overflow-hidden shadow-lg ring-4",
+              welcomeLogoClass(welcomeLogoShape),
               logoUrl
                 ? "ring-white/70 dark:ring-white/10"
                 : "bg-gradient-to-br from-amber-400 to-orange-600 ring-amber-200/50 dark:ring-amber-900/40"
@@ -195,7 +198,7 @@ export function WelcomeScreen({
           {/* Fixed ltr order so the buttons keep their position when the
               selected language flips the page between rtl and ltr. */}
           <div className="flex justify-center" dir="ltr">
-            <LanguageSelector locale={locale} onChange={setLocale} variant={appearance.welcomeLanguageStyle ?? "buttons"} />
+            <LanguageSelector locale={locale} onChange={setLocale} variant={appearance.welcomeLanguageStyle ?? "buttons"} availableLocales={enabledLocales} />
           </div>
         </div>
 
@@ -212,7 +215,7 @@ export function WelcomeScreen({
           </a>
         </Button>
 
-        {social && Object.values(social).some((value) => value?.trim()) ? (
+        {appearance.welcomeShowSocialLinks !== false && social && Object.values(social).some((value) => value?.trim()) ? (
           <div className="mt-6 space-y-2">
             <p dir={textDir} className="text-xs font-medium text-muted-foreground" style={helperTextStyle}>
               {translate(locale, "welcome.findUsSocial")}
@@ -249,6 +252,12 @@ function SteamingCup() {
   );
 }
 
+function welcomeLogoClass(style: "circle" | "rounded" | "square") {
+  if (style === "square") return "rounded-lg";
+  if (style === "rounded") return "rounded-2xl";
+  return "rounded-full";
+}
+
 function welcomeThemeStyle(accentColor: string): CSSProperties {
   const primary = hexToHslVar(accentColor) || "122 40% 75%";
   return {
@@ -260,10 +269,11 @@ function welcomeThemeStyle(accentColor: string): CSSProperties {
 
 function welcomeBackgroundStyle(appearance: AppearanceSettings): CSSProperties {
   const design = appearance.welcomeBackgroundStyle ?? "gradient";
+  const overlay = Math.min(100, Math.max(0, appearance.welcomeBackgroundOverlay ?? 15)) / 100;
   if (design === "image" && appearance.welcomeBackgroundImageUrl && !isWelcomeBackgroundVideo(appearance)) {
     return {
       backgroundColor: appearance.welcomeBackgroundColor || "#d7efd8",
-      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), url(${appearance.welcomeBackgroundImageUrl})`,
+      backgroundImage: `linear-gradient(rgba(0, 0, 0, ${overlay}), rgba(0, 0, 0, ${overlay})), url(${appearance.welcomeBackgroundImageUrl})`,
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
       backgroundSize: "cover"
@@ -332,7 +342,11 @@ function WelcomeBackgroundVideo({ appearance }: { appearance: AppearanceSettings
         preload="metadata"
         aria-hidden
       />
-      <div className="pointer-events-none absolute inset-0 bg-black/15" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 bg-black"
+        style={{ opacity: Math.min(100, Math.max(0, appearance.welcomeBackgroundOverlay ?? 15)) / 100 }}
+        aria-hidden
+      />
     </>
   );
 }

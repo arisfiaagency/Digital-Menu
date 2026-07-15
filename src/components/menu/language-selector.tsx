@@ -9,16 +9,19 @@ import type { Locale, WelcomeLanguageStyle } from "@/types/models";
 export function LanguageSelector({
   locale,
   onChange,
-  variant = "buttons"
+  variant = "buttons",
+  availableLocales = locales
 }: {
   locale: Locale;
   onChange: (locale: Locale) => void;
   variant?: WelcomeLanguageStyle;
+  availableLocales?: Locale[];
 }) {
+  const options = availableLocales.length ? availableLocales : locales;
   if (variant === "segmented") {
     return (
       <div dir="ltr" className="inline-flex rounded-full border bg-background/70 p-1 shadow-sm" aria-label="Language selector">
-        {locales.map((entry) => (
+        {options.map((entry) => (
           <button
             key={entry}
             type="button"
@@ -38,7 +41,7 @@ export function LanguageSelector({
   if (variant === "cards") {
     return (
       <div dir="ltr" className="grid w-full grid-cols-3 gap-2" aria-label="Language selector">
-        {locales.map((entry) => (
+        {options.map((entry) => (
           <button
             key={entry}
             type="button"
@@ -58,7 +61,7 @@ export function LanguageSelector({
   if (variant === "minimal") {
     return (
       <div dir="ltr" className="flex flex-wrap items-center justify-center gap-1 text-sm" aria-label="Language selector">
-        {locales.map((entry, index) => (
+        {options.map((entry, index) => (
           <span key={entry} className="inline-flex items-center gap-1">
             {index ? <span className="text-muted-foreground/45">/</span> : null}
             <button
@@ -80,7 +83,7 @@ export function LanguageSelector({
   return (
     <div dir="ltr" className="flex flex-wrap items-center gap-2" aria-label="Language selector">
       <Globe2 className="h-4 w-4 text-muted-foreground" aria-hidden />
-      {locales.map((entry) => (
+      {options.map((entry) => (
         <Button
           key={entry}
           type="button"
