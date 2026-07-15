@@ -37,162 +37,478 @@ type LookPreset = {
   id: string;
   name: string;
   blurb: string;
-  swatch: [string, string];
+  swatch: [string, string, string];
   patch: Partial<AppearanceSettings>;
 };
 
 const LOOK_PRESETS: LookPreset[] = [
   {
-    id: "fresh-green",
-    name: "Fresh Green",
-    blurb: "Bright cafe classic",
-    swatch: ["#0f766e", "#be123c"],
+    id: "champagne-gold",
+    name: "Champagne Gold",
+    blurb: "Warm cream & brushed gold",
+    swatch: ["#9a7b4f", "#c6a46b", "#f7f1e8"],
     patch: {
-      primaryColor: "#0f766e",
-      secondaryColor: "#be123c",
+      primaryColor: "#9a7b4f",
+      secondaryColor: "#c6a46b",
       defaultTheme: "light",
       cardDesign: "classic",
+      cardStyle: "elevated",
       categoryNavStyle: "pills",
-      sectionHeaderStyle: "plain",
-      backgroundType: "preset",
-      fontPreset: "brand",
-      pageDensity: "comfortable",
-      borderRadius: 12,
-      welcomeAccentColor: "#A4D8A6",
-      welcomeBackgroundStyle: "gradient",
-      welcomeBackgroundGradientFrom: "#d7efd8",
-      welcomeBackgroundGradientTo: "#86cc8a"
-    }
-  },
-  {
-    id: "espresso",
-    name: "Espresso",
-    blurb: "Dark roast lounge",
-    swatch: ["#6f4e37", "#c4a484"],
-    patch: {
-      primaryColor: "#6f4e37",
-      secondaryColor: "#c4a484",
-      defaultTheme: "dark",
-      cardDesign: "overlay",
-      categoryNavStyle: "bubble",
-      sectionHeaderStyle: "accent",
-      backgroundType: "solid",
-      pageSurfaceColor: "#1c1410",
-      cardSurfaceColor: "#2a1f18",
-      fontPreset: "classic",
-      pageDensity: "cozy",
-      borderRadius: 16,
-      priceStyle: "large",
-      welcomeAccentColor: "#c4a484",
-      welcomeBackgroundStyle: "solid",
-      welcomeBackgroundColor: "#2a1f18",
-      welcomeCardStyle: "solid",
-      welcomeEnterStyle: "rounded"
-    }
-  },
-  {
-    id: "coral-bistro",
-    name: "Coral Bistro",
-    blurb: "Warm & playful",
-    swatch: ["#e11d48", "#fb923c"],
-    patch: {
-      primaryColor: "#e11d48",
-      secondaryColor: "#fb923c",
-      defaultTheme: "light",
-      cardDesign: "poster",
-      categoryNavStyle: "cards",
-      sectionHeaderStyle: "banner",
-      backgroundType: "gradient",
-      backgroundGradientFrom: "#fff1f2",
-      backgroundGradientTo: "#fff7ed",
-      fontPreset: "soft",
-      itemColumns: "2",
-      priceStyle: "badge",
-      borderRadius: 20,
-      welcomeAccentColor: "#fb7185",
-      welcomeLanguageStyle: "cards",
-      welcomeCardStyle: "floating",
-      welcomeEnterStyle: "pill"
-    }
-  },
-  {
-    id: "midnight",
-    name: "Midnight",
-    blurb: "Cool urban night",
-    swatch: ["#6366f1", "#22d3ee"],
-    patch: {
-      primaryColor: "#6366f1",
-      secondaryColor: "#22d3ee",
-      defaultTheme: "dark",
-      cardDesign: "minimal",
-      categoryNavStyle: "segmented",
-      sectionHeaderStyle: "numbered",
-      backgroundType: "pattern",
-      backgroundColor: "#0f172a",
-      backgroundPattern: "mesh",
-      backgroundPatternColor: "#6366f1",
-      fontPreset: "modern",
-      pageDensity: "compact",
-      navSurface: "tinted",
-      borderRadius: 8,
-      welcomeAccentColor: "#818cf8",
-      welcomeBackgroundStyle: "gradient",
-      welcomeBackgroundGradientFrom: "#1e1b4b",
-      welcomeBackgroundGradientTo: "#0f172a",
-      welcomeCardStyle: "glass",
-      welcomeEnterStyle: "outline"
-    }
-  },
-  {
-    id: "sand",
-    name: "Warm Sand",
-    blurb: "Soft daylight menu",
-    swatch: ["#b45309", "#78716c"],
-    patch: {
-      primaryColor: "#b45309",
-      secondaryColor: "#78716c",
-      defaultTheme: "light",
-      cardDesign: "compact",
-      categoryNavStyle: "underline",
       sectionHeaderStyle: "overline",
       backgroundType: "solid",
-      pageSurfaceColor: "#faf7f2",
-      cardSurfaceColor: "#ffffff",
+      pageSurfaceColor: "#f7f1e8",
+      cardSurfaceColor: "#fffcf7",
       fontPreset: "classic",
+      pageDensity: "cozy",
       contentWidth: "narrow",
-      imageAspect: "square",
-      borderRadius: 10,
-      welcomeAccentColor: "#d97706",
-      welcomeBackgroundStyle: "pattern",
-      welcomeBackgroundColor: "#faf7f2",
-      welcomeBackgroundPattern: "dots",
-      welcomeCardWidth: "narrow",
-      welcomeEnterStyle: "square"
+      priceStyle: "large",
+      imageAspect: "wide",
+      borderRadius: 14,
+      navSurface: "muted",
+      welcomeAccentColor: "#c6a46b",
+      welcomeHeaderTextColor: "#9a7b4f",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#f7f1e8",
+      welcomeBackgroundGradientTo: "#e8d9c0",
+      welcomeCardStyle: "floating",
+      welcomeEnterStyle: "rounded",
+      welcomeCardWidth: "narrow"
     }
   },
   {
-    id: "berry",
-    name: "Berry Cafe",
-    blurb: "Bold dessert shop",
-    swatch: ["#9d174d", "#a21caf"],
+    id: "noir-velvet",
+    name: "Noir Velvet",
+    blurb: "Black-tie evening menu",
+    swatch: ["#d4af37", "#f5e6c8", "#0b0b0d"],
     patch: {
-      primaryColor: "#9d174d",
-      secondaryColor: "#a21caf",
+      primaryColor: "#d4af37",
+      secondaryColor: "#f5e6c8",
+      defaultTheme: "dark",
+      cardDesign: "overlay",
+      cardStyle: "elevated",
+      categoryNavStyle: "underline",
+      sectionHeaderStyle: "accent",
+      backgroundType: "solid",
+      pageSurfaceColor: "#0b0b0d",
+      cardSurfaceColor: "#161618",
+      fontPreset: "classic",
+      pageDensity: "cozy",
+      contentWidth: "narrow",
+      priceStyle: "large",
+      imageAspect: "tall",
+      borderRadius: 10,
+      navSurface: "solid",
+      sectionTitleCase: "uppercase",
+      welcomeAccentColor: "#d4af37",
+      welcomeHeaderTextColor: "#d4af37",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#0b0b0d",
+      welcomeBackgroundGradientTo: "#1a1612",
+      welcomeCardStyle: "outlined",
+      welcomeFormBorderColor: "#d4af37",
+      welcomeEnterStyle: "outline",
+      welcomeCardWidth: "narrow"
+    }
+  },
+  {
+    id: "emerald-atelier",
+    name: "Emerald Atelier",
+    blurb: "Deep jewel green, quiet luxury",
+    swatch: ["#0f5c4c", "#c2a878", "#f3f7f5"],
+    patch: {
+      primaryColor: "#0f5c4c",
+      secondaryColor: "#c2a878",
       defaultTheme: "light",
       cardDesign: "classic",
-      categoryNavStyle: "iconOnly",
+      cardStyle: "outlined",
+      categoryNavStyle: "segmented",
       sectionHeaderStyle: "boxed",
-      backgroundType: "image",
-      fontPreset: "soft",
-      itemColumns: "3",
+      backgroundType: "gradient",
+      backgroundGradientFrom: "#f3f7f5",
+      backgroundGradientTo: "#e7efeb",
+      pageSurfaceColor: "#f3f7f5",
+      cardSurfaceColor: "#ffffff",
+      fontPreset: "brand",
+      pageDensity: "comfortable",
       priceStyle: "badge",
-      sectionTitleCase: "uppercase",
+      borderRadius: 16,
+      navSurface: "tinted",
+      welcomeAccentColor: "#0f5c4c",
+      welcomeHeaderTextColor: "#0f5c4c",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#e7efeb",
+      welcomeBackgroundGradientTo: "#cfe0d8",
+      welcomeCardStyle: "glass",
+      welcomeEnterStyle: "pill",
+      welcomeCardWidth: "normal"
+    }
+  },
+  {
+    id: "ivory-marble",
+    name: "Ivory Marble",
+    blurb: "Gallery-white with soft charcoal",
+    swatch: ["#2f2a26", "#8a8178", "#f8f6f2"],
+    patch: {
+      primaryColor: "#2f2a26",
+      secondaryColor: "#8a8178",
+      defaultTheme: "light",
+      cardDesign: "minimal",
+      cardStyle: "flat",
+      categoryNavStyle: "minimal",
+      sectionHeaderStyle: "divider",
+      backgroundType: "solid",
+      pageSurfaceColor: "#f8f6f2",
+      cardSurfaceColor: "#ffffff",
+      fontPreset: "modern",
+      pageDensity: "cozy",
+      contentWidth: "narrow",
+      priceStyle: "plain",
+      imageAspect: "square",
+      borderRadius: 8,
+      navSurface: "transparent",
+      welcomeAccentColor: "#2f2a26",
+      welcomeHeaderTextColor: "#2f2a26",
+      welcomeBackgroundStyle: "solid",
+      welcomeBackgroundColor: "#f8f6f2",
+      welcomeCardStyle: "outlined",
+      welcomeEnterStyle: "square",
+      welcomeCardWidth: "narrow",
+      welcomeLanguageStyle: "minimal"
+    }
+  },
+  {
+    id: "rose-quartz",
+    name: "Rose Quartz",
+    blurb: "Blush silk & soft gold",
+    swatch: ["#b76e79", "#d4af87", "#fbf4f5"],
+    patch: {
+      primaryColor: "#b76e79",
+      secondaryColor: "#d4af87",
+      defaultTheme: "light",
+      cardDesign: "poster",
+      cardStyle: "elevated",
+      categoryNavStyle: "bubble",
+      sectionHeaderStyle: "centered",
+      backgroundType: "gradient",
+      backgroundGradientFrom: "#fbf4f5",
+      backgroundGradientTo: "#f3e7e0",
+      pageSurfaceColor: "#fbf4f5",
+      cardSurfaceColor: "#fffafb",
+      fontPreset: "soft",
+      pageDensity: "comfortable",
+      itemColumns: "2",
+      priceStyle: "badge",
+      imageAspect: "tall",
+      borderRadius: 22,
+      welcomeAccentColor: "#b76e79",
+      welcomeHeaderTextColor: "#b76e79",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#fbf4f5",
+      welcomeBackgroundGradientTo: "#ead5cf",
+      welcomeCardStyle: "floating",
+      welcomeLanguageStyle: "cards",
+      welcomeEnterStyle: "pill",
+      welcomeCardWidth: "normal"
+    }
+  },
+  {
+    id: "sapphire-lounge",
+    name: "Sapphire Lounge",
+    blurb: "Deep navy with champagne light",
+    swatch: ["#1e3a5f", "#c9a227", "#0f172a"],
+    patch: {
+      primaryColor: "#c9a227",
+      secondaryColor: "#7dd3fc",
+      defaultTheme: "dark",
+      cardDesign: "overlay",
+      cardStyle: "elevated",
+      categoryNavStyle: "pills",
+      sectionHeaderStyle: "banner",
+      backgroundType: "gradient",
+      backgroundGradientFrom: "#0f172a",
+      backgroundGradientTo: "#1e3a5f",
+      pageSurfaceColor: "#0f172a",
+      cardSurfaceColor: "#152238",
+      fontPreset: "classic",
+      pageDensity: "cozy",
+      priceStyle: "large",
+      imageAspect: "wide",
+      borderRadius: 12,
+      navSurface: "tinted",
+      welcomeAccentColor: "#c9a227",
+      welcomeHeaderTextColor: "#c9a227",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#0f172a",
+      welcomeBackgroundGradientTo: "#1e3a5f",
+      welcomeCardStyle: "glass",
+      welcomeEnterStyle: "outline",
+      welcomeCardWidth: "normal"
+    }
+  },
+  {
+    id: "obsidian-copper",
+    name: "Obsidian Copper",
+    blurb: "Dark stone & molten copper",
+    swatch: ["#b87333", "#e8c4a0", "#141210"],
+    patch: {
+      primaryColor: "#b87333",
+      secondaryColor: "#e8c4a0",
+      defaultTheme: "dark",
+      cardDesign: "compact",
+      cardStyle: "outlined",
+      categoryNavStyle: "cards",
+      sectionHeaderStyle: "accent",
+      backgroundType: "solid",
+      pageSurfaceColor: "#141210",
+      cardSurfaceColor: "#1f1b17",
+      fontPreset: "classic",
+      pageDensity: "comfortable",
+      priceStyle: "badge",
+      borderRadius: 12,
+      navSurface: "muted",
+      welcomeAccentColor: "#b87333",
+      welcomeHeaderTextColor: "#e8c4a0",
+      welcomeBackgroundStyle: "solid",
+      welcomeBackgroundColor: "#141210",
+      welcomeCardStyle: "solid",
+      welcomeEnterStyle: "rounded",
+      welcomeCardAlign: "bottom"
+    }
+  },
+  {
+    id: "olive-estate",
+    name: "Olive Estate",
+    blurb: "Mediterranean villa calm",
+    swatch: ["#5c6b4a", "#c4a882", "#f4f0e6"],
+    patch: {
+      primaryColor: "#5c6b4a",
+      secondaryColor: "#c4a882",
+      defaultTheme: "light",
+      cardDesign: "classic",
+      cardStyle: "outlined",
+      categoryNavStyle: "underline",
+      sectionHeaderStyle: "plain",
+      backgroundType: "solid",
+      pageSurfaceColor: "#f4f0e6",
+      cardSurfaceColor: "#fffcf5",
+      fontPreset: "classic",
+      pageDensity: "cozy",
+      contentWidth: "normal",
+      priceStyle: "plain",
+      imageAspect: "square",
+      borderRadius: 10,
+      navSurface: "muted",
+      welcomeAccentColor: "#5c6b4a",
+      welcomeHeaderTextColor: "#5c6b4a",
+      welcomeBackgroundStyle: "pattern",
+      welcomeBackgroundColor: "#f4f0e6",
+      welcomeBackgroundPattern: "dots",
+      welcomeBackgroundPatternColor: "#5c6b4a",
+      welcomeCardStyle: "outlined",
+      welcomeEnterStyle: "square",
+      welcomeCardWidth: "narrow"
+    }
+  },
+  {
+    id: "plum-opera",
+    name: "Plum Opera",
+    blurb: "Velvet plum & antique gold",
+    swatch: ["#5b2c6f", "#d4af37", "#1a1020"],
+    patch: {
+      primaryColor: "#5b2c6f",
+      secondaryColor: "#d4af37",
+      defaultTheme: "dark",
+      cardDesign: "poster",
+      cardStyle: "elevated",
+      categoryNavStyle: "bubble",
+      sectionHeaderStyle: "numbered",
+      backgroundType: "gradient",
+      backgroundGradientFrom: "#1a1020",
+      backgroundGradientTo: "#2d1b3d",
+      pageSurfaceColor: "#1a1020",
+      cardSurfaceColor: "#241530",
+      fontPreset: "soft",
+      pageDensity: "comfortable",
+      itemColumns: "2",
+      priceStyle: "large",
+      imageAspect: "tall",
       borderRadius: 18,
-      welcomeAccentColor: "#db2777",
-      welcomeLanguageStyle: "segmented",
-      welcomeCardAlign: "bottom",
-      welcomeCardWidth: "wide",
-      welcomeEnterStyle: "rounded"
+      sectionTitleCase: "uppercase",
+      welcomeAccentColor: "#d4af37",
+      welcomeHeaderTextColor: "#d4af37",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#1a1020",
+      welcomeBackgroundGradientTo: "#5b2c6f",
+      welcomeCardStyle: "floating",
+      welcomeEnterStyle: "rounded",
+      welcomeCardWidth: "wide"
+    }
+  },
+  {
+    id: "arctic-porcelain",
+    name: "Arctic Porcelain",
+    blurb: "Cool white, silver & ice blue",
+    swatch: ["#3d5a80", "#98c1d9", "#f7f9fb"],
+    patch: {
+      primaryColor: "#3d5a80",
+      secondaryColor: "#98c1d9",
+      defaultTheme: "light",
+      cardDesign: "minimal",
+      cardStyle: "outlined",
+      categoryNavStyle: "segmented",
+      sectionHeaderStyle: "boxed",
+      backgroundType: "solid",
+      pageSurfaceColor: "#f7f9fb",
+      cardSurfaceColor: "#ffffff",
+      fontPreset: "modern",
+      pageDensity: "compact",
+      contentWidth: "wide",
+      priceStyle: "badge",
+      borderRadius: 14,
+      navSurface: "solid",
+      welcomeAccentColor: "#3d5a80",
+      welcomeHeaderTextColor: "#3d5a80",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#f7f9fb",
+      welcomeBackgroundGradientTo: "#d6e6f0",
+      welcomeCardStyle: "glass",
+      welcomeEnterStyle: "outline",
+      welcomeLanguageStyle: "segmented"
+    }
+  },
+  {
+    id: "matcha-maison",
+    name: "Matcha Maison",
+    blurb: "Quiet green tea & linen",
+    swatch: ["#6b8f71", "#c9b79c", "#f5f3ea"],
+    patch: {
+      primaryColor: "#6b8f71",
+      secondaryColor: "#c9b79c",
+      defaultTheme: "light",
+      cardDesign: "classic",
+      cardStyle: "flat",
+      categoryNavStyle: "pills",
+      sectionHeaderStyle: "overline",
+      backgroundType: "gradient",
+      backgroundGradientFrom: "#f5f3ea",
+      backgroundGradientTo: "#e8efe6",
+      pageSurfaceColor: "#f5f3ea",
+      cardSurfaceColor: "#fffcf7",
+      fontPreset: "soft",
+      pageDensity: "cozy",
+      priceStyle: "plain",
+      imageAspect: "wide",
+      borderRadius: 16,
+      navSurface: "muted",
+      welcomeAccentColor: "#6b8f71",
+      welcomeHeaderTextColor: "#6b8f71",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#f5f3ea",
+      welcomeBackgroundGradientTo: "#d7e4d6",
+      welcomeCardStyle: "glass",
+      welcomeEnterStyle: "pill",
+      welcomeCardWidth: "normal"
+    }
+  },
+  {
+    id: "terracotta-villa",
+    name: "Terracotta Villa",
+    blurb: "Sun-washed clay & stone",
+    swatch: ["#9c5a3c", "#d8b48a", "#f6efe6"],
+    patch: {
+      primaryColor: "#9c5a3c",
+      secondaryColor: "#d8b48a",
+      defaultTheme: "light",
+      cardDesign: "compact",
+      cardStyle: "elevated",
+      categoryNavStyle: "cards",
+      sectionHeaderStyle: "accent",
+      backgroundType: "solid",
+      pageSurfaceColor: "#f6efe6",
+      cardSurfaceColor: "#fffaf3",
+      fontPreset: "classic",
+      pageDensity: "comfortable",
+      priceStyle: "badge",
+      imageAspect: "square",
+      borderRadius: 12,
+      navSurface: "muted",
+      welcomeAccentColor: "#9c5a3c",
+      welcomeHeaderTextColor: "#9c5a3c",
+      welcomeBackgroundStyle: "pattern",
+      welcomeBackgroundColor: "#f6efe6",
+      welcomeBackgroundPattern: "waves",
+      welcomeBackgroundPatternColor: "#9c5a3c",
+      welcomeCardStyle: "solid",
+      welcomeEnterStyle: "rounded",
+      welcomeCardWidth: "narrow"
+    }
+  },
+  {
+    id: "onyx-pearl",
+    name: "Onyx & Pearl",
+    blurb: "High-contrast monochrome luxury",
+    swatch: ["#111111", "#ececec", "#fafafa"],
+    patch: {
+      primaryColor: "#111111",
+      secondaryColor: "#6b7280",
+      defaultTheme: "light",
+      cardDesign: "minimal",
+      cardStyle: "outlined",
+      categoryNavStyle: "underline",
+      sectionHeaderStyle: "divider",
+      backgroundType: "solid",
+      pageSurfaceColor: "#fafafa",
+      cardSurfaceColor: "#ffffff",
+      fontPreset: "modern",
+      pageDensity: "cozy",
+      contentWidth: "narrow",
+      priceStyle: "large",
+      borderRadius: 6,
+      navSurface: "transparent",
+      sectionTitleCase: "uppercase",
+      showCategoryIcons: false,
+      welcomeAccentColor: "#111111",
+      welcomeHeaderTextColor: "#111111",
+      welcomeBackgroundStyle: "solid",
+      welcomeBackgroundColor: "#fafafa",
+      welcomeCardStyle: "outlined",
+      welcomeFormBorderColor: "#111111",
+      welcomeEnterStyle: "square",
+      welcomeLanguageStyle: "minimal",
+      welcomeCardWidth: "narrow"
+    }
+  },
+  {
+    id: "bordeaux-silk",
+    name: "Bordeaux Silk",
+    blurb: "Wine red & candlelight cream",
+    swatch: ["#722f37", "#e8d5b7", "#1a0f10"],
+    patch: {
+      primaryColor: "#722f37",
+      secondaryColor: "#e8d5b7",
+      defaultTheme: "dark",
+      cardDesign: "overlay",
+      cardStyle: "elevated",
+      categoryNavStyle: "iconOnly",
+      sectionHeaderStyle: "banner",
+      backgroundType: "solid",
+      pageSurfaceColor: "#1a0f10",
+      cardSurfaceColor: "#251618",
+      fontPreset: "classic",
+      pageDensity: "cozy",
+      priceStyle: "large",
+      imageAspect: "tall",
+      borderRadius: 14,
+      navSurface: "solid",
+      welcomeAccentColor: "#e8d5b7",
+      welcomeHeaderTextColor: "#e8d5b7",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#1a0f10",
+      welcomeBackgroundGradientTo: "#722f37",
+      welcomeCardStyle: "glass",
+      welcomeEnterStyle: "outline",
+      welcomeCardAlign: "center",
+      welcomeCardWidth: "normal"
     }
   }
 ];
@@ -597,7 +913,7 @@ export function MenuDesigner() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Instant starting looks so each cafe can feel different. You can still fine-tune every option below.
+                  Curated luxury looks for different venues. Apply one, then refine colors, cards, and welcome styling below.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {LOOK_PRESETS.map((preset) => (
@@ -605,14 +921,29 @@ export function MenuDesigner() {
                       key={preset.id}
                       type="button"
                       onClick={() => update(preset.patch)}
-                      className="rounded-xl border p-3 text-start transition-colors hover:border-primary hover:bg-primary/5"
+                      className="group overflow-hidden rounded-2xl border bg-card text-start shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
                     >
-                      <div className="mb-2 flex gap-1.5">
-                        <span className="h-6 w-6 rounded-full border" style={{ backgroundColor: preset.swatch[0] }} />
-                        <span className="h-6 w-6 rounded-full border" style={{ backgroundColor: preset.swatch[1] }} />
+                      <div
+                        className="h-16 w-full"
+                        style={{
+                          backgroundImage: `linear-gradient(135deg, ${preset.swatch[2]} 0%, ${preset.swatch[0]} 48%, ${preset.swatch[1]} 100%)`
+                        }}
+                      />
+                      <div className="space-y-2 p-3">
+                        <div className="flex items-center gap-1.5">
+                          {preset.swatch.map((color) => (
+                            <span
+                              key={color}
+                              className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold tracking-tight">{preset.name}</p>
+                          <p className="text-xs text-muted-foreground">{preset.blurb}</p>
+                        </div>
                       </div>
-                      <p className="text-sm font-semibold">{preset.name}</p>
-                      <p className="text-xs text-muted-foreground">{preset.blurb}</p>
                     </button>
                   ))}
                 </div>
