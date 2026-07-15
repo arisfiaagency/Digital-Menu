@@ -63,7 +63,7 @@ export function DashboardStats() {
   const currency: Currency = todaysOrders[0]?.currency || activeCompleted[0]?.currency || data?.general.defaultCurrency || "IQD";
   const canSeeSales = auth.can("reports") || auth.can("pos");
 
-  const restaurantName = localized(data?.general.restaurantName, locale, "Stone Cafe");
+  const restaurantName = localized(data?.general.restaurantName, locale, "Cafe");
   const dateLabel = new Date().toLocaleDateString(locale === "ckb" ? "ar-IQ" : locale, {
     weekday: "long",
     day: "numeric",

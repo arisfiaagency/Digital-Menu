@@ -3,10 +3,10 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 // Branded 1200×630 card shown when the menu link is shared (WhatsApp, Instagram,
-// iMessage, Facebook, X): the real Stone Cafe logo on its own sage-green field
+// iMessage, Facebook, X): product logo on its sage-green field
 // (#719567 — sampled from the logo's background) so the green matches edge-to-edge.
 export const runtime = "nodejs";
-export const alt = "Stone Cafe — Digital Menu";
+export const alt = "Digital Menu";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

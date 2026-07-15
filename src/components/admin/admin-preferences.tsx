@@ -127,7 +127,7 @@ const commonCkb = {
 export const adminText: Record<Locale, AdminText> = {
   en: {
     ...commonEn,
-    brand: "Stone Cafe Admin",
+    brand: "Menu Admin",
     dashboard: "Dashboard",
     categories: "Categories",
     menuItems: "Menu Items",
@@ -566,7 +566,7 @@ export const adminText: Record<Locale, AdminText> = {
   },
   ar: {
     ...commonAr,
-    brand: "إدارة قائمة ستون كافيه",
+    brand: "إدارة القائمة",
     dashboard: "لوحة التحكم",
     categories: "الأقسام",
     menuItems: "عناصر القائمة",
@@ -1005,7 +1005,7 @@ export const adminText: Record<Locale, AdminText> = {
   },
   ckb: {
     ...commonCkb,
-    brand: "بەڕێوەبردنی مینیوی ستۆن کافێ",
+    brand: "بەڕێوەبردنی مینیو",
     dashboard: "داشبۆرد",
     categories: "بەشەکان",
     menuItems: "بابەتەکانی مینیو",

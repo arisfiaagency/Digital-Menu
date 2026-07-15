@@ -402,7 +402,7 @@ function TableCard({
   return (
     <div className="qr-holder qr-holder--design">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="qr-holder__logo" src={logoSrc} alt="Stone Cafe" />
+      <img className="qr-holder__logo" src={logoSrc} alt={title.en || "Menu"} />
       <div className="qr-holder__num">{label}</div>
       <div className="qr-holder__tile">
         {/* eslint-disable-next-line @next/next/no-img-element */}

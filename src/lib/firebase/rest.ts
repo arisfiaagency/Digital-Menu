@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { defaultAppData } from "@/data/default-data";
-import { normalizeClientSlug } from "@/lib/tenant";
+import { normalizeClientSlug, DEMO_CLIENT_SLUG } from "@/lib/tenant";
 import type {
   AppData,
   AppearanceSettings,
@@ -168,15 +168,31 @@ async function fetchPublicAppData(clientSlug: string): Promise<AppData> {
 }
 
 async function fetchPublicClient(clientSlug: string): Promise<ClientAccount | null> {
-  if (!DOCUMENTS_BASE || !API_KEY) return null;
   const slug = normalizeClientSlug(clientSlug);
   if (!slug) return null;
+  // Without Firebase config, serve local sample data at /demo for local/e2e previews.
+  if (!DOCUMENTS_BASE || !API_KEY) {
+    return slug === DEMO_CLIENT_SLUG ? offlineDemoClient() : null;
+  }
   try {
     const client = await getRestDocument(`clients/${slug}`) as ClientAccount | null;
-    return client && client.status === "active" ? client : null;
+    if (client && client.status === "active") return client;
+    // Keep /demo usable even when the tenant has not been seeded yet.
+    return slug === DEMO_CLIENT_SLUG ? offlineDemoClient() : null;
   } catch {
-    return null;
+    return slug === DEMO_CLIENT_SLUG ? offlineDemoClient() : null;
   }
+}
+
+function offlineDemoClient(): ClientAccount {
+  return {
+    id: DEMO_CLIENT_SLUG,
+    name: defaultAppData.general.restaurantName.en || "Demo Cafe",
+    slug: DEMO_CLIENT_SLUG,
+    status: "active",
+    defaultCurrency: defaultAppData.general.defaultCurrency,
+    defaultLanguage: defaultAppData.general.defaultLanguage
+  };
 }
 
 async function fetchClientAccount(clientSlug: string): Promise<ClientAccount | null> {

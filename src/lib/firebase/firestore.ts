@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -20,7 +21,7 @@ import {
 import { defaultAppData } from "@/data/default-data";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { removeImage } from "@/lib/supabase/storage";
-import { getActiveClientSlug, normalizeClientSlug } from "@/lib/tenant";
+import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { slugify } from "@/lib/utils/format";
 import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape } from "@/types/models";
 
@@ -112,6 +113,9 @@ export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: stri
   if (!db) throw new Error("Firestore is not configured.");
   const slug = normalizeClientSlug(client.slug || client.id || client.name);
   if (!slug) throw new Error("Client slug is required.");
+  if (isReservedClientSlug(slug)) {
+    throw new Error(`Slug "${slug}" is reserved. Choose a different client slug.`);
+  }
   const clientRef = doc(db, "clients", slug).withConverter(clientConverter);
   const existing = await getDoc(clientRef);
   const payload: ClientAccount = {
@@ -461,14 +465,31 @@ export async function getPosState(): Promise<PosState> {
 export async function savePosState(state: PosState) {
   const db = getFirebaseDb();
   if (!db) return;
-  await setDoc(tenantDoc(db, "settings", "pos"), { ...serializePosState(state), updatedAt: serverTimestamp() }, { merge: true });
+  await setDoc(
+    tenantDoc(db, "settings", "pos"),
+    {
+      ...serializePosState(state),
+      // Completed sales live in the completedOrders collection; drop any legacy array.
+      completedOrders: deleteField(),
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
 }
 
 export async function completePosOrder(state: PosState, completedOrder: PosCompletedOrder) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const batch = writeBatch(db);
-  batch.set(tenantDoc(db, "settings", "pos"), { ...serializePosState(state), updatedAt: serverTimestamp() }, { merge: true });
+  batch.set(
+    tenantDoc(db, "settings", "pos"),
+    {
+      ...serializePosState(state),
+      completedOrders: deleteField(),
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
   batch.set(tenantDoc(db, "completedOrders", completedOrder.id).withConverter(completedOrderConverter), completedOrder);
   await batch.commit();
 }
@@ -482,51 +503,29 @@ export async function cancelCompletedOrder(order: PosCompletedOrder, cancelledBy
     cancelledAt: new Date().toISOString(),
     cancelledByUid
   };
-  const posRef = tenantDoc(db, "settings", "pos");
-  const posSnap = await getDoc(posRef);
-  const legacyOrders = posSnap.exists() && Array.isArray(posSnap.data().completedOrders)
-    ? (posSnap.data().completedOrders as PosCompletedOrder[]).map((entry) => entry.id === order.id ? cancelledOrder : entry)
-    : [];
   const batch = writeBatch(db);
   batch.set(tenantDoc(db, "completedOrders", order.id).withConverter(completedOrderConverter), cancelledOrder);
-  if (legacyOrders.some((entry) => entry.id === order.id)) {
-    batch.set(posRef, { ...stripUndefined({ completedOrders: legacyOrders }), updatedAt: serverTimestamp() }, { merge: true });
-  }
+  // One-way migration: clear any leftover settings/pos.completedOrders array.
+  batch.set(tenantDoc(db, "settings", "pos"), { completedOrders: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
   await batch.commit();
 }
 
 export async function deleteCompletedOrder(orderId: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
-  const posRef = tenantDoc(db, "settings", "pos");
-  const posSnap = await getDoc(posRef);
-  const legacyOrders = posSnap.exists() && Array.isArray(posSnap.data().completedOrders)
-    ? (posSnap.data().completedOrders as PosCompletedOrder[]).filter((entry) => entry.id !== orderId)
-    : [];
   const batch = writeBatch(db);
   batch.delete(tenantDoc(db, "completedOrders", orderId));
-  if (posSnap.exists() && Array.isArray(posSnap.data().completedOrders)) {
-    batch.set(posRef, { completedOrders: legacyOrders, updatedAt: serverTimestamp() }, { merge: true });
-  }
+  batch.set(tenantDoc(db, "settings", "pos"), { completedOrders: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
   await batch.commit();
 }
 
-// Full-admin edit of a recorded sale (change lines/prices/discount). Writes the new order to the
-// completedOrders collection and mirrors it into any legacy settings/pos.completedOrders entry.
+// Full-admin edit of a recorded sale (change lines/prices/discount).
 export async function updateCompletedOrder(order: PosCompletedOrder) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
-  const posRef = tenantDoc(db, "settings", "pos");
-  const posSnap = await getDoc(posRef);
   const batch = writeBatch(db);
   batch.set(tenantDoc(db, "completedOrders", order.id).withConverter(completedOrderConverter), order);
-  if (posSnap.exists() && Array.isArray(posSnap.data().completedOrders)) {
-    const legacyOrders = (posSnap.data().completedOrders as PosCompletedOrder[]);
-    if (legacyOrders.some((entry) => entry.id === order.id)) {
-      const merged = legacyOrders.map((entry) => (entry.id === order.id ? order : entry));
-      batch.set(posRef, { ...stripUndefined({ completedOrders: merged }), updatedAt: serverTimestamp() }, { merge: true });
-    }
-  }
+  batch.set(tenantDoc(db, "settings", "pos"), { completedOrders: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
   await batch.commit();
 }
 

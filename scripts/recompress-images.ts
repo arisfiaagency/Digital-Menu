@@ -20,7 +20,7 @@
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { cert, initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, type DocumentReference } from "firebase-admin/firestore";
 import sharp from "sharp";
 
 const MAX_DIMENSION = 1600;
@@ -77,15 +77,40 @@ async function main() {
 
   console.log(APPLY ? "APPLY MODE — writing changes.\n" : "DRY RUN — nothing will be written. Re-run with --apply to migrate.\n");
 
-  const snapshot = await db.collection("menuItems").get();
   let processed = 0;
   let skipped = 0;
   let failed = 0;
   let savedBytes = 0;
 
-  for (const doc of snapshot.docs) {
+  type ItemDoc = { ref: DocumentReference; id: string; data: () => Record<string, unknown>; labelPrefix: string };
+
+  const itemDocs: ItemDoc[] = [];
+  const clients = await db.collection("clients").get();
+  for (const client of clients.docs) {
+    const snapshot = await client.ref.collection("menuItems").get();
+    for (const doc of snapshot.docs) {
+      itemDocs.push({
+        ref: doc.ref,
+        id: doc.id,
+        data: () => doc.data(),
+        labelPrefix: `${client.id}/`
+      });
+    }
+  }
+  // Legacy root collection from the pre-tenant layout.
+  const legacyRoot = await db.collection("menuItems").get();
+  for (const doc of legacyRoot.docs) {
+    itemDocs.push({
+      ref: doc.ref,
+      id: doc.id,
+      data: () => doc.data(),
+      labelPrefix: ""
+    });
+  }
+
+  for (const doc of itemDocs) {
     const item = doc.data() as { name?: { en?: string }; imageUrl?: string; imagePath?: string };
-    const label = item.name?.en || doc.id;
+    const label = `${doc.labelPrefix}${item.name?.en || doc.id}`;
     const imageUrl = item.imageUrl || "";
     const imagePath = item.imagePath || "";
 

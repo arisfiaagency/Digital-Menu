@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-const title = "Stone Cafe";
-const description = "Fresh coffee, warm meals and desserts, served all day. Browse our full menu.";
+const title = "Digital Menu";
+const description = "Multilingual digital menus for cafes and restaurants — English, Arabic, and Kurdish.";
 
 export const metadata: Metadata = {
   // When NEXT_PUBLIC_SITE_URL is unset, Next falls back to the Vercel URL so the
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "Stone Cafe",
+    siteName: "Digital Menu",
     title,
     description,
     locale: "en_US"

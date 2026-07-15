@@ -1013,6 +1013,7 @@ export function PosManager() {
                   totals={totals}
                   locale={locale}
                   serviceFeePercent={serviceFeePercent}
+                  restaurantName={localized(data?.general.restaurantName, locale, "Cafe")}
                 />
               </>
             ) : null}
@@ -2485,7 +2486,7 @@ function mergeOrderLines(
 }
 
 // Square thumbnail for the menu picker. Real uploaded photos fill the tile
-// (object-cover); items without an image fall back to the round Stone Cafe logo,
+// (object-cover); items without an image fall back to the default cafe logo,
 // matching the public menu cards. Plain <img> so animated GIFs still play.
 const POS_THUMB_FALLBACK = "/stone-cafe-logo.jpg";
 
@@ -2593,12 +2594,14 @@ function ReceiptPreview({
   totals,
   locale,
   serviceFeePercent,
+  restaurantName,
 }: {
   table: PosTable;
   order: PosTableOrder;
   totals: PosTotals;
   locale: "en" | "ar" | "ckb";
   serviceFeePercent: number;
+  restaurantName: string;
 }) {
   const receiptLocale: "en" | "ckb" = locale === "ckb" ? "ckb" : "en";
   const issuedAt = formatReceiptDateTime(new Date());
@@ -2608,13 +2611,13 @@ function ReceiptPreview({
       <div className="text-center">
         <Image
           src="/stone-cafe-receipt-logo.png"
-          alt="Stone Cafe logo"
+          alt={`${restaurantName} logo`}
           width={360}
           height={159}
           className="pos-receipt-logo mx-auto h-auto w-60 object-contain"
         />
         <h2 className="mt-2 text-2xl font-black uppercase tracking-[0.14em]">
-          STONE CAFE
+          {restaurantName}
         </h2>
       </div>
 

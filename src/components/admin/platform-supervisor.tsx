@@ -79,7 +79,7 @@ export function PlatformSupervisor() {
       setStatus("active");
       setDefaultCurrency("IQD");
       setDefaultLanguage("ckb");
-      setMessage(`Client /${resolvedSlug} is ready.`);
+      setMessage(`Client /${resolvedSlug} is ready with default settings. Open /${resolvedSlug}/admin to add menu content.`);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save client.");
@@ -101,7 +101,7 @@ export function PlatformSupervisor() {
             <AdminPreferences />
             <h1 className="text-2xl font-semibold">Firebase is not configured</h1>
             <p className="text-muted-foreground">
-              Add the new Firebase project values to environment variables, then use this supervisor panel to create clients.
+              Add Firebase Web and Admin environment variables, then use this supervisor panel to create clients in the same project.
             </p>
           </CardContent>
         </Card>
@@ -183,7 +183,7 @@ export function PlatformSupervisor() {
             <CardContent>
               <form className="space-y-4" onSubmit={createClient}>
                 <Field label="Client name" htmlFor="client-name">
-                  <Input id="client-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Stone Cafe" required />
+                  <Input id="client-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="My Cafe" required />
                 </Field>
                 <Field label="Slug" htmlFor="client-slug">
                   <Input id="client-slug" value={slug} onChange={(event) => setSlug(event.target.value)} placeholder={resolvedSlug || "stone"} />
