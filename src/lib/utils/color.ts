@@ -91,7 +91,25 @@ const FONT_PRESETS: Record<MenuFontPreset, { body: string; heading: string }> = 
   soft: {
     body: '"StoneCafeCairo", "Trebuchet MS", "Segoe UI", sans-serif',
     heading: '"StoneCafeReadex", "Trebuchet MS", "Segoe UI", sans-serif'
+  },
+  display: {
+    body: 'ui-sans-serif, system-ui, sans-serif',
+    heading: 'Georgia, "Palatino Linotype", "Book Antiqua", Palatino, "Noto Naskh Arabic", serif'
+  },
+  mono: {
+    body: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
+    heading: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace'
+  },
+  rounded: {
+    body: '"Trebuchet MS", "Segoe UI", "StoneCafeCairo", ui-sans-serif, sans-serif',
+    heading: '"Trebuchet MS", "Segoe UI", "StoneCafeReadex", ui-sans-serif, sans-serif'
   }
+};
+
+const FONT_SCALE: Record<string, string> = {
+  sm: "15px",
+  md: "16px",
+  lg: "17.5px"
 };
 
 /**
@@ -134,7 +152,49 @@ export function menuThemeStyle(appearance?: AppearanceSettings): CSSProperties {
   const fonts = FONT_PRESETS[fontPreset] || FONT_PRESETS.brand;
   style.fontFamily = fonts.body;
   style["--menu-heading-font"] = fonts.heading;
+  const scale = appearance?.fontScale ?? "md";
+  style.fontSize = FONT_SCALE[scale] || FONT_SCALE.md;
+  if (appearance?.headingWeight) {
+    const weight =
+      appearance.headingWeight === "normal"
+        ? "400"
+        : appearance.headingWeight === "semibold"
+          ? "600"
+          : appearance.headingWeight === "extrabold"
+            ? "800"
+            : "700";
+    style["--menu-heading-weight"] = weight;
+  }
   return style as CSSProperties;
+}
+
+/** Dark-mode surface overrides injected as a scoped style tag on the menu root. */
+export function menuDarkThemeCss(appearance?: AppearanceSettings): string | null {
+  if (!appearance) return null;
+  const rules: string[] = [];
+  if (appearance.darkPageSurfaceColor) {
+    const page = hexToHslVar(appearance.darkPageSurfaceColor);
+    if (page) rules.push(`--background: ${page}`);
+  }
+  if (appearance.darkCardSurfaceColor) {
+    const card = hexToHslVar(appearance.darkCardSurfaceColor);
+    if (card) {
+      rules.push(`--card: ${card}`);
+      const fg = readableForegroundHslVar(appearance.darkCardSurfaceColor);
+      if (fg) rules.push(`--card-foreground: ${fg}`);
+    }
+  }
+  if (appearance.darkPrimaryColor) {
+    const primary = hexToHslVar(appearance.darkPrimaryColor);
+    if (primary) {
+      rules.push(`--primary: ${primary}`);
+      const fg = readableForegroundHslVar(appearance.darkPrimaryColor);
+      if (fg) rules.push(`--primary-foreground: ${fg}`);
+      rules.push(`--ring: ${primary}`);
+    }
+  }
+  if (!rules.length) return null;
+  return `.dark { ${rules.join("; ")}; }`;
 }
 
 export function menuHeadingFontStyle(appearance?: AppearanceSettings): CSSProperties {

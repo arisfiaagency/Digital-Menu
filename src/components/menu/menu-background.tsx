@@ -67,7 +67,7 @@ export function MenuBackground({ appearance }: { appearance?: AppearanceSettings
     );
   }
 
-  return <FloatingIconsBackground pattern="cafe" />;
+  return <FloatingIconsBackground pattern={(appearance?.backgroundPreset as FloatingIconPattern) || "cafe"} />;
 }
 
 function PatternBackground({

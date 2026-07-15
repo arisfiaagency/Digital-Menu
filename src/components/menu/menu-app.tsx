@@ -18,6 +18,7 @@ import { LocationPinIcon, PhoneSignalIcon, WhatsappSendIcon } from "@/components
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { MenuItemCard } from "@/components/menu/menu-item-card";
 import { LanguageGlobe } from "@/components/menu/language-globe";
+import { LanguageSelector } from "@/components/menu/language-selector";
 import { MenuBackground } from "@/components/menu/menu-background";
 import { ThemeToggle } from "@/components/menu/theme-toggle";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
@@ -27,7 +28,7 @@ import { defaultAppData } from "@/data/default-data";
 import { localized, translate, locales } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney, normalizeSearch, serviceFeeAmount } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-import { menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
+import { menuDarkThemeCss, menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
 import { useLocale } from "@/hooks/use-locale";
 import type { AppData, Category, CategoryNavStyle, ContactChipStyle, ContactLayout, Locale, MenuItem, MenuLogoStyle, MenuSettings, SearchStyle, SectionHeaderStyle } from "@/types/models";
 
@@ -257,15 +258,44 @@ export function MenuApp({
   );
   const brandText = (
     <div className="min-w-0" dir={textDir}>
-      <h1 className={cn("truncate font-bold", headerCompact ? "text-lg sm:text-2xl" : "text-xl sm:text-3xl")}>{restaurantName}</h1>
-      {showHeaderDescription && description ? <p className="line-clamp-2 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
+      <h1
+        className={cn("truncate font-bold", headerCompact ? "text-lg sm:text-2xl" : "text-xl sm:text-3xl")}
+        style={{
+          color: appearance.headerTextColor || undefined,
+          fontWeight: appearance.headingWeight === "normal" ? 400 : appearance.headingWeight === "semibold" ? 600 : appearance.headingWeight === "extrabold" ? 800 : 700,
+          fontFamily: "var(--menu-heading-font)"
+        }}
+      >
+        {restaurantName}
+      </h1>
+      {showHeaderDescription && description ? (
+        <p className="line-clamp-2 max-w-2xl text-sm text-muted-foreground" style={appearance.headerMutedColor ? { color: appearance.headerMutedColor } : undefined}>
+          {description}
+        </p>
+      ) : null}
     </div>
   );
+  const languageControl =
+    (appearance.menuLanguageStyle ?? "globe") === "globe" ? (
+      <LanguageGlobe locale={locale} onChange={setLocale} availableLocales={enabledLocales} />
+    ) : (
+      <LanguageSelector
+        locale={locale}
+        onChange={setLocale}
+        availableLocales={enabledLocales}
+        variant={appearance.menuLanguageStyle as "buttons" | "segmented" | "cards" | "minimal"}
+      />
+    );
   const actionButtons = (
     <div className="flex shrink-0 items-center justify-end gap-2">
-      {data.menu.showPrices ? <CartIconButton count={cart.totalQuantity} locale={locale} onClick={() => setCartOpen(true)} /> : null}
-      {darkModeEnabled ? <ThemeToggle /> : null}
-      <LanguageGlobe locale={locale} onChange={setLocale} availableLocales={enabledLocales} />
+      {data.menu.showPrices && appearance.showCartButton !== false ? <CartIconButton count={cart.totalQuantity} locale={locale} onClick={() => setCartOpen(true)} /> : null}
+      {darkModeEnabled ? (
+        <ThemeToggle
+          presentation={appearance.menuThemeToggleStyle ?? appearance.welcomeThemeToggleStyle ?? "circle"}
+          iconStyle={appearance.menuThemeIconStyle ?? appearance.welcomeThemeIconStyle ?? "sunMoon"}
+        />
+      ) : null}
+      {languageControl}
     </div>
   );
   const contactRow = (
@@ -334,10 +364,11 @@ export function MenuApp({
 
   return (
     <main dir="ltr" className="no-select relative min-h-screen" style={menuThemeStyle(appearance)}>
+      {menuDarkThemeCss(appearance) ? <style dangerouslySetInnerHTML={{ __html: menuDarkThemeCss(appearance)! }} /> : null}
       <MenuBackground appearance={appearance} />
       {/* Branded header */}
       <header className={cn("relative overflow-hidden border-b", headerBgType === "theme" && "bg-gradient-to-b from-accent/55 via-card/95 to-card/90")} style={headerStyle}>
-        <div className="glow-primary pointer-events-none absolute -right-16 -top-20 h-64 w-64" aria-hidden />
+        {appearance.headerShowGlow !== false ? <div className="glow-primary pointer-events-none absolute -right-16 -top-20 h-64 w-64" aria-hidden /> : null}
         <div className={cn(containerWidth, "relative grid", headerCompact ? "gap-3 py-5" : "gap-5 py-7")}>
           {headerAlign === "center" ? (
             <>
@@ -365,11 +396,19 @@ export function MenuApp({
 
       {/* Region above the category bar (cover / promo / featured), set in /admin. */}
       {aboveCategory === "cover" && coverImageUrl ? (
-        <section className="relative h-40 w-full overflow-hidden sm:h-56">
+        <section
+          className={cn(
+            "relative w-full overflow-hidden",
+            (appearance.coverHeight ?? "md") === "sm" && "h-28 sm:h-36",
+            (appearance.coverHeight ?? "md") === "md" && "h-40 sm:h-56",
+            (appearance.coverHeight ?? "md") === "lg" && "h-52 sm:h-72",
+            (appearance.coverHeight ?? "md") === "xl" && "h-64 sm:h-96"
+          )}
+        >
           <Image src={coverImageUrl} alt={restaurantName} fill sizes="100vw" className="object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+          <div className="absolute inset-0 bg-black" style={{ opacity: Math.min(100, Math.max(0, appearance.coverOverlay ?? 55)) / 100 }} />
           <div className={cn(containerWidth, "absolute inset-x-0 bottom-0 pb-4")} dir={textDir}>
-            <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">{restaurantName}</h2>
+            <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl" style={{ fontFamily: "var(--menu-heading-font)" }}>{restaurantName}</h2>
             {showHeaderDescription && description ? <p className="line-clamp-2 max-w-xl text-sm text-white/85">{description}</p> : null}
           </div>
         </section>
@@ -386,7 +425,17 @@ export function MenuApp({
         <section className="border-b bg-background/70">
           <div className={cn(containerWidth, "flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden")}>
             {data.categories.map((category) => (
-              <CategoryNavItem key={category.id} style="cards" active={false} onClick={() => scrollToCategory(category.id)} slug={category.slug} icon={category.icon} textDir={textDir} showIcon={showCategoryIcons}>
+              <CategoryNavItem
+                key={category.id}
+                style={appearance.featuredNavStyle ?? "cards"}
+                active={false}
+                onClick={() => scrollToCategory(category.id)}
+                slug={category.slug}
+                icon={category.icon}
+                textDir={textDir}
+                showIcon={showCategoryIcons}
+                activeColor={appearance.navActiveColor}
+              >
                 {localized(category.name, locale)}
               </CategoryNavItem>
             ))}
@@ -401,7 +450,7 @@ export function MenuApp({
           <div className={cn(containerWidth, "pt-3")}>{searchField}</div>
         ) : null}
         <div className={cn(containerWidth, "flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", categoryNavStyle === "segmented" && "rounded-lg bg-muted/40")}>
-          <CategoryNavItem style={categoryNavStyle} active={activeCategoryId === "all"} onClick={() => scrollToCategory("all")} slug="all" textDir={textDir} showIcon={showCategoryIcons}>
+          <CategoryNavItem style={categoryNavStyle} active={activeCategoryId === "all"} onClick={() => scrollToCategory("all")} slug="all" textDir={textDir} showIcon={showCategoryIcons} activeColor={appearance.navActiveColor}>
             {translate(locale, "menu.all")}
           </CategoryNavItem>
           {data.categories.map((category) => (
@@ -414,6 +463,7 @@ export function MenuApp({
               icon={category.icon}
               textDir={textDir}
               showIcon={showCategoryIcons}
+              activeColor={appearance.navActiveColor}
             >
               {localized(category.name, locale)}
             </CategoryNavItem>
@@ -600,7 +650,8 @@ function CategoryNavItem({
   slug,
   icon,
   textDir,
-  showIcon = true
+  showIcon = true,
+  activeColor
 }: {
   style: CategoryNavStyle;
   active: boolean;
@@ -610,13 +661,17 @@ function CategoryNavItem({
   icon?: string;
   textDir: "ltr" | "rtl";
   showIcon?: boolean;
+  activeColor?: string;
 }) {
+  const activeStyle = active && activeColor ? ({ color: activeColor, borderColor: activeColor } as React.CSSProperties) : undefined;
+  const activeBgStyle = active && activeColor ? ({ backgroundColor: activeColor, color: "#fff", borderColor: activeColor } as React.CSSProperties) : undefined;
   const iconNode = showIcon ? <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" /> : null;
   if (style === "underline") {
     return (
       <button
         type="button"
         onClick={onClick}
+        style={activeStyle}
         className={cn(
           "focus-ring inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors",
           active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
@@ -633,13 +688,14 @@ function CategoryNavItem({
       <button
         type="button"
         onClick={onClick}
+        style={active ? activeStyle : undefined}
         className={cn(
           "focus-ring inline-flex w-20 shrink-0 flex-col items-center gap-1.5 whitespace-nowrap rounded-xl border px-2 py-2.5 text-xs font-medium transition-colors",
           active ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:bg-muted"
         )}
       >
         {showIcon ? (
-          <span className={cn("inline-flex h-9 w-9 items-center justify-center rounded-lg", active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
+          <span className={cn("inline-flex h-9 w-9 items-center justify-center rounded-lg", active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")} style={active && activeColor ? { color: activeColor } : undefined}>
             <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
           </span>
         ) : null}
@@ -653,6 +709,7 @@ function CategoryNavItem({
       <button
         type="button"
         onClick={onClick}
+        style={activeStyle}
         className={cn(
           "focus-ring inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
           active ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -669,6 +726,7 @@ function CategoryNavItem({
       <button
         type="button"
         onClick={onClick}
+        style={activeStyle}
         className={cn(
           "focus-ring inline-flex items-center gap-2 whitespace-nowrap px-2 py-2 text-sm font-semibold underline-offset-8 transition-colors",
           active ? "text-primary underline decoration-2" : "text-muted-foreground hover:text-foreground"
@@ -685,6 +743,7 @@ function CategoryNavItem({
         type="button"
         onClick={onClick}
         title={typeof children === "string" ? children : slug}
+        style={activeBgStyle}
         className={cn(
           "focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors",
           active ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -700,6 +759,7 @@ function CategoryNavItem({
       <button
         type="button"
         onClick={onClick}
+        style={activeBgStyle}
         className={cn(
           "focus-ring inline-flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2 text-sm font-bold transition-all",
           active ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-accent text-accent-foreground hover:bg-accent/80"
@@ -720,6 +780,7 @@ function CategoryNavItem({
     <button
       type="button"
       onClick={onClick}
+      style={activeBgStyle}
       className={cn(
         "focus-ring inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors",
         active ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border bg-card text-foreground hover:bg-muted"

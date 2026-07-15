@@ -286,14 +286,19 @@ export type MenuBackgroundPattern =
   | "stripes"
   | "scatter";
 export type MenuBackgroundImageStyle = "cover" | "contain" | "tile" | "fixed";
-export type MenuFontPreset = "brand" | "modern" | "classic" | "soft";
+export type MenuFontPreset = "brand" | "modern" | "classic" | "soft" | "display" | "mono" | "rounded";
+export type FontScale = "sm" | "md" | "lg";
+export type HeadingWeight = "normal" | "semibold" | "bold" | "extrabold";
 export type PageDensity = "cozy" | "comfortable" | "compact";
 export type ContentWidth = "narrow" | "normal" | "wide";
 export type ItemColumns = "auto" | "1" | "2" | "3";
-export type PriceStyle = "plain" | "badge" | "large";
+export type PriceStyle = "plain" | "badge" | "large" | "tag";
 export type MenuNavSurface = "solid" | "muted" | "tinted" | "transparent";
 export type ImageAspect = "square" | "wide" | "tall" | "auto";
 export type TitleCaseStyle = "normal" | "uppercase";
+export type CardHoverStyle = "lift" | "glow" | "border" | "none";
+export type CoverHeight = "sm" | "md" | "lg" | "xl";
+export type MenuLanguageStyle = "globe" | "buttons" | "segmented" | "cards" | "minimal";
 export type WelcomeLogoStyle = "circle" | "rounded" | "square";
 export type WelcomeThemeToggleStyle = "circle" | "pill" | "segmented";
 export type WelcomeThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "contrast";
@@ -364,16 +369,34 @@ export type AppearanceSettings = {
   promoColor?: string;
   // Distinctive UI knobs so each cafe can look different from the next.
   fontPreset?: MenuFontPreset;
+  fontScale?: FontScale;
+  headingWeight?: HeadingWeight;
   pageDensity?: PageDensity;
   contentWidth?: ContentWidth;
   itemColumns?: ItemColumns;
   priceStyle?: PriceStyle;
+  priceColor?: string;
   navSurface?: MenuNavSurface;
+  navActiveColor?: string;
   imageAspect?: ImageAspect;
   sectionTitleCase?: TitleCaseStyle;
   showCategoryIcons?: boolean;
   pageSurfaceColor?: string;
   cardSurfaceColor?: string;
+  darkPageSurfaceColor?: string;
+  darkCardSurfaceColor?: string;
+  darkPrimaryColor?: string;
+  headerTextColor?: string;
+  headerMutedColor?: string;
+  headerShowGlow?: boolean;
+  cardHover?: CardHoverStyle;
+  coverHeight?: CoverHeight;
+  coverOverlay?: number;
+  featuredNavStyle?: CategoryNavStyle;
+  menuLanguageStyle?: MenuLanguageStyle;
+  menuThemeToggleStyle?: WelcomeThemeToggleStyle;
+  menuThemeIconStyle?: WelcomeThemeIconStyle;
+  showCartButton?: boolean;
   // Welcome page presentation at /{clientSlug}.
   welcomeAccentColor?: string;
   welcomeHeaderTextColor?: string;

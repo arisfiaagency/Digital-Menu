@@ -1,10 +1,11 @@
+import type { CSSProperties } from "react";
 import { Plus, Pointer } from "lucide-react";
 import { dirForLocale, localized, translate } from "@/lib/i18n/config";
 import { formatMoney } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
 import { QuantityStepper } from "@/components/menu/cart";
-import type { AppearanceSettings, ImageAspect, Locale, MenuItem, MenuSettings, PriceStyle } from "@/types/models";
+import type { AppearanceSettings, CardHoverStyle, ImageAspect, Locale, MenuItem, MenuSettings, PriceStyle } from "@/types/models";
 
 type MenuItemCardProps = {
   item: MenuItem;
@@ -35,6 +36,18 @@ function surfaceClasses(appearance?: AppearanceSettings) {
 
 function radiusStyle(appearance?: AppearanceSettings) {
   return { borderRadius: Math.max(0, appearance?.borderRadius ?? 8) };
+}
+
+function hoverClasses(appearance?: AppearanceSettings) {
+  const hover = (appearance?.cardHover ?? "lift") as CardHoverStyle;
+  if (hover === "none") return "";
+  if (hover === "glow") return "hover:shadow-xl hover:shadow-primary/15 hover:border-primary/25";
+  if (hover === "border") return "hover:border-primary/40";
+  return "hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5";
+}
+
+function priceColorStyle(appearance?: AppearanceSettings): CSSProperties | undefined {
+  return appearance?.priceColor ? { color: appearance.priceColor } : undefined;
 }
 
 function imageAspectClass(appearance?: AppearanceSettings, fallback = "aspect-[5/4]") {
@@ -78,6 +91,24 @@ function PriceBlock({
             "inline-flex rounded-full px-2.5 py-1 text-xs font-bold",
             tone === "overlay" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
           )}
+          style={tone === "overlay" ? undefined : priceColorStyle(appearance)}
+        >
+          {price}
+        </span>
+      </div>
+    );
+  }
+
+  if (style === "tag") {
+    return (
+      <div className="shrink-0 text-end">
+        {hasDiscount ? <p className={cn("mb-1 text-[10px] line-through", tone === "overlay" ? "text-white/60" : "text-muted-foreground")}>{original}</p> : null}
+        <span
+          className={cn(
+            "inline-flex rounded-sm border px-2 py-0.5 text-xs font-bold tracking-wide",
+            tone === "overlay" ? "border-white/40 text-white" : "border-primary/30 text-primary"
+          )}
+          style={tone === "overlay" ? undefined : priceColorStyle(appearance)}
         >
           {price}
         </span>
@@ -89,7 +120,10 @@ function PriceBlock({
     return (
       <div className="shrink-0 text-end">
         {hasDiscount ? <p className={cn("text-xs line-through", tone === "overlay" ? "text-white/60" : "text-muted-foreground")}>{original}</p> : null}
-        <p className={cn("text-lg font-black tracking-tight sm:text-xl", tone === "overlay" ? "text-white" : hasDiscount ? "text-secondary" : "text-primary")}>
+        <p
+          className={cn("text-lg font-black tracking-tight sm:text-xl", tone === "overlay" ? "text-white" : hasDiscount ? "text-secondary" : "text-primary")}
+          style={tone === "overlay" ? undefined : priceColorStyle(appearance)}
+        >
           {price}
         </p>
       </div>
@@ -103,10 +137,10 @@ function PriceBlock({
       {hasDiscount ? (
         <>
           <p className={cn("text-xs line-through", baseTone)}>{original}</p>
-          <p className={cn("text-sm font-bold", tone === "overlay" ? "text-white" : "text-secondary")}>{price}</p>
+          <p className={cn("text-sm font-bold", tone === "overlay" ? "text-white" : "text-secondary")} style={tone === "overlay" ? undefined : priceColorStyle(appearance)}>{price}</p>
         </>
       ) : (
-        <p className={cn("text-sm font-bold", primaryTone)}>{price}</p>
+        <p className={cn("text-sm font-bold", primaryTone)} style={tone === "overlay" ? undefined : priceColorStyle(appearance)}>{price}</p>
       )}
     </div>
   );
@@ -166,7 +200,7 @@ function ClassicCard(props: MenuItemCardProps) {
     <article
       dir={textDir}
       style={radiusStyle(props.appearance)}
-      className={cn("group relative flex flex-col overflow-hidden hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5", surfaceClasses(props.appearance))}
+      className={cn("group relative flex flex-col overflow-hidden", surfaceClasses(props.appearance), hoverClasses(props.appearance))}
     >
       {props.settings.showImages !== false ? (
         <div className={cn("relative overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10", imageAspectClass(props.appearance))}>
@@ -199,8 +233,7 @@ function CompactCard(props: MenuItemCardProps) {
     <article
       dir={textDir}
       style={radiusStyle(props.appearance)}
-      className={cn("group relative flex gap-3 overflow-hidden p-3 hover:border-primary/30 hover:shadow-md sm:gap-4 sm:p-4", surfaceClasses(props.appearance))}
-    >
+      className={cn("group relative flex gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4", surfaceClasses(props.appearance), hoverClasses(props.appearance))}    >
       {props.settings.showImages !== false ? (
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-accent via-primary/5 to-secondary/10 sm:h-28 sm:w-28">
           <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />
@@ -230,7 +263,7 @@ function OverlayCard(props: MenuItemCardProps) {
     <article
       dir={textDir}
       style={radiusStyle(props.appearance)}
-      className={cn("group relative flex flex-col overflow-hidden hover:-translate-y-1 hover:shadow-xl", surfaceClasses(props.appearance))}
+      className={cn("group relative flex flex-col overflow-hidden", surfaceClasses(props.appearance), hoverClasses(props.appearance))}
     >
       <div className={cn("relative w-full overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10", imageAspectClass(props.appearance, "aspect-[4/5]"))}>
         <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />
@@ -260,8 +293,7 @@ function MinimalCard(props: MenuItemCardProps) {
     <article
       dir={textDir}
       style={radiusStyle(props.appearance)}
-      className={cn("group relative flex flex-col gap-2 overflow-hidden px-4 py-3 hover:border-primary/25", surfaceClasses(props.appearance))}
-    >
+      className={cn("group relative flex flex-col gap-2 overflow-hidden px-4 py-3", surfaceClasses(props.appearance), hoverClasses(props.appearance))}    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base font-semibold leading-tight sm:text-lg">{title}</h3>
@@ -289,7 +321,7 @@ function PosterCard(props: MenuItemCardProps) {
     <article
       dir={textDir}
       style={radiusStyle(props.appearance)}
-      className={cn("group relative flex flex-col overflow-hidden hover:-translate-y-1 hover:shadow-xl", surfaceClasses(props.appearance))}
+      className={cn("group relative flex flex-col overflow-hidden", surfaceClasses(props.appearance), hoverClasses(props.appearance))}
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10">
         <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />

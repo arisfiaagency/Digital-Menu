@@ -1355,12 +1355,33 @@ export function MenuDesigner() {
                     <option value="modern">Modern system</option>
                     <option value="classic">Classic serif</option>
                     <option value="soft">Soft rounded</option>
+                    <option value="display">Display (serif headings)</option>
+                    <option value="mono">Mono / technical</option>
+                    <option value="rounded">Friendly rounded</option>
+                  </Select>
+                </Field>
+                <Field label="Font size">
+                  <Select value={appearance.fontScale ?? "md"} onChange={(e) => update({ fontScale: e.target.value as AppearanceSettings["fontScale"] })}>
+                    <option value="sm">Small</option>
+                    <option value="md">Medium</option>
+                    <option value="lg">Large</option>
+                  </Select>
+                </Field>
+                <Field label="Heading weight">
+                  <Select value={appearance.headingWeight ?? "bold"} onChange={(e) => update({ headingWeight: e.target.value as AppearanceSettings["headingWeight"] })}>
+                    <option value="normal">Normal</option>
+                    <option value="semibold">Semibold</option>
+                    <option value="bold">Bold</option>
+                    <option value="extrabold">Extra bold</option>
                   </Select>
                 </Field>
                 <Field label="Page surface color"><Input type="color" value={appearance.pageSurfaceColor || "#f8fafc"} onChange={(e) => update({ pageSurfaceColor: e.target.value })} /></Field>
                 <Field label="Card surface color"><Input type="color" value={appearance.cardSurfaceColor || "#ffffff"} onChange={(e) => update({ cardSurfaceColor: e.target.value })} /></Field>
-                <div className="flex items-end">
-                  <Button type="button" variant="outline" onClick={() => update({ pageSurfaceColor: undefined, cardSurfaceColor: undefined })}>
+                <Field label="Dark page surface"><Input type="color" value={appearance.darkPageSurfaceColor || "#0f172a"} onChange={(e) => update({ darkPageSurfaceColor: e.target.value })} /></Field>
+                <Field label="Dark card surface"><Input type="color" value={appearance.darkCardSurfaceColor || "#1e293b"} onChange={(e) => update({ darkCardSurfaceColor: e.target.value })} /></Field>
+                <Field label="Dark primary color"><Input type="color" value={appearance.darkPrimaryColor || appearance.primaryColor} onChange={(e) => update({ darkPrimaryColor: e.target.value })} /></Field>
+                <div className="flex items-end md:col-span-2">
+                  <Button type="button" variant="outline" onClick={() => update({ pageSurfaceColor: undefined, cardSurfaceColor: undefined, darkPageSurfaceColor: undefined, darkCardSurfaceColor: undefined, darkPrimaryColor: undefined })}>
                     Reset surfaces
                   </Button>
                 </div>
@@ -1456,6 +1477,40 @@ export function MenuDesigner() {
                     <option value="gradient">Gradient</option>
                   </Select>
                 </Field>
+                <Field label="Cafe name color"><Input type="color" value={appearance.headerTextColor || "#0f172a"} onChange={(e) => update({ headerTextColor: e.target.value })} /></Field>
+                <Field label="Description text color"><Input type="color" value={appearance.headerMutedColor || "#64748b"} onChange={(e) => update({ headerMutedColor: e.target.value })} /></Field>
+                <Field label="Language control">
+                  <Select value={appearance.menuLanguageStyle ?? "globe"} onChange={(e) => update({ menuLanguageStyle: e.target.value as AppearanceSettings["menuLanguageStyle"] })}>
+                    <option value="globe">Globe menu</option>
+                    <option value="buttons">Language buttons</option>
+                    <option value="segmented">Segmented</option>
+                    <option value="cards">Language cards</option>
+                    <option value="minimal">Minimal</option>
+                  </Select>
+                </Field>
+                <Field label="Theme toggle shape">
+                  <Select value={appearance.menuThemeToggleStyle ?? "circle"} onChange={(e) => update({ menuThemeToggleStyle: e.target.value as AppearanceSettings["menuThemeToggleStyle"] })}>
+                    <option value="circle">Circle</option>
+                    <option value="pill">Pill</option>
+                    <option value="segmented">Segmented</option>
+                  </Select>
+                </Field>
+                <Field label="Theme toggle icons">
+                  <Select value={appearance.menuThemeIconStyle ?? "sunMoon"} onChange={(e) => update({ menuThemeIconStyle: e.target.value as AppearanceSettings["menuThemeIconStyle"] })}>
+                    <option value="sunMoon">Sun / moon</option>
+                    <option value="coffeeMoon">Coffee / moon</option>
+                    <option value="sparkles">Sparkles</option>
+                    <option value="contrast">Contrast</option>
+                  </Select>
+                </Field>
+                <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+                  <span className="text-sm font-medium">Header glow accent</span>
+                  <Switch label="Header glow" checked={appearance.headerShowGlow !== false} onCheckedChange={(v) => update({ headerShowGlow: v })} />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+                  <span className="text-sm font-medium">Show cart button</span>
+                  <Switch label="Show cart" checked={appearance.showCartButton !== false} onCheckedChange={(v) => update({ showCartButton: v })} />
+                </div>
                 <div className="flex items-center justify-between gap-3 pt-6">
                   <span className="text-sm font-medium">Show contact row</span>
                   <Switch label="Show contact row" checked={appearance.showContactRow !== false} onCheckedChange={(v) => update({ showContactRow: v })} />
@@ -1616,6 +1671,16 @@ export function MenuDesigner() {
                     <option value="plain">Plain</option>
                     <option value="badge">Badge chip</option>
                     <option value="large">Large bold</option>
+                    <option value="tag">Tag outline</option>
+                  </Select>
+                </Field>
+                <Field label="Price color"><Input type="color" value={appearance.priceColor || appearance.primaryColor} onChange={(e) => update({ priceColor: e.target.value })} /></Field>
+                <Field label="Card hover motion">
+                  <Select value={appearance.cardHover ?? "lift"} onChange={(e) => update({ cardHover: e.target.value as AppearanceSettings["cardHover"] })}>
+                    <option value="lift">Lift + soft shadow</option>
+                    <option value="glow">Glow</option>
+                    <option value="border">Border highlight</option>
+                    <option value="none">None</option>
                   </Select>
                 </Field>
               </CardContent>
@@ -1635,6 +1700,7 @@ export function MenuDesigner() {
                     <option value="bubble">Bubble chips</option>
                   </Select>
                 </Field>
+                <Field label="Active category color"><Input type="color" value={appearance.navActiveColor || appearance.primaryColor} onChange={(e) => update({ navActiveColor: e.target.value })} /></Field>
                 <Field label="Section header style">
                   <Select value={appearance.sectionHeaderStyle ?? "plain"} onChange={(e) => update({ sectionHeaderStyle: e.target.value as AppearanceSettings["sectionHeaderStyle"] })}>
                     <option value="plain">Plain</option>
@@ -1653,7 +1719,7 @@ export function MenuDesigner() {
                     <option value="uppercase">UPPERCASE</option>
                   </Select>
                 </Field>
-                <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+                <div className="flex items-center justify-between gap-3 rounded-md border p-3 md:col-span-2">
                   <span className="text-sm font-medium">Show category icons</span>
                   <Switch label="Show category icons" checked={appearance.showCategoryIcons !== false} onCheckedChange={(v) => update({ showCategoryIcons: v })} />
                 </div>
@@ -1673,13 +1739,35 @@ export function MenuDesigner() {
                 </Field>
 
                 {(appearance.aboveCategory ?? "none") === "cover" ? (
-                  <ImageUploadField
-                    label="Cover image"
-                    path={`clients/${slug}/cover`}
-                    imageUrl={general.coverImageUrl}
-                    onUploaded={(result) => setGeneral({ ...general, coverImageUrl: result.imageUrl, coverImagePath: result.imagePath })}
-                    onRemoved={() => setGeneral({ ...general, coverImageUrl: undefined, coverImagePath: undefined })}
-                  />
+                  <div className="grid gap-4">
+                    <ImageUploadField
+                      label="Cover image"
+                      path={`clients/${slug}/cover`}
+                      imageUrl={general.coverImageUrl}
+                      onUploaded={(result) => setGeneral({ ...general, coverImageUrl: result.imageUrl, coverImagePath: result.imagePath })}
+                      onRemoved={() => setGeneral({ ...general, coverImageUrl: undefined, coverImagePath: undefined })}
+                    />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field label="Cover height">
+                        <Select value={appearance.coverHeight ?? "md"} onChange={(e) => update({ coverHeight: e.target.value as AppearanceSettings["coverHeight"] })}>
+                          <option value="sm">Small</option>
+                          <option value="md">Medium</option>
+                          <option value="lg">Large</option>
+                          <option value="xl">Extra large</option>
+                        </Select>
+                      </Field>
+                      <Field label={`Cover darken (${appearance.coverOverlay ?? 55}%)`}>
+                        <input
+                          type="range"
+                          min={0}
+                          max={90}
+                          value={appearance.coverOverlay ?? 55}
+                          onChange={(e) => update({ coverOverlay: Number(e.target.value) })}
+                          className="w-full"
+                        />
+                      </Field>
+                    </div>
+                  </div>
                 ) : null}
 
                 {(appearance.aboveCategory ?? "none") === "promo" ? (
@@ -1694,7 +1782,18 @@ export function MenuDesigner() {
                 ) : null}
 
                 {(appearance.aboveCategory ?? "none") === "featured" ? (
-                  <p className="text-sm text-muted-foreground">Shows a quick-jump row of this cafe&apos;s categories above the sticky bar.</p>
+                  <div className="grid gap-4">
+                    <p className="text-sm text-muted-foreground">Shows a quick-jump row of this cafe&apos;s categories above the sticky bar.</p>
+                    <Field label="Featured row style">
+                      <Select value={appearance.featuredNavStyle ?? "cards"} onChange={(e) => update({ featuredNavStyle: e.target.value as AppearanceSettings["featuredNavStyle"] })}>
+                        <option value="cards">Category cards</option>
+                        <option value="pills">Pills</option>
+                        <option value="bubble">Bubbles</option>
+                        <option value="iconOnly">Icons only</option>
+                        <option value="segmented">Segmented</option>
+                      </Select>
+                    </Field>
+                  </div>
                 ) : null}
               </CardContent>
             </Card>
@@ -1771,7 +1870,16 @@ export function MenuDesigner() {
                 ) : null}
 
                 {backgroundType === "preset" ? (
-                  <p className="text-sm text-muted-foreground">The drifting café-icon animation (the original look).</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label="Floating icon pack">
+                      <Select value={appearance.backgroundPreset || "cafe"} onChange={(e) => update({ backgroundPreset: e.target.value })}>
+                        {PATTERN_SELECT_OPTIONS.filter((option) => option.value !== "none" && ["cafe", "bakery", "drinks", "dessert", "leaves", "utensils", "hearts", "beans", "sparkles", "mixed"].includes(option.value)).map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <p className="self-end text-sm text-muted-foreground">Drifting café icons (desktop). Hidden on phones for scroll performance.</p>
+                  </div>
                 ) : null}
               </CardContent>
             </Card>
