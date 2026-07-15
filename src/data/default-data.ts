@@ -92,6 +92,17 @@ export const defaultAppearanceSettings = {
   searchShowLabel: false,
   aboveCategory: "none" as const,
   promoColor: "#0f766e",
+  fontPreset: "brand" as const,
+  pageDensity: "comfortable" as const,
+  contentWidth: "normal" as const,
+  itemColumns: "auto" as const,
+  priceStyle: "plain" as const,
+  navSurface: "solid" as const,
+  imageAspect: "wide" as const,
+  sectionTitleCase: "normal" as const,
+  showCategoryIcons: true,
+  pageSurfaceColor: "",
+  cardSurfaceColor: "",
   welcomeAccentColor: "#A4D8A6",
   welcomeHeaderTextColor: "#A4D8A6",
   welcomeHelperTextColor: "#6b7280",
@@ -114,6 +125,9 @@ export const defaultAppearanceSettings = {
   welcomeBackgroundOverlay: 15,
   welcomeLogoStyle: "circle" as const,
   welcomeShowSocialLinks: true,
+  welcomeEnterStyle: "pill" as const,
+  welcomeCardWidth: "normal" as const,
+  welcomeCardAlign: "center" as const,
   showHeaderDescription: true
 };
 

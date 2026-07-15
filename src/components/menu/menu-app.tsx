@@ -166,9 +166,33 @@ export function MenuApp({
   const enabledLocales = data.general.enabledLanguages?.length ? data.general.enabledLanguages : locales;
   const showHeaderDescription = appearance.showHeaderDescription !== false;
   const cardDesign = appearance.cardDesign ?? "classic";
-  // Compact cards are horizontal, so they read best in a 1–2 column list; the
-  // image-forward classic/overlay designs use the wider grid.
-  const itemsGridClass = cardDesign === "compact" ? "grid gap-3 lg:grid-cols-2" : "grid gap-5 sm:grid-cols-2 xl:grid-cols-3";
+  const itemColumns = appearance.itemColumns ?? "auto";
+  const pageDensity = appearance.pageDensity ?? "comfortable";
+  const contentWidth = appearance.contentWidth ?? "normal";
+  const navSurface = appearance.navSurface ?? "solid";
+  const showCategoryIcons = appearance.showCategoryIcons !== false;
+  const sectionTitleCase = appearance.sectionTitleCase ?? "normal";
+  // Compact/minimal cards are horizontal/text-first; image-forward designs use a wider grid.
+  // Explicit itemColumns always wins when set.
+  const itemsGridClass = (() => {
+    if (appearance.menuLayout === "list" || itemColumns === "1") return "grid gap-3";
+    if (itemColumns === "2") return "grid gap-4 sm:grid-cols-2";
+    if (itemColumns === "3") return "grid gap-4 sm:grid-cols-2 xl:grid-cols-3";
+    if (cardDesign === "compact" || cardDesign === "minimal") return "grid gap-3 lg:grid-cols-2";
+    if (cardDesign === "poster") return "grid gap-4 sm:grid-cols-2 xl:grid-cols-3";
+    return "grid gap-5 sm:grid-cols-2 xl:grid-cols-3";
+  })();
+  const densityGap = pageDensity === "cozy" ? "gap-8 py-8" : pageDensity === "compact" ? "gap-4 py-4" : "gap-6 py-6";
+  const containerWidth =
+    contentWidth === "narrow" ? "mx-auto w-full max-w-3xl px-4 sm:px-6" : contentWidth === "wide" ? "mx-auto w-full max-w-7xl px-4 sm:px-6" : "container";
+  const navSurfaceClass =
+    navSurface === "muted"
+      ? "border-b bg-muted/50"
+      : navSurface === "tinted"
+        ? "border-b bg-primary/10"
+        : navSurface === "transparent"
+          ? "border-b bg-background/80"
+          : "border-b bg-background";
   const categoryNavStyle = appearance.categoryNavStyle ?? "pills";
   const sectionHeaderStyle = appearance.sectionHeaderStyle ?? "plain";
 
@@ -314,7 +338,7 @@ export function MenuApp({
       {/* Branded header */}
       <header className={cn("relative overflow-hidden border-b", headerBgType === "theme" && "bg-gradient-to-b from-accent/55 via-card/95 to-card/90")} style={headerStyle}>
         <div className="glow-primary pointer-events-none absolute -right-16 -top-20 h-64 w-64" aria-hidden />
-        <div className={cn("container relative grid", headerCompact ? "gap-3 py-5" : "gap-5 py-7")}>
+        <div className={cn(containerWidth, "relative grid", headerCompact ? "gap-3 py-5" : "gap-5 py-7")}>
           {headerAlign === "center" ? (
             <>
               {actionButtons}
@@ -344,7 +368,7 @@ export function MenuApp({
         <section className="relative h-40 w-full overflow-hidden sm:h-56">
           <Image src={coverImageUrl} alt={restaurantName} fill sizes="100vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
-          <div className="container absolute inset-x-0 bottom-0 pb-4" dir={textDir}>
+          <div className={cn(containerWidth, "absolute inset-x-0 bottom-0 pb-4")} dir={textDir}>
             <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">{restaurantName}</h2>
             {showHeaderDescription && description ? <p className="line-clamp-2 max-w-xl text-sm text-white/85">{description}</p> : null}
           </div>
@@ -355,14 +379,14 @@ export function MenuApp({
           className="w-full"
           style={{ backgroundColor: appearance.promoColor || "#0f766e", color: `hsl(${readableForegroundHslVar(appearance.promoColor || "#0f766e") || "0 0% 100%"})` }}
         >
-          <div className="container py-2.5 text-center text-sm font-semibold" dir={textDir}>{promoText}</div>
+          <div className={cn(containerWidth, "py-2.5 text-center text-sm font-semibold")} dir={textDir}>{promoText}</div>
         </div>
       ) : null}
       {aboveCategory === "featured" && data.categories.length ? (
         <section className="border-b bg-background/70">
-          <div className="container flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className={cn(containerWidth, "flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden")}>
             {data.categories.map((category) => (
-              <CategoryNavItem key={category.id} style="cards" active={false} onClick={() => scrollToCategory(category.id)} slug={category.slug} icon={category.icon} textDir={textDir}>
+              <CategoryNavItem key={category.id} style="cards" active={false} onClick={() => scrollToCategory(category.id)} slug={category.slug} icon={category.icon} textDir={textDir} showIcon={showCategoryIcons}>
                 {localized(category.name, locale)}
               </CategoryNavItem>
             ))}
@@ -372,12 +396,12 @@ export function MenuApp({
 
       {/* Sticky category nav. Solid background (no backdrop-blur) — a blurred
           sticky bar re-blurs the page every scroll frame and janks on phones. */}
-      <nav className="sticky top-0 z-10 border-b bg-background">
+      <nav className={cn("sticky top-0 z-10", navSurfaceClass)}>
         {searchPlacement === "sticky" && searchField ? (
-          <div className="container pt-3">{searchField}</div>
+          <div className={cn(containerWidth, "pt-3")}>{searchField}</div>
         ) : null}
-        <div className={cn("container flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", categoryNavStyle === "segmented" && "rounded-lg bg-muted/40")}>
-          <CategoryNavItem style={categoryNavStyle} active={activeCategoryId === "all"} onClick={() => scrollToCategory("all")} slug="all" textDir={textDir}>
+        <div className={cn(containerWidth, "flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", categoryNavStyle === "segmented" && "rounded-lg bg-muted/40")}>
+          <CategoryNavItem style={categoryNavStyle} active={activeCategoryId === "all"} onClick={() => scrollToCategory("all")} slug="all" textDir={textDir} showIcon={showCategoryIcons}>
             {translate(locale, "menu.all")}
           </CategoryNavItem>
           {data.categories.map((category) => (
@@ -389,6 +413,7 @@ export function MenuApp({
               slug={category.slug}
               icon={category.icon}
               textDir={textDir}
+              showIcon={showCategoryIcons}
             >
               {localized(category.name, locale)}
             </CategoryNavItem>
@@ -396,7 +421,7 @@ export function MenuApp({
         </div>
       </nav>
 
-      <section className="container grid gap-6 py-6">
+      <section className={cn(containerWidth, "grid", densityGap)}>
         <div className="grid gap-10">
           {sections.map((section, sectionIndex) => {
               return (
@@ -412,6 +437,8 @@ export function MenuApp({
                     icon={section.category.icon}
                     textDir={textDir}
                     index={sectionIndex + 1}
+                    showIcon={showCategoryIcons}
+                    titleCase={sectionTitleCase}
                   />
                   <div className={itemsGridClass}>
                     {section.items.map((item, itemIndex) => (
@@ -572,7 +599,8 @@ function CategoryNavItem({
   children,
   slug,
   icon,
-  textDir
+  textDir,
+  showIcon = true
 }: {
   style: CategoryNavStyle;
   active: boolean;
@@ -581,7 +609,9 @@ function CategoryNavItem({
   slug: string;
   icon?: string;
   textDir: "ltr" | "rtl";
+  showIcon?: boolean;
 }) {
+  const iconNode = showIcon ? <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" /> : null;
   if (style === "underline") {
     return (
       <button
@@ -592,7 +622,7 @@ function CategoryNavItem({
           active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
         )}
       >
-        <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" />
+        {iconNode}
         <span dir={textDir}>{children}</span>
       </button>
     );
@@ -608,9 +638,11 @@ function CategoryNavItem({
           active ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:bg-muted"
         )}
       >
-        <span className={cn("inline-flex h-9 w-9 items-center justify-center rounded-lg", active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
-          <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
-        </span>
+        {showIcon ? (
+          <span className={cn("inline-flex h-9 w-9 items-center justify-center rounded-lg", active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
+            <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
+          </span>
+        ) : null}
         <span dir={textDir} className="w-full truncate text-center">{children}</span>
       </button>
     );
@@ -626,7 +658,7 @@ function CategoryNavItem({
           active ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
         )}
       >
-        <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" />
+        {iconNode}
         <span dir={textDir}>{children}</span>
       </button>
     );
@@ -673,9 +705,11 @@ function CategoryNavItem({
           active ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-accent text-accent-foreground hover:bg-accent/80"
         )}
       >
-        <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-full", active ? "bg-white/20" : "bg-background/70")}>
-          <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" />
-        </span>
+        {showIcon ? (
+          <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-full", active ? "bg-white/20" : "bg-background/70")}>
+            <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" />
+          </span>
+        ) : null}
         <span dir={textDir}>{children}</span>
       </button>
     );
@@ -691,7 +725,7 @@ function CategoryNavItem({
         active ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border bg-card text-foreground hover:bg-muted"
       )}
     >
-      <CategoryIcon slug={slug} icon={icon} className="h-4 w-4" />
+      {iconNode}
       <span dir={textDir}>{children}</span>
     </button>
   );
@@ -704,7 +738,9 @@ function SectionHeader({
   slug,
   icon,
   textDir,
-  index
+  index,
+  showIcon = true,
+  titleCase = "normal"
 }: {
   style: SectionHeaderStyle;
   title: string;
@@ -712,18 +748,21 @@ function SectionHeader({
   icon?: string;
   textDir: "ltr" | "rtl";
   index: number;
+  showIcon?: boolean;
+  titleCase?: "normal" | "uppercase";
 }) {
-  const iconChip = (
+  const displayTitle = titleCase === "uppercase" ? title.toLocaleUpperCase() : title;
+  const iconChip = showIcon ? (
     <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
       <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
     </span>
-  );
+  ) : null;
 
   if (style === "centered") {
     return (
       <div dir={textDir} className="flex flex-col items-center gap-2 text-center">
         {iconChip}
-        <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+        <h2 className="text-xl font-bold sm:text-2xl">{displayTitle}</h2>
       </div>
     );
   }
@@ -732,7 +771,7 @@ function SectionHeader({
     return (
       <div dir={textDir} className="flex items-center gap-3">
         <span className="h-px flex-1 bg-border" aria-hidden />
-        <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+        <h2 className="text-xl font-bold sm:text-2xl">{displayTitle}</h2>
         <span className="h-px flex-1 bg-border" aria-hidden />
       </div>
     );
@@ -741,10 +780,12 @@ function SectionHeader({
   if (style === "banner") {
     return (
       <div dir={textDir} className="flex items-center gap-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground">
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/20">
-          <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
-        </span>
-        <h2 className="text-lg font-bold sm:text-xl">{title}</h2>
+        {showIcon ? (
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/20">
+            <CategoryIcon slug={slug} icon={icon} className="h-5 w-5" />
+          </span>
+        ) : null}
+        <h2 className="text-lg font-bold sm:text-xl">{displayTitle}</h2>
       </div>
     );
   }
@@ -754,7 +795,7 @@ function SectionHeader({
       <div dir={textDir} className="rounded-xl border bg-card px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           {iconChip}
-          <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+          <h2 className="text-xl font-bold sm:text-2xl">{displayTitle}</h2>
         </div>
       </div>
     );
@@ -764,7 +805,7 @@ function SectionHeader({
     return (
       <div dir={textDir} className="flex items-center gap-3 border-s-4 border-primary bg-primary/5 px-4 py-3">
         {iconChip}
-        <h2 className="text-xl font-bold text-primary sm:text-2xl">{title}</h2>
+        <h2 className="text-xl font-bold text-primary sm:text-2xl">{displayTitle}</h2>
       </div>
     );
   }
@@ -775,7 +816,7 @@ function SectionHeader({
         <span className="inline-flex h-10 min-w-10 items-center justify-center rounded-full bg-primary text-sm font-black text-primary-foreground">
           {String(index).padStart(2, "0")}
         </span>
-        <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+        <h2 className="text-xl font-bold sm:text-2xl">{displayTitle}</h2>
         <span className="h-px flex-1 bg-border" aria-hidden />
       </div>
     );
@@ -785,7 +826,7 @@ function SectionHeader({
     return (
       <div dir={textDir} className="grid gap-1">
         <span className="h-1 w-12 rounded-full bg-primary" aria-hidden />
-        <h2 className="text-2xl font-black uppercase tracking-wide sm:text-3xl">{title}</h2>
+        <h2 className="text-2xl font-black uppercase tracking-wide sm:text-3xl">{displayTitle}</h2>
       </div>
     );
   }
@@ -794,7 +835,7 @@ function SectionHeader({
   return (
     <div dir={textDir} className="flex items-center gap-3">
       {iconChip}
-      <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+      <h2 className="text-xl font-bold sm:text-2xl">{displayTitle}</h2>
       <span className="h-px flex-1 bg-border" aria-hidden />
     </div>
   );

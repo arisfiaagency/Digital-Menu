@@ -33,6 +33,170 @@ const MENU_SETTING_LABELS: Record<string, string> = {
 const ALL_LOCALES: Locale[] = ["ckb", "ar", "en"];
 const CURRENCIES = ["IQD", "USD", "EUR", "TRY"] as const;
 
+type LookPreset = {
+  id: string;
+  name: string;
+  blurb: string;
+  swatch: [string, string];
+  patch: Partial<AppearanceSettings>;
+};
+
+const LOOK_PRESETS: LookPreset[] = [
+  {
+    id: "fresh-green",
+    name: "Fresh Green",
+    blurb: "Bright cafe classic",
+    swatch: ["#0f766e", "#be123c"],
+    patch: {
+      primaryColor: "#0f766e",
+      secondaryColor: "#be123c",
+      defaultTheme: "light",
+      cardDesign: "classic",
+      categoryNavStyle: "pills",
+      sectionHeaderStyle: "plain",
+      backgroundType: "preset",
+      fontPreset: "brand",
+      pageDensity: "comfortable",
+      borderRadius: 12,
+      welcomeAccentColor: "#A4D8A6",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#d7efd8",
+      welcomeBackgroundGradientTo: "#86cc8a"
+    }
+  },
+  {
+    id: "espresso",
+    name: "Espresso",
+    blurb: "Dark roast lounge",
+    swatch: ["#6f4e37", "#c4a484"],
+    patch: {
+      primaryColor: "#6f4e37",
+      secondaryColor: "#c4a484",
+      defaultTheme: "dark",
+      cardDesign: "overlay",
+      categoryNavStyle: "bubble",
+      sectionHeaderStyle: "accent",
+      backgroundType: "solid",
+      pageSurfaceColor: "#1c1410",
+      cardSurfaceColor: "#2a1f18",
+      fontPreset: "classic",
+      pageDensity: "cozy",
+      borderRadius: 16,
+      priceStyle: "large",
+      welcomeAccentColor: "#c4a484",
+      welcomeBackgroundStyle: "solid",
+      welcomeBackgroundColor: "#2a1f18",
+      welcomeCardStyle: "solid",
+      welcomeEnterStyle: "rounded"
+    }
+  },
+  {
+    id: "coral-bistro",
+    name: "Coral Bistro",
+    blurb: "Warm & playful",
+    swatch: ["#e11d48", "#fb923c"],
+    patch: {
+      primaryColor: "#e11d48",
+      secondaryColor: "#fb923c",
+      defaultTheme: "light",
+      cardDesign: "poster",
+      categoryNavStyle: "cards",
+      sectionHeaderStyle: "banner",
+      backgroundType: "gradient",
+      backgroundGradientFrom: "#fff1f2",
+      backgroundGradientTo: "#fff7ed",
+      fontPreset: "soft",
+      itemColumns: "2",
+      priceStyle: "badge",
+      borderRadius: 20,
+      welcomeAccentColor: "#fb7185",
+      welcomeLanguageStyle: "cards",
+      welcomeCardStyle: "floating",
+      welcomeEnterStyle: "pill"
+    }
+  },
+  {
+    id: "midnight",
+    name: "Midnight",
+    blurb: "Cool urban night",
+    swatch: ["#6366f1", "#22d3ee"],
+    patch: {
+      primaryColor: "#6366f1",
+      secondaryColor: "#22d3ee",
+      defaultTheme: "dark",
+      cardDesign: "minimal",
+      categoryNavStyle: "segmented",
+      sectionHeaderStyle: "numbered",
+      backgroundType: "pattern",
+      backgroundColor: "#0f172a",
+      backgroundPattern: "mesh",
+      backgroundPatternColor: "#6366f1",
+      fontPreset: "modern",
+      pageDensity: "compact",
+      navSurface: "tinted",
+      borderRadius: 8,
+      welcomeAccentColor: "#818cf8",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#1e1b4b",
+      welcomeBackgroundGradientTo: "#0f172a",
+      welcomeCardStyle: "glass",
+      welcomeEnterStyle: "outline"
+    }
+  },
+  {
+    id: "sand",
+    name: "Warm Sand",
+    blurb: "Soft daylight menu",
+    swatch: ["#b45309", "#78716c"],
+    patch: {
+      primaryColor: "#b45309",
+      secondaryColor: "#78716c",
+      defaultTheme: "light",
+      cardDesign: "compact",
+      categoryNavStyle: "underline",
+      sectionHeaderStyle: "overline",
+      backgroundType: "solid",
+      pageSurfaceColor: "#faf7f2",
+      cardSurfaceColor: "#ffffff",
+      fontPreset: "classic",
+      contentWidth: "narrow",
+      imageAspect: "square",
+      borderRadius: 10,
+      welcomeAccentColor: "#d97706",
+      welcomeBackgroundStyle: "pattern",
+      welcomeBackgroundColor: "#faf7f2",
+      welcomeBackgroundPattern: "dots",
+      welcomeCardWidth: "narrow",
+      welcomeEnterStyle: "square"
+    }
+  },
+  {
+    id: "berry",
+    name: "Berry Cafe",
+    blurb: "Bold dessert shop",
+    swatch: ["#9d174d", "#a21caf"],
+    patch: {
+      primaryColor: "#9d174d",
+      secondaryColor: "#a21caf",
+      defaultTheme: "light",
+      cardDesign: "classic",
+      categoryNavStyle: "iconOnly",
+      sectionHeaderStyle: "boxed",
+      backgroundType: "image",
+      fontPreset: "soft",
+      itemColumns: "3",
+      priceStyle: "badge",
+      sectionTitleCase: "uppercase",
+      borderRadius: 18,
+      welcomeAccentColor: "#db2777",
+      welcomeLanguageStyle: "segmented",
+      welcomeCardAlign: "bottom",
+      welcomeCardWidth: "wide",
+      welcomeEnterStyle: "rounded"
+    }
+  }
+];
+
 const SAMPLE_ITEMS = defaultMenuItems.slice(0, 2);
 const HOUR_OPTIONS = Array.from({ length: 25 }, (_, hour) => hour);
 const WELCOME_BACKGROUND_MEDIA_HINT = "Supports images or videos. Recommended: 1080x1920 px mobile / 1920x1080 px desktop. Max upload: 100 MB.";
@@ -294,6 +458,27 @@ export function MenuDesigner() {
                       <option value="minimal">Minimal text</option>
                     </Select>
                   </Field>
+                  <Field label="Enter button style">
+                    <Select value={appearance.welcomeEnterStyle ?? "pill"} onChange={(e) => update({ welcomeEnterStyle: e.target.value as AppearanceSettings["welcomeEnterStyle"] })}>
+                      <option value="pill">Pill</option>
+                      <option value="rounded">Rounded</option>
+                      <option value="square">Square</option>
+                      <option value="outline">Outline</option>
+                    </Select>
+                  </Field>
+                  <Field label="Welcome card width">
+                    <Select value={appearance.welcomeCardWidth ?? "normal"} onChange={(e) => update({ welcomeCardWidth: e.target.value as AppearanceSettings["welcomeCardWidth"] })}>
+                      <option value="narrow">Narrow</option>
+                      <option value="normal">Normal</option>
+                      <option value="wide">Wide</option>
+                    </Select>
+                  </Field>
+                  <Field label="Welcome card position">
+                    <Select value={appearance.welcomeCardAlign ?? "center"} onChange={(e) => update({ welcomeCardAlign: e.target.value as AppearanceSettings["welcomeCardAlign"] })}>
+                      <option value="center">Centered</option>
+                      <option value="bottom">Lower on screen</option>
+                    </Select>
+                  </Field>
                   <Field label="Accent color"><Input type="color" value={appearance.welcomeAccentColor || "#A4D8A6"} onChange={(e) => update({ welcomeAccentColor: e.target.value })} /></Field>
                   <Field label="Welcome text color"><Input type="color" value={appearance.welcomeHeaderTextColor || appearance.welcomeAccentColor || "#A4D8A6"} onChange={(e) => update({ welcomeHeaderTextColor: e.target.value })} /></Field>
                   <Field label="Tagline/helper text color"><Input type="color" value={appearance.welcomeHelperTextColor || appearance.welcomeFormTextColor || "#6b7280"} onChange={(e) => update({ welcomeHelperTextColor: e.target.value })} /></Field>
@@ -407,6 +592,34 @@ export function MenuDesigner() {
             </Card>
 
             <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
+              <CardHeader>
+                <CardTitle>Look Presets</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Instant starting looks so each cafe can feel different. You can still fine-tune every option below.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {LOOK_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => update(preset.patch)}
+                      className="rounded-xl border p-3 text-start transition-colors hover:border-primary hover:bg-primary/5"
+                    >
+                      <div className="mb-2 flex gap-1.5">
+                        <span className="h-6 w-6 rounded-full border" style={{ backgroundColor: preset.swatch[0] }} />
+                        <span className="h-6 w-6 rounded-full border" style={{ backgroundColor: preset.swatch[1] }} />
+                      </div>
+                      <p className="text-sm font-semibold">{preset.name}</p>
+                      <p className="text-xs text-muted-foreground">{preset.blurb}</p>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className={activeDesignerTab === "menu" ? undefined : "hidden"}>
               <CardHeader><CardTitle>Menu Display &amp; Behavior</CardTitle></CardHeader>
               <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {Object.entries(menu)
@@ -497,6 +710,21 @@ export function MenuDesigner() {
                     <option value="dark">Dark</option>
                   </Select>
                 </Field>
+                <Field label="Font style">
+                  <Select value={appearance.fontPreset ?? "brand"} onChange={(e) => update({ fontPreset: e.target.value as AppearanceSettings["fontPreset"] })}>
+                    <option value="brand">Brand (Cairo / Readex)</option>
+                    <option value="modern">Modern system</option>
+                    <option value="classic">Classic serif</option>
+                    <option value="soft">Soft rounded</option>
+                  </Select>
+                </Field>
+                <Field label="Page surface color"><Input type="color" value={appearance.pageSurfaceColor || "#f8fafc"} onChange={(e) => update({ pageSurfaceColor: e.target.value })} /></Field>
+                <Field label="Card surface color"><Input type="color" value={appearance.cardSurfaceColor || "#ffffff"} onChange={(e) => update({ cardSurfaceColor: e.target.value })} /></Field>
+                <div className="flex items-end">
+                  <Button type="button" variant="outline" onClick={() => update({ pageSurfaceColor: undefined, cardSurfaceColor: undefined })}>
+                    Reset surfaces
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -509,10 +737,40 @@ export function MenuDesigner() {
                     <option value="grid">Grid</option>
                   </Select>
                 </Field>
+                <Field label="Item columns">
+                  <Select value={appearance.itemColumns ?? "auto"} onChange={(e) => update({ itemColumns: e.target.value as AppearanceSettings["itemColumns"] })}>
+                    <option value="auto">Auto (by card design)</option>
+                    <option value="1">1 column</option>
+                    <option value="2">2 columns</option>
+                    <option value="3">3 columns</option>
+                  </Select>
+                </Field>
+                <Field label="Page density">
+                  <Select value={appearance.pageDensity ?? "comfortable"} onChange={(e) => update({ pageDensity: e.target.value as AppearanceSettings["pageDensity"] })}>
+                    <option value="cozy">Cozy (more space)</option>
+                    <option value="comfortable">Comfortable</option>
+                    <option value="compact">Compact</option>
+                  </Select>
+                </Field>
+                <Field label="Content width">
+                  <Select value={appearance.contentWidth ?? "normal"} onChange={(e) => update({ contentWidth: e.target.value as AppearanceSettings["contentWidth"] })}>
+                    <option value="narrow">Narrow</option>
+                    <option value="normal">Normal</option>
+                    <option value="wide">Wide</option>
+                  </Select>
+                </Field>
                 <Field label="Header density">
                   <Select value={appearance.headerLayout} onChange={(e) => update({ headerLayout: e.target.value as AppearanceSettings["headerLayout"] })}>
                     <option value="expanded">Expanded</option>
                     <option value="compact">Compact</option>
+                  </Select>
+                </Field>
+                <Field label="Category bar surface">
+                  <Select value={appearance.navSurface ?? "solid"} onChange={(e) => update({ navSurface: e.target.value as AppearanceSettings["navSurface"] })}>
+                    <option value="solid">Solid</option>
+                    <option value="muted">Muted</option>
+                    <option value="tinted">Primary tint</option>
+                    <option value="transparent">Soft transparent</option>
                   </Select>
                 </Field>
                 <div className="flex items-center justify-between gap-3 rounded-md border p-3 md:col-span-2">
@@ -695,6 +953,8 @@ export function MenuDesigner() {
                     <option value="classic">Classic — photo on top</option>
                     <option value="compact">Compact list — thumbnail beside text</option>
                     <option value="overlay">Image overlay — text over photo</option>
+                    <option value="minimal">Minimal — text first, no photo</option>
+                    <option value="poster">Poster — tall photo with title</option>
                   </Select>
                 </Field>
                 <Field label="Surface style">
@@ -702,6 +962,21 @@ export function MenuDesigner() {
                     <option value="flat">Flat</option>
                     <option value="outlined">Outlined</option>
                     <option value="elevated">Elevated</option>
+                  </Select>
+                </Field>
+                <Field label="Photo aspect">
+                  <Select value={appearance.imageAspect ?? "wide"} onChange={(e) => update({ imageAspect: e.target.value as AppearanceSettings["imageAspect"] })}>
+                    <option value="wide">Wide</option>
+                    <option value="square">Square</option>
+                    <option value="tall">Tall</option>
+                    <option value="auto">Auto</option>
+                  </Select>
+                </Field>
+                <Field label="Price style">
+                  <Select value={appearance.priceStyle ?? "plain"} onChange={(e) => update({ priceStyle: e.target.value as AppearanceSettings["priceStyle"] })}>
+                    <option value="plain">Plain</option>
+                    <option value="badge">Badge chip</option>
+                    <option value="large">Large bold</option>
                   </Select>
                 </Field>
               </CardContent>
@@ -733,6 +1008,16 @@ export function MenuDesigner() {
                     <option value="overline">Overline</option>
                   </Select>
                 </Field>
+                <Field label="Section title case">
+                  <Select value={appearance.sectionTitleCase ?? "normal"} onChange={(e) => update({ sectionTitleCase: e.target.value as AppearanceSettings["sectionTitleCase"] })}>
+                    <option value="normal">Normal</option>
+                    <option value="uppercase">UPPERCASE</option>
+                  </Select>
+                </Field>
+                <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+                  <span className="text-sm font-medium">Show category icons</span>
+                  <Switch label="Show category icons" checked={appearance.showCategoryIcons !== false} onCheckedChange={(v) => update({ showCategoryIcons: v })} />
+                </div>
               </CardContent>
             </Card>
 

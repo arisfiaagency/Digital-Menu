@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { AppearanceSettings } from "@/types/models";
+import type { AppearanceSettings, MenuFontPreset } from "@/types/models";
 
 // Theme colors are stored as hex (from the admin color pickers) but the design
 // system drives everything through CSS custom properties in the
@@ -75,6 +75,25 @@ export function readableForegroundHslVar(hex: string): string | null {
   return luminance > 150 ? "222 47% 11%" : "0 0% 100%";
 }
 
+const FONT_PRESETS: Record<MenuFontPreset, { body: string; heading: string }> = {
+  brand: {
+    body: '"StoneCafeCairo", ui-sans-serif, system-ui, sans-serif',
+    heading: '"StoneCafeReadex", "StoneCafeCairo", ui-sans-serif, system-ui, sans-serif'
+  },
+  modern: {
+    body: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    heading: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  },
+  classic: {
+    body: 'Georgia, "Times New Roman", "Noto Naskh Arabic", serif',
+    heading: 'Georgia, "Times New Roman", "Noto Naskh Arabic", serif'
+  },
+  soft: {
+    body: '"StoneCafeCairo", "Trebuchet MS", "Segoe UI", sans-serif',
+    heading: '"StoneCafeReadex", "Trebuchet MS", "Segoe UI", sans-serif'
+  }
+};
+
 /**
  * Build inline CSS custom properties from a cafe's chosen primary/secondary
  * colors so the whole design system (buttons, pills, accents) picks them up via
@@ -96,5 +115,30 @@ export function menuThemeStyle(appearance?: AppearanceSettings): CSSProperties {
     const fg = readableForegroundHslVar(appearance.secondaryColor);
     if (fg) style["--secondary-foreground"] = fg;
   }
+  if (typeof appearance?.borderRadius === "number" && Number.isFinite(appearance.borderRadius)) {
+    style["--radius"] = `${Math.max(0, appearance.borderRadius) / 16}rem`;
+  }
+  if (appearance?.pageSurfaceColor) {
+    const page = hexToHslVar(appearance.pageSurfaceColor);
+    if (page) style["--background"] = page;
+  }
+  if (appearance?.cardSurfaceColor) {
+    const card = hexToHslVar(appearance.cardSurfaceColor);
+    if (card) {
+      style["--card"] = card;
+      const fg = readableForegroundHslVar(appearance.cardSurfaceColor);
+      if (fg) style["--card-foreground"] = fg;
+    }
+  }
+  const fontPreset = (appearance?.fontPreset || appearance?.font || "brand") as MenuFontPreset;
+  const fonts = FONT_PRESETS[fontPreset] || FONT_PRESETS.brand;
+  style.fontFamily = fonts.body;
+  style["--menu-heading-font"] = fonts.heading;
   return style as CSSProperties;
+}
+
+export function menuHeadingFontStyle(appearance?: AppearanceSettings): CSSProperties {
+  const fontPreset = (appearance?.fontPreset || appearance?.font || "brand") as MenuFontPreset;
+  const fonts = FONT_PRESETS[fontPreset] || FONT_PRESETS.brand;
+  return { fontFamily: fonts.heading };
 }

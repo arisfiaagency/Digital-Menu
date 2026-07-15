@@ -232,7 +232,7 @@ export type PosState = {
   updatedAt?: Timestamp;
 };
 
-export type MenuCardDesign = "classic" | "compact" | "overlay";
+export type MenuCardDesign = "classic" | "compact" | "overlay" | "minimal" | "poster";
 export type CategoryNavStyle = "pills" | "underline" | "cards" | "segmented" | "minimal" | "iconOnly" | "bubble";
 export type SectionHeaderStyle = "plain" | "divider" | "banner" | "centered" | "boxed" | "accent" | "numbered" | "overline";
 export type MenuBackgroundType = "preset" | "solid" | "gradient" | "image" | "pattern";
@@ -252,6 +252,14 @@ export type SearchIconPosition = "left" | "right" | "none";
 export type SearchWidth = "normal" | "wide" | "full";
 export type MenuBackgroundPattern = "none" | "cafe" | "dots" | "grid" | "diagonal" | "waves" | "checker" | "confetti" | "stars" | "mesh";
 export type MenuBackgroundImageStyle = "cover" | "contain" | "tile" | "fixed";
+export type MenuFontPreset = "brand" | "modern" | "classic" | "soft";
+export type PageDensity = "cozy" | "comfortable" | "compact";
+export type ContentWidth = "narrow" | "normal" | "wide";
+export type ItemColumns = "auto" | "1" | "2" | "3";
+export type PriceStyle = "plain" | "badge" | "large";
+export type MenuNavSurface = "solid" | "muted" | "tinted" | "transparent";
+export type ImageAspect = "square" | "wide" | "tall" | "auto";
+export type TitleCaseStyle = "normal" | "uppercase";
 export type WelcomeLogoStyle = "circle" | "rounded" | "square";
 export type WelcomeThemeToggleStyle = "circle" | "pill" | "segmented";
 export type WelcomeThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "contrast";
@@ -259,6 +267,9 @@ export type WelcomeLanguageStyle = "buttons" | "segmented" | "cards" | "minimal"
 export type WelcomeCardStyle = "glass" | "solid" | "outlined" | "floating";
 export type WelcomePattern = "none" | "cafe" | "dots" | "grid" | "diagonal" | "waves";
 export type WelcomeBackgroundStyle = "gradient" | "solid" | "pattern" | "image";
+export type WelcomeEnterStyle = "pill" | "rounded" | "square" | "outline";
+export type WelcomeCardWidth = "narrow" | "normal" | "wide";
+export type WelcomeCardAlign = "center" | "bottom";
 
 export type AppearanceSettings = {
   primaryColor: string;
@@ -316,6 +327,18 @@ export type AppearanceSettings = {
   // Region shown between the header and the sticky category nav.
   aboveCategory?: AboveCategoryRegion;
   promoColor?: string;
+  // Distinctive UI knobs so each cafe can look different from the next.
+  fontPreset?: MenuFontPreset;
+  pageDensity?: PageDensity;
+  contentWidth?: ContentWidth;
+  itemColumns?: ItemColumns;
+  priceStyle?: PriceStyle;
+  navSurface?: MenuNavSurface;
+  imageAspect?: ImageAspect;
+  sectionTitleCase?: TitleCaseStyle;
+  showCategoryIcons?: boolean;
+  pageSurfaceColor?: string;
+  cardSurfaceColor?: string;
   // Welcome page presentation at /{clientSlug}.
   welcomeAccentColor?: string;
   welcomeHeaderTextColor?: string;
@@ -342,6 +365,9 @@ export type AppearanceSettings = {
   welcomeBackgroundOverlay?: number;
   welcomeLogoStyle?: WelcomeLogoStyle;
   welcomeShowSocialLinks?: boolean;
+  welcomeEnterStyle?: WelcomeEnterStyle;
+  welcomeCardWidth?: WelcomeCardWidth;
+  welcomeCardAlign?: WelcomeCardAlign;
   showHeaderDescription?: boolean;
   updatedAt?: Timestamp;
 };

@@ -104,13 +104,20 @@ export function WelcomeScreen({
     <main
       dir="ltr"
       style={mainStyle}
-      className="no-select fixed inset-0 flex touch-none items-center justify-center overflow-hidden overscroll-none p-4"
+      className={cn(
+        "no-select fixed inset-0 flex touch-none overflow-hidden overscroll-none p-4",
+        (appearance.welcomeCardAlign ?? "center") === "bottom" ? "items-end justify-center pb-8 sm:pb-12" : "items-center justify-center"
+      )}
     >
       <WelcomeBackgroundVideo appearance={appearance} />
       <WelcomeBackgroundPattern appearance={appearance} />
 
       <section
-        className={cn("relative z-10 w-full max-w-md overflow-hidden p-6 text-center sm:p-8", welcomeCardClass(appearance))}
+        className={cn(
+          "relative z-10 w-full overflow-hidden p-6 text-center sm:p-8",
+          welcomeCardWidthClass(appearance),
+          welcomeCardClass(appearance)
+        )}
         style={welcomeCardStyle(appearance)}
       >
         <WelcomePatternLayer
@@ -208,7 +215,7 @@ export function WelcomeScreen({
             refresh. A full page load reliably paints the server-rendered menu
             and guarantees the fixed-body scroll lock is fully released. The
             chosen language still carries over via localStorage. */}
-        <Button asChild size="default" className="mt-8 h-12 w-full text-base font-semibold">
+        <Button asChild size="default" className={cn("mt-8 h-12 w-full text-base font-semibold", welcomeEnterButtonClass(appearance))} variant={welcomeEnterButtonVariant(appearance)}>
           <a href={menuHref} onClick={releaseScrollLock}>
             <span dir={textDir}>{translate(locale, "welcome.enter")}</span>
             <ArrowRight className="h-5 w-5" aria-hidden />
@@ -250,6 +257,25 @@ function SteamingCup() {
       <ellipse cx="30" cy="54" rx="22" ry="3.4" fill="currentColor" opacity="0.35" />
     </svg>
   );
+}
+
+function welcomeCardWidthClass(appearance: AppearanceSettings) {
+  const width = appearance.welcomeCardWidth ?? "normal";
+  if (width === "narrow") return "max-w-sm";
+  if (width === "wide") return "max-w-xl";
+  return "max-w-md";
+}
+
+function welcomeEnterButtonClass(appearance: AppearanceSettings) {
+  const style = appearance.welcomeEnterStyle ?? "pill";
+  if (style === "square") return "rounded-md";
+  if (style === "rounded") return "rounded-xl";
+  if (style === "outline") return "rounded-full";
+  return "rounded-full";
+}
+
+function welcomeEnterButtonVariant(appearance: AppearanceSettings): "default" | "outline" {
+  return (appearance.welcomeEnterStyle ?? "pill") === "outline" ? "outline" : "default";
 }
 
 function welcomeLogoClass(style: "circle" | "rounded" | "square") {
