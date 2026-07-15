@@ -2,16 +2,7 @@
 
 import { useEffect, type CSSProperties } from "react";
 import Image from "next/image";
-import {
-  ArrowRight,
-  CakeSlice,
-  Coffee,
-  Croissant,
-  CupSoda,
-  GlassWater,
-  Martini,
-  Pizza
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/menu/language-selector";
 import { ThemeToggle } from "@/components/menu/theme-toggle";
@@ -22,6 +13,7 @@ import { cn } from "@/lib/utils/cn";
 import { SocialLinks } from "@/components/menu/social-links";
 import { BrandCredit } from "@/components/brand-credit";
 import { hexToHslVar, hexToRgba, readableForegroundHslVar } from "@/lib/utils/color";
+import { cssPatternStyle, floatingFigures, isFloatingIconPattern } from "@/lib/menu-patterns";
 import type { AppearanceSettings, GeneralSettings, MenuSettings, WelcomePattern } from "@/types/models";
 
 // The welcome screen always opens in this language, regardless of any previously
@@ -387,7 +379,7 @@ function WelcomeBackgroundPattern({ appearance }: { appearance: AppearanceSettin
   const pattern = appearance.welcomeBackgroundPattern ?? "cafe";
   const color = appearance.welcomeBackgroundPatternColor || appearance.welcomeAccentColor || "#3f8a49";
   if (pattern === "none") return null;
-  if (pattern === "cafe") return <CoffeeBackground color={color} />;
+  if (isFloatingIconPattern(pattern)) return <FloatingIconsLayer pattern={pattern} color={color} />;
   return <WelcomePatternLayer pattern={pattern} color={color} opacity={0.16} />;
 }
 
@@ -400,65 +392,27 @@ function WelcomePatternLayer({
   color: string;
   opacity: number;
 }) {
-  if (pattern === "none" || pattern === "cafe") return null;
+  if (pattern === "none" || isFloatingIconPattern(pattern)) return null;
   return (
     <div
       className="pointer-events-none absolute inset-0"
-      style={welcomePatternStyle(pattern, color, opacity)}
+      style={cssPatternStyle(pattern, color, opacity)}
       aria-hidden
     />
   );
 }
 
-function welcomePatternStyle(pattern: WelcomePattern, color: string, opacity: number): CSSProperties {
-  const base: CSSProperties = {
-    color,
-    opacity
-  };
-  if (pattern === "dots") {
-    return {
-      ...base,
-      backgroundImage: "radial-gradient(currentColor 1.4px, transparent 1.4px)",
-      backgroundSize: "18px 18px"
-    };
-  }
-  if (pattern === "grid") {
-    return {
-      ...base,
-      backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)",
-      backgroundSize: "28px 28px"
-    };
-  }
-  if (pattern === "diagonal") {
-    return {
-      ...base,
-      backgroundImage: "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 16px)"
-    };
-  }
-  return {
-    ...base,
-    backgroundImage: "radial-gradient(70% 60% at 50% 100%, transparent 58%, currentColor 60%, transparent 62%)",
-    backgroundSize: "42px 24px"
-  };
-}
-
-function CoffeeBackground({ color }: { color?: string }) {
-  // Floating figures representing the cafe menu: coffee, mocktails, other
-  // non-alcoholic drinks, cinnamon rolls, trileçe (tralicha), and mini pizza.
-  const figures = [
-    { Icon: Coffee, top: "11%", left: "9%", size: 30, delay: "0s", opacity: 0.16 },
-    { Icon: Martini, top: "20%", left: "84%", size: 34, delay: "1.2s", opacity: 0.15 },
-    { Icon: Pizza, top: "70%", left: "11%", size: 32, delay: "0.7s", opacity: 0.16 },
-    { Icon: CakeSlice, top: "79%", left: "82%", size: 28, delay: "2s", opacity: 0.17 },
-    { Icon: CupSoda, top: "43%", left: "91%", size: 26, delay: "1s", opacity: 0.15 },
-    { Icon: Croissant, top: "85%", left: "46%", size: 30, delay: "0.4s", opacity: 0.14 },
-    { Icon: GlassWater, top: "31%", left: "5%", size: 24, delay: "1.6s", opacity: 0.16 },
-    { Icon: Coffee, top: "57%", left: "93%", size: 20, delay: "2.4s", opacity: 0.12 }
-  ];
+function FloatingIconsLayer({
+  pattern,
+  color
+}: {
+  pattern: Parameters<typeof floatingFigures>[0];
+  color?: string;
+}) {
+  const figures = floatingFigures(pattern);
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {/* mint aroma glows (+ a soft light glow) */}
       <div className="aroma-1 aroma-pan absolute -left-24 -top-24 h-80 w-80" />
       <div
         className="aroma-2 aroma-pan absolute -bottom-32 -right-20 h-96 w-96"
@@ -469,12 +423,17 @@ function CoffeeBackground({ color }: { color?: string }) {
         style={{ animationDelay: "8s" }}
       />
 
-      {/* floating menu figures */}
       {figures.map(({ Icon, ...figure }, index) => (
         <span
           key={index}
           className="bean-float absolute"
-          style={{ top: figure.top, left: figure.left, animationDelay: figure.delay, opacity: figure.opacity, color: color || "#3f8a49" }}
+          style={{
+            top: figure.top,
+            left: figure.left,
+            animationDelay: figure.delay,
+            opacity: figure.opacity,
+            color: color || "#3f8a49"
+          }}
         >
           <Icon style={{ width: figure.size, height: figure.size }} aria-hidden />
         </span>

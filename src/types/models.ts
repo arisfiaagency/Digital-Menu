@@ -250,7 +250,41 @@ export type ContactChipStyle = "pill" | "soft" | "outline" | "square" | "iconOnl
 export type SocialLinkStyle = "icons" | "soft" | "outline" | "square";
 export type SearchIconPosition = "left" | "right" | "none";
 export type SearchWidth = "normal" | "wide" | "full";
-export type MenuBackgroundPattern = "none" | "cafe" | "dots" | "grid" | "diagonal" | "waves" | "checker" | "confetti" | "stars" | "mesh";
+export type MenuBackgroundPattern =
+  | "none"
+  | "cafe"
+  | "bakery"
+  | "drinks"
+  | "dessert"
+  | "leaves"
+  | "utensils"
+  | "hearts"
+  | "beans"
+  | "sparkles"
+  | "mixed"
+  | "dots"
+  | "grid"
+  | "diagonal"
+  | "waves"
+  | "checker"
+  | "confetti"
+  | "stars"
+  | "mesh"
+  | "honeycomb"
+  | "crosshatch"
+  | "chevron"
+  | "diamonds"
+  | "plus"
+  | "rings"
+  | "rain"
+  | "herringbone"
+  | "bubbles"
+  | "triangles"
+  | "mosaic"
+  | "circuit"
+  | "polka"
+  | "stripes"
+  | "scatter";
 export type MenuBackgroundImageStyle = "cover" | "contain" | "tile" | "fixed";
 export type MenuFontPreset = "brand" | "modern" | "classic" | "soft";
 export type PageDensity = "cozy" | "comfortable" | "compact";
@@ -265,7 +299,8 @@ export type WelcomeThemeToggleStyle = "circle" | "pill" | "segmented";
 export type WelcomeThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "contrast";
 export type WelcomeLanguageStyle = "buttons" | "segmented" | "cards" | "minimal";
 export type WelcomeCardStyle = "glass" | "solid" | "outlined" | "floating";
-export type WelcomePattern = "none" | "cafe" | "dots" | "grid" | "diagonal" | "waves";
+/** Same pattern vocabulary as the menu background (floating icons + CSS textures). */
+export type WelcomePattern = MenuBackgroundPattern;
 export type WelcomeBackgroundStyle = "gradient" | "solid" | "pattern" | "image";
 export type WelcomeEnterStyle = "pill" | "rounded" | "square" | "outline";
 export type WelcomeCardWidth = "narrow" | "normal" | "wide";

@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { cert, initializeApp } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { defaultAppData } from "../src/data/default-data";
+import { mihrakoCategories, mihrakoMenuItems } from "../src/data/mihrako-menu";
 import { isReservedClientSlug, normalizeClientSlug } from "../src/lib/tenant";
 
 // tsx does not auto-load .env.local.
@@ -71,7 +72,7 @@ async function main() {
   if (isReservedClientSlug(slug)) {
     throw new Error(`Slug "${slug}" is reserved. Choose a different client slug.`);
   }
-  const displayName = name || (slug === "demo" ? "Demo Cafe" : slug);
+  const displayName = name || (slug === "demo" ? "Demo Cafe" : slug === "mihrako" ? "Mihrako" : slug);
   const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
   const clientRef = db.collection("clients").doc(slug);
   const existing = await clientRef.get();
@@ -122,11 +123,13 @@ async function main() {
   );
 
   if (sampleMenu) {
-    for (const category of defaultAppData.categories) {
+    const categories = slug === "mihrako" ? mihrakoCategories : defaultAppData.categories;
+    const menuItems = slug === "mihrako" ? mihrakoMenuItems : defaultAppData.menuItems;
+    for (const category of categories) {
       const { id, ...data } = category;
       batch.set(clientRef.collection("categories").doc(id), { ...data, createdAt: now, updatedAt: now }, { merge: true });
     }
-    for (const item of defaultAppData.menuItems) {
+    for (const item of menuItems) {
       const { id, ...data } = item;
       batch.set(clientRef.collection("menuItems").doc(id), { ...data, createdAt: now, updatedAt: now }, { merge: true });
     }

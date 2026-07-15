@@ -17,6 +17,12 @@ import { getAdminAppData, listClients, saveSettings } from "@/lib/firebase/fires
 import { setActiveClientSlug } from "@/lib/tenant";
 import { defaultAppearanceSettings, defaultGeneralSettings, defaultMenuItems, defaultMenuSettings } from "@/data/default-data";
 import { localeLabels } from "@/lib/i18n/config";
+import {
+  CARD_PATTERN_SELECT_OPTIONS,
+  cssPatternStyle,
+  isFloatingIconPattern,
+  PATTERN_SELECT_OPTIONS
+} from "@/lib/menu-patterns";
 import type { AppearanceSettings, ClientAccount, GeneralSettings, Locale, MenuSettings } from "@/types/models";
 
 const MENU_SETTING_LABELS: Record<string, string> = {
@@ -510,6 +516,313 @@ const LOOK_PRESETS: LookPreset[] = [
       welcomeCardAlign: "center",
       welcomeCardWidth: "normal"
     }
+  },
+  {
+    id: "lavender-atelier",
+    name: "Lavender Atelier",
+    blurb: "Soft lilac & silver mist",
+    swatch: ["#7c6a9a", "#c4b5d4", "#f6f3f9"],
+    patch: {
+      primaryColor: "#7c6a9a",
+      secondaryColor: "#c4b5d4",
+      defaultTheme: "light",
+      cardDesign: "poster",
+      cardStyle: "elevated",
+      categoryNavStyle: "bubble",
+      sectionHeaderStyle: "centered",
+      backgroundType: "pattern",
+      backgroundColor: "#f6f3f9",
+      backgroundPattern: "sparkles",
+      backgroundPatternColor: "#7c6a9a",
+      pageSurfaceColor: "#f6f3f9",
+      cardSurfaceColor: "#fffcfe",
+      fontPreset: "soft",
+      pageDensity: "comfortable",
+      priceStyle: "badge",
+      borderRadius: 20,
+      welcomeAccentColor: "#7c6a9a",
+      welcomeHeaderTextColor: "#7c6a9a",
+      welcomeBackgroundStyle: "pattern",
+      welcomeBackgroundColor: "#f6f3f9",
+      welcomeBackgroundPattern: "hearts",
+      welcomeBackgroundPatternColor: "#7c6a9a",
+      welcomeCardStyle: "floating",
+      welcomeEnterStyle: "pill"
+    }
+  },
+  {
+    id: "amber-hearth",
+    name: "Amber Hearth",
+    blurb: "Firelight amber & walnut",
+    swatch: ["#b45309", "#f59e0b", "#1c1410"],
+    patch: {
+      primaryColor: "#b45309",
+      secondaryColor: "#f59e0b",
+      defaultTheme: "dark",
+      cardDesign: "classic",
+      cardStyle: "elevated",
+      categoryNavStyle: "pills",
+      sectionHeaderStyle: "accent",
+      backgroundType: "pattern",
+      backgroundColor: "#1c1410",
+      backgroundPattern: "beans",
+      backgroundPatternColor: "#f59e0b",
+      pageSurfaceColor: "#1c1410",
+      cardSurfaceColor: "#271c16",
+      fontPreset: "classic",
+      pageDensity: "cozy",
+      priceStyle: "large",
+      borderRadius: 12,
+      welcomeAccentColor: "#f59e0b",
+      welcomeHeaderTextColor: "#f59e0b",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#1c1410",
+      welcomeBackgroundGradientTo: "#3b2415",
+      welcomeBackgroundPattern: "cafe",
+      welcomeBackgroundPatternColor: "#f59e0b",
+      welcomeCardStyle: "solid",
+      welcomeEnterStyle: "rounded"
+    }
+  },
+  {
+    id: "seafoam-coast",
+    name: "Seafoam Coast",
+    blurb: "Ocean mist & driftwood",
+    swatch: ["#0d9488", "#99f6e4", "#f0fdfa"],
+    patch: {
+      primaryColor: "#0d9488",
+      secondaryColor: "#5eead4",
+      defaultTheme: "light",
+      cardDesign: "minimal",
+      cardStyle: "outlined",
+      categoryNavStyle: "segmented",
+      sectionHeaderStyle: "overline",
+      backgroundType: "pattern",
+      backgroundColor: "#f0fdfa",
+      backgroundPattern: "waves",
+      backgroundPatternColor: "#0d9488",
+      pageSurfaceColor: "#f0fdfa",
+      cardSurfaceColor: "#ffffff",
+      fontPreset: "modern",
+      pageDensity: "comfortable",
+      priceStyle: "plain",
+      borderRadius: 16,
+      welcomeAccentColor: "#0d9488",
+      welcomeHeaderTextColor: "#0d9488",
+      welcomeBackgroundStyle: "pattern",
+      welcomeBackgroundColor: "#f0fdfa",
+      welcomeBackgroundPattern: "bubbles",
+      welcomeBackgroundPatternColor: "#0d9488",
+      welcomeCardStyle: "glass",
+      welcomeEnterStyle: "pill"
+    }
+  },
+  {
+    id: "ink-indigo",
+    name: "Ink Indigo",
+    blurb: "Deep indigo & moon silver",
+    swatch: ["#312e81", "#a5b4fc", "#0b1026"],
+    patch: {
+      primaryColor: "#a5b4fc",
+      secondaryColor: "#818cf8",
+      defaultTheme: "dark",
+      cardDesign: "overlay",
+      cardStyle: "elevated",
+      categoryNavStyle: "underline",
+      sectionHeaderStyle: "banner",
+      backgroundType: "pattern",
+      backgroundColor: "#0b1026",
+      backgroundPattern: "stars",
+      backgroundPatternColor: "#a5b4fc",
+      pageSurfaceColor: "#0b1026",
+      cardSurfaceColor: "#151a33",
+      fontPreset: "modern",
+      pageDensity: "cozy",
+      priceStyle: "badge",
+      imageAspect: "wide",
+      borderRadius: 10,
+      welcomeAccentColor: "#a5b4fc",
+      welcomeHeaderTextColor: "#a5b4fc",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#0b1026",
+      welcomeBackgroundGradientTo: "#312e81",
+      welcomeBackgroundPattern: "sparkles",
+      welcomeBackgroundPatternColor: "#a5b4fc",
+      welcomeCardStyle: "outlined",
+      welcomeEnterStyle: "outline"
+    }
+  },
+  {
+    id: "citrus-grove",
+    name: "Citrus Grove",
+    blurb: "Sunlit lemon & orchard green",
+    swatch: ["#65a30d", "#facc15", "#fefce8"],
+    patch: {
+      primaryColor: "#65a30d",
+      secondaryColor: "#facc15",
+      defaultTheme: "light",
+      cardDesign: "classic",
+      cardStyle: "elevated",
+      categoryNavStyle: "cards",
+      sectionHeaderStyle: "boxed",
+      backgroundType: "pattern",
+      backgroundColor: "#fefce8",
+      backgroundPattern: "leaves",
+      backgroundPatternColor: "#65a30d",
+      pageSurfaceColor: "#fefce8",
+      cardSurfaceColor: "#fffef5",
+      fontPreset: "brand",
+      pageDensity: "comfortable",
+      priceStyle: "badge",
+      borderRadius: 18,
+      welcomeAccentColor: "#65a30d",
+      welcomeHeaderTextColor: "#65a30d",
+      welcomeBackgroundStyle: "pattern",
+      welcomeBackgroundColor: "#fefce8",
+      welcomeBackgroundPattern: "mixed",
+      welcomeBackgroundPatternColor: "#65a30d",
+      welcomeCardStyle: "floating",
+      welcomeEnterStyle: "rounded"
+    }
+  },
+  {
+    id: "graphite-studio",
+    name: "Graphite Studio",
+    blurb: "Architect gray & concrete",
+    swatch: ["#52525b", "#a1a1aa", "#f4f4f5"],
+    patch: {
+      primaryColor: "#52525b",
+      secondaryColor: "#a1a1aa",
+      defaultTheme: "light",
+      cardDesign: "compact",
+      cardStyle: "flat",
+      categoryNavStyle: "minimal",
+      sectionHeaderStyle: "divider",
+      backgroundType: "pattern",
+      backgroundColor: "#f4f4f5",
+      backgroundPattern: "grid",
+      backgroundPatternColor: "#52525b",
+      pageSurfaceColor: "#f4f4f5",
+      cardSurfaceColor: "#ffffff",
+      fontPreset: "modern",
+      pageDensity: "compact",
+      contentWidth: "wide",
+      priceStyle: "plain",
+      borderRadius: 4,
+      showCategoryIcons: false,
+      welcomeAccentColor: "#52525b",
+      welcomeHeaderTextColor: "#52525b",
+      welcomeBackgroundStyle: "pattern",
+      welcomeBackgroundColor: "#f4f4f5",
+      welcomeBackgroundPattern: "crosshatch",
+      welcomeBackgroundPatternColor: "#52525b",
+      welcomeCardStyle: "outlined",
+      welcomeEnterStyle: "square",
+      welcomeLanguageStyle: "minimal"
+    }
+  },
+  {
+    id: "mocha-silk",
+    name: "Mocha Silk",
+    blurb: "Espresso brown & latte foam",
+    swatch: ["#78350f", "#d6a77a", "#faf6f1"],
+    patch: {
+      primaryColor: "#78350f",
+      secondaryColor: "#d6a77a",
+      defaultTheme: "light",
+      cardDesign: "classic",
+      cardStyle: "outlined",
+      categoryNavStyle: "pills",
+      sectionHeaderStyle: "plain",
+      backgroundType: "pattern",
+      backgroundColor: "#faf6f1",
+      backgroundPattern: "cafe",
+      backgroundPatternColor: "#78350f",
+      pageSurfaceColor: "#faf6f1",
+      cardSurfaceColor: "#fffdf9",
+      fontPreset: "classic",
+      pageDensity: "cozy",
+      priceStyle: "large",
+      borderRadius: 14,
+      welcomeAccentColor: "#78350f",
+      welcomeHeaderTextColor: "#78350f",
+      welcomeBackgroundStyle: "pattern",
+      welcomeBackgroundColor: "#faf6f1",
+      welcomeBackgroundPattern: "beans",
+      welcomeBackgroundPatternColor: "#78350f",
+      welcomeCardStyle: "glass",
+      welcomeEnterStyle: "pill"
+    }
+  },
+  {
+    id: "midnight-jade",
+    name: "Midnight Jade",
+    blurb: "Forest night & jade glow",
+    swatch: ["#064e3b", "#34d399", "#022c22"],
+    patch: {
+      primaryColor: "#34d399",
+      secondaryColor: "#6ee7b7",
+      defaultTheme: "dark",
+      cardDesign: "poster",
+      cardStyle: "elevated",
+      categoryNavStyle: "bubble",
+      sectionHeaderStyle: "numbered",
+      backgroundType: "pattern",
+      backgroundColor: "#022c22",
+      backgroundPattern: "leaves",
+      backgroundPatternColor: "#34d399",
+      pageSurfaceColor: "#022c22",
+      cardSurfaceColor: "#0a3d32",
+      fontPreset: "soft",
+      pageDensity: "comfortable",
+      priceStyle: "badge",
+      imageAspect: "tall",
+      borderRadius: 16,
+      welcomeAccentColor: "#34d399",
+      welcomeHeaderTextColor: "#34d399",
+      welcomeBackgroundStyle: "gradient",
+      welcomeBackgroundGradientFrom: "#022c22",
+      welcomeBackgroundGradientTo: "#064e3b",
+      welcomeBackgroundPattern: "dessert",
+      welcomeBackgroundPatternColor: "#34d399",
+      welcomeCardStyle: "floating",
+      welcomeEnterStyle: "outline"
+    }
+  },
+  {
+    id: "blush-linen",
+    name: "Blush Linen",
+    blurb: "Powder peach & warm linen",
+    swatch: ["#e11d48", "#fda4af", "#fff1f2"],
+    patch: {
+      primaryColor: "#e11d48",
+      secondaryColor: "#fda4af",
+      defaultTheme: "light",
+      cardDesign: "minimal",
+      cardStyle: "elevated",
+      categoryNavStyle: "underline",
+      sectionHeaderStyle: "centered",
+      backgroundType: "pattern",
+      backgroundColor: "#fff1f2",
+      backgroundPattern: "hearts",
+      backgroundPatternColor: "#e11d48",
+      pageSurfaceColor: "#fff1f2",
+      cardSurfaceColor: "#fffafa",
+      fontPreset: "soft",
+      pageDensity: "comfortable",
+      itemColumns: "2",
+      priceStyle: "badge",
+      borderRadius: 22,
+      welcomeAccentColor: "#e11d48",
+      welcomeHeaderTextColor: "#e11d48",
+      welcomeBackgroundStyle: "pattern",
+      welcomeBackgroundColor: "#fff1f2",
+      welcomeBackgroundPattern: "polka",
+      welcomeBackgroundPatternColor: "#e11d48",
+      welcomeCardStyle: "floating",
+      welcomeLanguageStyle: "cards",
+      welcomeEnterStyle: "pill"
+    }
   }
 ];
 
@@ -811,11 +1124,9 @@ export function MenuDesigner() {
                   </Field>
                   <Field label="Form/card pattern">
                     <Select value={appearance.welcomeCardPattern ?? "none"} onChange={(e) => update({ welcomeCardPattern: e.target.value as AppearanceSettings["welcomeCardPattern"] })}>
-                      <option value="none">None</option>
-                      <option value="dots">Dots</option>
-                      <option value="grid">Grid</option>
-                      <option value="diagonal">Diagonal lines</option>
-                      <option value="waves">Waves</option>
+                      {CARD_PATTERN_SELECT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
                     </Select>
                   </Field>
                   <Field label="Form/card color"><Input type="color" value={appearance.welcomeFormColor || "#ffffff"} onChange={(e) => update({ welcomeFormColor: e.target.value })} /></Field>
@@ -861,12 +1172,9 @@ export function MenuDesigner() {
                     </Field>
                     <Field label="Pattern">
                       <Select value={appearance.welcomeBackgroundPattern ?? "cafe"} onChange={(e) => update({ welcomeBackgroundPattern: e.target.value as AppearanceSettings["welcomeBackgroundPattern"] })}>
-                        <option value="none">None</option>
-                        <option value="cafe">Floating cafe icons</option>
-                        <option value="dots">Dots</option>
-                        <option value="grid">Grid</option>
-                        <option value="diagonal">Diagonal lines</option>
-                        <option value="waves">Waves</option>
+                        {PATTERN_SELECT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                       </Select>
                     </Field>
                     <Field label="Background color"><Input type="color" value={appearance.welcomeBackgroundColor || "#d7efd8"} onChange={(e) => update({ welcomeBackgroundColor: e.target.value })} /></Field>
@@ -1449,16 +1757,9 @@ export function MenuDesigner() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label="Pattern">
                       <Select value={appearance.backgroundPattern ?? "dots"} onChange={(e) => update({ backgroundPattern: e.target.value as AppearanceSettings["backgroundPattern"] })}>
-                        <option value="none">None</option>
-                        <option value="cafe">Floating cafe icons</option>
-                        <option value="dots">Dots</option>
-                        <option value="grid">Grid</option>
-                        <option value="diagonal">Diagonal lines</option>
-                        <option value="waves">Waves</option>
-                        <option value="checker">Checker</option>
-                        <option value="confetti">Confetti</option>
-                        <option value="stars">Stars</option>
-                        <option value="mesh">Soft mesh</option>
+                        {PATTERN_SELECT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                       </Select>
                     </Field>
                     <Field label="Pattern color"><Input type="color" value={appearance.backgroundPatternColor || "#3f8a49"} onChange={(e) => update({ backgroundPatternColor: e.target.value })} /></Field>
@@ -1534,15 +1835,16 @@ function formatHourLabel(hour: number) {
 }
 
 function designerPatternStyle(pattern: string, color: string): React.CSSProperties {
-  const base: React.CSSProperties = { color, opacity: 0.2 };
-  if (pattern === "grid") return { ...base, backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)", backgroundSize: "28px 28px" };
-  if (pattern === "diagonal") return { ...base, backgroundImage: "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 16px)" };
-  if (pattern === "waves") return { ...base, backgroundImage: "radial-gradient(70% 60% at 50% 100%, transparent 58%, currentColor 60%, transparent 62%)", backgroundSize: "42px 24px" };
-  if (pattern === "checker") return { ...base, backgroundImage: "linear-gradient(45deg, currentColor 25%, transparent 25%), linear-gradient(-45deg, currentColor 25%, transparent 25%)", backgroundSize: "24px 24px" };
-  if (pattern === "confetti") return { ...base, backgroundImage: "radial-gradient(circle at 20% 30%, currentColor 0 2px, transparent 2px), radial-gradient(circle at 70% 65%, currentColor 0 1.5px, transparent 1.5px)", backgroundSize: "54px 54px" };
-  if (pattern === "stars") return { ...base, backgroundImage: "radial-gradient(circle at 50% 50%, currentColor 0 1.4px, transparent 1.6px), radial-gradient(circle at 15% 20%, currentColor 0 1px, transparent 1.2px)", backgroundSize: "38px 38px" };
-  if (pattern === "mesh") return { ...base, opacity: 0.28, backgroundImage: "radial-gradient(circle at 20% 20%, currentColor, transparent 30%), radial-gradient(circle at 80% 30%, currentColor, transparent 28%)", backgroundSize: "260px 260px" };
-  return { ...base, backgroundImage: "radial-gradient(currentColor 1.5px, transparent 1.5px)", backgroundSize: "20px 20px" };
+  if (isFloatingIconPattern(pattern)) {
+    return {
+      color,
+      opacity: 0.22,
+      backgroundImage: "radial-gradient(currentColor 2px, transparent 2px), radial-gradient(currentColor 1.5px, transparent 1.5px)",
+      backgroundPosition: "0 0, 24px 24px",
+      backgroundSize: "48px 48px"
+    };
+  }
+  return cssPatternStyle(pattern, color, 0.2);
 }
 
 // Lightweight sample of the menu (header + background + two cards) rendered with
@@ -1759,17 +2061,14 @@ function normalizeWelcomePreviewTransparency(value: number | undefined) {
 }
 
 function welcomePreviewPatternStyle(pattern: string, color: string, opacity: number): React.CSSProperties {
-  const base: React.CSSProperties = { color, opacity };
-  if (pattern === "cafe") {
+  if (isFloatingIconPattern(pattern)) {
     return {
-      ...base,
+      color,
+      opacity,
       backgroundImage: "radial-gradient(currentColor 2px, transparent 2px), radial-gradient(currentColor 1.5px, transparent 1.5px)",
       backgroundPosition: "0 0, 24px 24px",
       backgroundSize: "48px 48px"
     };
   }
-  if (pattern === "dots") return { ...base, backgroundImage: "radial-gradient(currentColor 1.4px, transparent 1.4px)", backgroundSize: "18px 18px" };
-  if (pattern === "grid") return { ...base, backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)", backgroundSize: "28px 28px" };
-  if (pattern === "diagonal") return { ...base, backgroundImage: "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 16px)" };
-  return { ...base, backgroundImage: "radial-gradient(70% 60% at 50% 100%, transparent 58%, currentColor 60%, transparent 62%)", backgroundSize: "42px 24px" };
+  return cssPatternStyle(pattern, color, opacity);
 }
