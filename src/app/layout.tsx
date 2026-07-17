@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   title,
   description,
   icons: {
-    icon: "/stone-cafe-logo.jpg",
-    shortcut: "/stone-cafe-logo.jpg",
-    apple: "/stone-cafe-logo.jpg"
+    icon: "/site-icon.png",
+    shortcut: "/site-icon.png",
+    apple: "/site-icon.png"
   },
   openGraph: {
     type: "website",
