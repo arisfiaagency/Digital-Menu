@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LogOut, RefreshCw, ShieldCheck } from "lucide-react";
+import { ChevronDown, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
 import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-preferences";
 import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from "@/components/admin/clients-panel";
 import { MenuDesigner } from "@/components/admin/menu-designer";
@@ -19,6 +19,7 @@ import { formatExpiryDate, formatMoney } from "@/lib/client-access";
 import { hasFirebaseClientConfig } from "@/lib/firebase/client";
 import { deleteClient, listClients, patchClient, recordClientPayment, saveClient } from "@/lib/firebase/firestore";
 import { logoutAdmin } from "@/lib/firebase/auth";
+import { cn } from "@/lib/utils/cn";
 import type {
   ClientAccount,
   ClientBilling,
@@ -33,7 +34,7 @@ type SupervisorTab = "clients" | "design" | "qr" | "payments";
 
 export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: SupervisorTab }) {
   const auth = useAdminAuth();
-  const { text } = useAdminLocale();
+  const { text, dir: textDir } = useAdminLocale();
   const [clients, setClients] = useState<ClientAccount[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -251,17 +252,15 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
             <h1 className="text-3xl font-semibold">Digital Menu Supervisor</h1>
             <p className="text-muted-foreground">Clients, billing, menu design, and QR codes.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <AdminPreferences />
-            <Button type="button" variant="outline" onClick={() => void refresh()}>
-              <RefreshCw className="h-4 w-4" aria-hidden />
-              Refresh
-            </Button>
-            <Button type="button" variant="destructive" onClick={() => void signOut()}>
-              <LogOut className="h-4 w-4" aria-hidden />
-              {text.logout}
-            </Button>
-          </div>
+          <SupervisorProfileMenu
+            profileName={auth.profile?.displayName || auth.profile?.username || "Supervisor"}
+            profileHandle={auth.profile?.username ? `@${auth.profile.username}` : auth.user.email || ""}
+            roleLabel={auth.role === "employee" ? text.roleEmployee : text.roleAdmin}
+            text={text}
+            textDir={textDir}
+            onRefresh={refresh}
+            onLogout={signOut}
+          />
         </header>
 
         {message ? <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm text-primary">{message}</p> : null}
@@ -345,6 +344,142 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
       </div>
     </main>
   );
+}
+
+function SupervisorProfileMenu({
+  profileName,
+  profileHandle,
+  roleLabel,
+  text,
+  textDir,
+  onRefresh,
+  onLogout
+}: {
+  profileName: string;
+  profileHandle: string;
+  roleLabel: string;
+  text: Record<string, string>;
+  textDir: "ltr" | "rtl";
+  onRefresh: () => void | Promise<void>;
+  onLogout: () => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const avatarText = getProfileInitials(profileName || profileHandle || text.adminProfile);
+  const secondaryProfileText = profileHandle || text.email;
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointer(event: MouseEvent | TouchEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    }
+
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("touchstart", handlePointer);
+    document.addEventListener("keydown", handleKey);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("touchstart", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  async function handleRefresh() {
+    setOpen(false);
+    await onRefresh();
+  }
+
+  async function handleLogout() {
+    setOpen(false);
+    await onLogout();
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      {open ? (
+        <div
+          role="menu"
+          className="pop-in absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-2xl border bg-card p-1.5 shadow-xl"
+        >
+          <div className="rounded-xl bg-muted/40 p-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                {avatarText}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span dir={textDir} className="block truncate text-sm font-semibold">
+                  {profileName}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">{secondaryProfileText}</span>
+              </span>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="min-w-0">
+                <span dir={textDir} className="block truncate text-xs font-semibold uppercase text-muted-foreground">
+                  {text.profilePreferences}
+                </span>
+                <span dir={textDir} className="block truncate text-xs text-muted-foreground">{roleLabel}</span>
+              </span>
+              <AdminPreferences compact />
+            </div>
+          </div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => void handleRefresh()}
+            className="focus-ring mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            <RefreshCw className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span dir={textDir}>Refresh</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => void handleLogout()}
+            className="focus-ring flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+          >
+            <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+            <span dir={textDir}>{text.logout}</span>
+          </button>
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        className="focus-ring group relative flex h-12 w-12 items-center justify-center rounded-full border bg-background/70 text-primary shadow-sm transition-colors hover:bg-muted"
+        aria-label={text.adminProfile}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={`${profileName} - ${secondaryProfileText}`}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-xs font-bold">
+          {avatarText}
+        </span>
+        <ChevronDown
+          className={cn(
+            "absolute -right-1 bottom-3 h-3.5 w-3.5 rounded-full bg-card text-muted-foreground shadow-sm transition-transform group-hover:text-foreground",
+            open && "rotate-180"
+          )}
+          aria-hidden
+        />
+      </button>
+    </div>
+  );
+}
+
+function getProfileInitials(value: string) {
+  const cleaned = value.trim();
+  const name = cleaned.includes("@") ? cleaned.split("@")[0] : cleaned;
+  const parts = name.split(/\s+/).filter(Boolean);
+  const letters = parts.length > 1 ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}` : name.slice(0, 2);
+  return (letters || "A").toLocaleUpperCase();
 }
 
 function SupervisorSkeleton() {
