@@ -22,6 +22,7 @@ import { defaultAppData } from "@/data/default-data";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { removeImage } from "@/lib/supabase/storage";
 import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
+import { extendSubscriptionExpiry } from "@/lib/client-access";
 import { slugify } from "@/lib/utils/format";
 import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, SavedLookPreset } from "@/types/models";
 
@@ -550,10 +551,12 @@ export async function saveCustomLookPresets(presets: SavedLookPreset[]) {
 
 const paymentConverter = converter<PlatformPayment>();
 
-/** Record a cafe subscription payment and update the client billing totals. */
+/** Record a cafe subscription payment, extend expiry by months, and update billing totals. */
 export async function recordClientPayment(input: {
   client: ClientAccount;
   amount: number;
+  /** Months of access to add (default 1). */
+  months?: number;
   note?: string;
   recordedByEmail?: string;
 }) {
@@ -561,11 +564,15 @@ export async function recordClientPayment(input: {
   if (!db) throw new Error("Firestore is not configured.");
   const amount = Number(input.amount);
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Payment amount must be greater than zero.");
+  const months = Math.max(1, Math.floor(Number(input.months) || 1));
 
   const client = input.client;
   const currency = client.billing?.currency || client.subscription?.currency || client.defaultCurrency || "IQD";
   const paid = (client.billing?.amountPaid || 0) + amount;
+  const planPrice = client.subscription?.price || 0;
   const owed = Math.max(0, (client.billing?.amountOwed || 0) - amount);
+  const baseExpiry = client.subscription?.expiresAt || client.trial?.endAt;
+  const expiresAtAfter = extendSubscriptionExpiry(baseExpiry, months);
   const paymentRef = doc(collection(db, "platformPayments")).withConverter(paymentConverter);
   const createdAt = new Date().toISOString();
   const payment: PlatformPayment = {
@@ -574,7 +581,9 @@ export async function recordClientPayment(input: {
     clientName: client.name,
     amount,
     currency,
-    note: input.note?.trim() || undefined,
+    monthsAdded: months,
+    expiresAtAfter,
+    note: input.note?.trim() || (months === 1 ? "1 month" : `${months} months`),
     amountPaidAfter: paid,
     amountOwedAfter: owed,
     recordedByEmail: input.recordedByEmail,
@@ -589,15 +598,16 @@ export async function recordClientPayment(input: {
       billing: { amountPaid: paid, amountOwed: owed, currency },
       subscription: {
         plan: client.subscription?.plan || "basic",
-        price: client.subscription?.price || 0,
+        price: planPrice,
         currency,
-        status: owed === 0 ? "active" : client.subscription?.status || "past_due",
+        status: "active",
         period: client.subscription?.period || "monthly",
+        expiresAt: expiresAtAfter,
         note: client.subscription?.note
       },
-      blocked: owed === 0 ? false : client.blocked ?? false,
-      blockedReason: owed === 0 ? "" : client.blockedReason || "",
-      blockedAt: owed === 0 ? "" : client.blockedAt || "",
+      blocked: false,
+      blockedReason: "",
+      blockedAt: "",
       updatedAt: serverTimestamp()
     }),
     { merge: true }

@@ -480,6 +480,8 @@ export type ClientSubscription = {
   currency: Currency;
   status: ClientSubscriptionStatus;
   period?: "monthly" | "yearly";
+  /** When paid access ends (ISO). Extended by each monthly payment. */
+  expiresAt?: string;
   note?: string;
 };
 
@@ -502,6 +504,10 @@ export type PlatformPayment = {
   clientName: string;
   amount: number;
   currency: Currency;
+  /** How many months of access this payment added. */
+  monthsAdded?: number;
+  /** Subscription expiry after applying this payment. */
+  expiresAtAfter?: string;
   note?: string;
   amountPaidAfter: number;
   amountOwedAfter: number;

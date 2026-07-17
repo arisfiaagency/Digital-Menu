@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
-import { formatMoney, isClientServiceActive, trialDaysRemaining } from "@/lib/client-access";
+import { accessExpiryLabel, formatExpiryDate, formatMoney, getAccessExpiryState, getServiceExpiresAt, isClientServiceActive, trialDaysRemaining } from "@/lib/client-access";
 import { hasFirebaseClientConfig } from "@/lib/firebase/client";
 import { deleteClient, listClients, patchClient, recordClientPayment, saveClient } from "@/lib/firebase/firestore";
 import { logoutAdmin } from "@/lib/firebase/auth";
@@ -123,7 +123,10 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
     setSaving(true);
     try {
       const trial = defaultTrial(Math.max(0, trialDays || 0));
-      const subscription = defaultSubscription(defaultCurrency, Math.max(0, planPrice || 0));
+      const subscription = {
+        ...defaultSubscription(defaultCurrency, Math.max(0, planPrice || 0)),
+        expiresAt: trial.endAt
+      };
       const billing = defaultBilling(defaultCurrency, Math.max(0, planPrice || 0));
       await saveClient({
         name,
@@ -223,18 +226,21 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
     }
   }
 
-  async function recordPayment(client: ClientAccount, amount: number) {
+  async function recordPayment(client: ClientAccount, amount: number, months = 1) {
     if (!amount || amount <= 0) return;
     const currency = client.billing?.currency || client.subscription?.currency || client.defaultCurrency || "IQD";
     setUpdatingSlug(client.slug);
     setError("");
     try {
-      await recordClientPayment({
+      const payment = await recordClientPayment({
         client,
         amount,
+        months,
         recordedByEmail: auth.user?.email || undefined
       });
-      setMessage(`Recorded ${formatMoney(amount, currency)} for /${client.slug}.`);
+      setMessage(
+        `Recorded ${formatMoney(amount, currency)} for /${client.slug} · +${months} mo · expires ${formatExpiryDate(payment.expiresAtAfter)}.`
+      );
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not record payment.");
@@ -453,7 +459,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
                     onBlock={() => void toggleBlock(client)}
                     onDelete={() => void removeClient(client)}
                     onSaveBilling={(next) => void saveBilling(client, next)}
-                    onRecordPayment={(amount) => void recordPayment(client, amount)}
+                    onRecordPayment={(amount, months) => void recordPayment(client, amount, months)}
                     onOpenQr={() => {
                       setQrSlug(client.slug);
                       setTab("qr");
@@ -498,12 +504,14 @@ function ClientRow({
     billing: ClientBilling;
     blockedReason?: string;
   }) => void;
-  onRecordPayment: (amount: number) => void;
+  onRecordPayment: (amount: number, months: number) => void;
   onOpenQr: () => void;
 }) {
   const currency = client.billing?.currency || client.subscription?.currency || client.defaultCurrency || "IQD";
   const daysLeft = trialDaysRemaining(client);
   const live = isClientServiceActive(client);
+  const expiryState = getAccessExpiryState(client);
+  const expiresAt = getServiceExpiresAt(client);
   const [plan, setPlan] = useState<ClientSubscriptionPlan>(client.subscription?.plan || "basic");
   const [subStatus, setSubStatus] = useState<ClientSubscriptionStatus>(client.subscription?.status || "trialing");
   const [period, setPeriod] = useState<"monthly" | "yearly">(client.subscription?.period || "monthly");
@@ -513,8 +521,10 @@ function ClientRow({
   const [billCurrency, setBillCurrency] = useState<Currency>(currency);
   const [trialDayCount, setTrialDayCount] = useState(client.trial?.days ?? 14);
   const [trialEnd, setTrialEnd] = useState(client.trial?.endAt?.slice(0, 10) || "");
+  const [expiresDate, setExpiresDate] = useState(client.subscription?.expiresAt?.slice(0, 10) || "");
   const [reason, setReason] = useState(client.blockedReason || "");
-  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentAmount, setPaymentAmount] = useState(client.subscription?.price ?? 0);
+  const [paymentMonths, setPaymentMonths] = useState(1);
 
   useEffect(() => {
     setPlan(client.subscription?.plan || "basic");
@@ -526,7 +536,9 @@ function ClientRow({
     setBillCurrency(client.billing?.currency || client.subscription?.currency || client.defaultCurrency || "IQD");
     setTrialDayCount(client.trial?.days ?? 14);
     setTrialEnd(client.trial?.endAt?.slice(0, 10) || "");
+    setExpiresDate(client.subscription?.expiresAt?.slice(0, 10) || "");
     setReason(client.blockedReason || "");
+    setPaymentAmount(client.subscription?.price ?? 0);
   }, [client]);
 
   function submitBilling() {
@@ -534,13 +546,17 @@ function ClientRow({
       ? new Date(`${trialEnd}T23:59:59.000Z`).toISOString()
       : defaultTrial(trialDayCount).endAt;
     const startIso = client.trial?.startAt || new Date().toISOString();
+    const subscriptionExpiresAt = expiresDate
+      ? new Date(`${expiresDate}T23:59:59.000Z`).toISOString()
+      : client.subscription?.expiresAt;
     onSaveBilling({
       subscription: {
         plan,
         price: Math.max(0, price),
         currency: billCurrency,
         status: subStatus,
-        period
+        period,
+        expiresAt: subscriptionExpiresAt
       },
       trial: {
         startAt: startIso,
@@ -556,18 +572,31 @@ function ClientRow({
     });
   }
 
+  const expiryBadgeClass =
+    expiryState === "expired" || client.blocked
+      ? "border-destructive/40 text-destructive"
+      : expiryState === "near_expiry"
+        ? "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-300"
+        : live
+          ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
+          : "border-destructive/40 text-destructive";
+
   return (
-    <article className={`rounded-lg border p-4 ${client.blocked ? "border-destructive/40 bg-destructive/5" : ""}`}>
+    <article
+      className={`rounded-lg border p-4 ${
+        client.blocked || expiryState === "expired"
+          ? "border-destructive/40 bg-destructive/5"
+          : expiryState === "near_expiry"
+            ? "border-amber-500/40 bg-amber-500/5"
+            : ""
+      }`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-semibold">{client.name}</h2>
-            <span
-              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${
-                live ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400" : "border-destructive/40 text-destructive"
-              }`}
-            >
-              {client.blocked ? "Blocked" : live ? "Live" : "Offline"}
+            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${expiryBadgeClass}`}>
+              {client.blocked ? "Blocked" : accessExpiryLabel(client)}
             </span>
             {client.subscription?.status ? (
               <span className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">
@@ -577,8 +606,19 @@ function ClientRow({
           </div>
           <p className="text-sm text-muted-foreground">
             /{client.slug} · {client.status}
-            {daysLeft !== null ? ` · trial ${daysLeft > 0 ? `${daysLeft}d left` : "ended"}` : ""}
+            {expiresAt ? ` · access until ${formatExpiryDate(expiresAt)}` : ""}
+            {daysLeft !== null && !client.subscription?.expiresAt ? ` · trial ${daysLeft > 0 ? `${daysLeft}d left` : "ended"}` : ""}
           </p>
+          {expiryState === "near_expiry" ? (
+            <p className="mt-1 text-sm font-medium text-amber-800 dark:text-amber-300">
+              Near expiry — renew within 5 days or the menu will go offline.
+            </p>
+          ) : null}
+          {expiryState === "expired" && !client.blocked ? (
+            <p className="mt-1 text-sm font-medium text-destructive">
+              Expired — record a monthly payment to restore access.
+            </p>
+          ) : null}
           <p className="text-sm text-muted-foreground">
             Paid {formatMoney(client.billing?.amountPaid || 0, currency)} · Owed{" "}
             {formatMoney(client.billing?.amountOwed || 0, currency)}
@@ -654,8 +694,11 @@ function ClientRow({
                 <option value="yearly">Yearly</option>
               </Select>
             </Field>
-            <Field label="Plan price">
+            <Field label="Plan price / month">
               <Input type="number" min={0} value={price} onChange={(e) => setPrice(Number(e.target.value) || 0)} />
+            </Field>
+            <Field label="Access expires">
+              <Input type="date" value={expiresDate} onChange={(e) => setExpiresDate(e.target.value)} />
             </Field>
             <Field label="Amount paid">
               <Input type="number" min={0} value={paid} onChange={(e) => setPaid(Number(e.target.value) || 0)} />
@@ -685,14 +728,23 @@ function ClientRow({
               {updating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               <span className="ms-2">Save billing</span>
             </Button>
-            <div className="flex items-end gap-2">
-              <Field label="Record payment">
+            <div className="flex flex-wrap items-end gap-2 rounded-lg border bg-muted/20 p-3">
+              <Field label="Payment amount">
                 <Input
                   type="number"
                   min={0}
                   value={paymentAmount || ""}
                   onChange={(e) => setPaymentAmount(Number(e.target.value) || 0)}
-                  placeholder="0"
+                  placeholder={String(price || 0)}
+                />
+              </Field>
+              <Field label="Months paid">
+                <Input
+                  type="number"
+                  min={1}
+                  max={36}
+                  value={paymentMonths}
+                  onChange={(e) => setPaymentMonths(Math.max(1, Number(e.target.value) || 1))}
                 />
               </Field>
               <Button
@@ -700,13 +752,17 @@ function ClientRow({
                 variant="outline"
                 disabled={updating || !paymentAmount}
                 onClick={() => {
-                  onRecordPayment(paymentAmount);
-                  setPaymentAmount(0);
+                  onRecordPayment(paymentAmount, paymentMonths);
+                  setPaymentMonths(1);
                 }}
               >
                 <CheckCircle2 className="h-4 w-4" aria-hidden />
-                Add payment
+                Add {paymentMonths} mo payment
               </Button>
+              <p className="basis-full text-xs text-muted-foreground">
+                Adds {paymentMonths} month{paymentMonths === 1 ? "" : "s"} to the access expiry
+                {expiresAt ? ` (currently ${formatExpiryDate(expiresAt)})` : ""}.
+              </p>
             </div>
           </div>
         </div>

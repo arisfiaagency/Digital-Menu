@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatMoney } from "@/lib/client-access";
+import { formatExpiryDate, formatMoney, getAccessExpiryState } from "@/lib/client-access";
 import { listClients, listPlatformPayments } from "@/lib/firebase/firestore";
 import type { ClientAccount, Currency, PlatformPayment } from "@/types/models";
 
@@ -105,12 +105,21 @@ export function PaymentReports() {
     return [...map.entries()];
   }, [payments, thisMonthKey, clientFilter]);
 
+  const nearExpiryClients = useMemo(
+    () => clients.filter((client) => !client.blocked && getAccessExpiryState(client) === "near_expiry"),
+    [clients]
+  );
+  const expiredClients = useMemo(
+    () => clients.filter((client) => !client.blocked && getAccessExpiryState(client) === "expired"),
+    [clients]
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold">Payment reports</h2>
-          <p className="text-sm text-muted-foreground">Ledger of cafe subscription payments recorded in Clients.</p>
+          <p className="text-sm text-muted-foreground">Ledger of cafe subscription payments and upcoming expiries.</p>
         </div>
         <Button type="button" variant="outline" onClick={() => void refresh()} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
@@ -119,6 +128,37 @@ export function PaymentReports() {
       </div>
 
       {error ? <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p> : null}
+
+      {(nearExpiryClients.length > 0 || expiredClients.length > 0) && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {nearExpiryClients.length ? (
+            <Card className="border-amber-500/40 bg-amber-500/5">
+              <CardContent className="space-y-2 pt-5">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Near expiry (≤5 days)</p>
+                {nearExpiryClients.map((client) => (
+                  <p key={client.slug} className="text-sm">
+                    <span className="font-medium">{client.name}</span>
+                    <span className="text-muted-foreground"> /{client.slug} · until {formatExpiryDate(client.subscription?.expiresAt || client.trial?.endAt)}</span>
+                  </p>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+          {expiredClients.length ? (
+            <Card className="border-destructive/40 bg-destructive/5">
+              <CardContent className="space-y-2 pt-5">
+                <p className="text-sm font-semibold text-destructive">Expired</p>
+                {expiredClients.map((client) => (
+                  <p key={client.slug} className="text-sm">
+                    <span className="font-medium">{client.name}</span>
+                    <span className="text-muted-foreground"> /{client.slug} · expired {formatExpiryDate(client.subscription?.expiresAt || client.trial?.endAt)}</span>
+                  </p>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -222,7 +262,8 @@ export function PaymentReports() {
                     <th className="px-3 py-2 font-medium">Date</th>
                     <th className="px-3 py-2 font-medium">Cafe</th>
                     <th className="px-3 py-2 font-medium">Amount</th>
-                    <th className="px-3 py-2 font-medium">After</th>
+                    <th className="px-3 py-2 font-medium">Months</th>
+                    <th className="px-3 py-2 font-medium">Expires after</th>
                     <th className="px-3 py-2 font-medium">Note</th>
                     <th className="px-3 py-2 font-medium">By</th>
                   </tr>
@@ -238,11 +279,8 @@ export function PaymentReports() {
                       <td className="px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-400">
                         {formatMoney(payment.amount, payment.currency)}
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">
-                        paid {formatMoney(payment.amountPaidAfter, payment.currency)}
-                        <br />
-                        owed {formatMoney(payment.amountOwedAfter, payment.currency)}
-                      </td>
+                      <td className="px-3 py-2">{payment.monthsAdded ? `+${payment.monthsAdded}` : "—"}</td>
+                      <td className="px-3 py-2">{formatExpiryDate(payment.expiresAtAfter)}</td>
                       <td className="px-3 py-2 text-muted-foreground">{payment.note || "—"}</td>
                       <td className="px-3 py-2 text-muted-foreground">{payment.recordedByEmail || "—"}</td>
                     </tr>
