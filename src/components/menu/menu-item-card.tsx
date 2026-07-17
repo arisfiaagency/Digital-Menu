@@ -12,6 +12,8 @@ type MenuItemCardProps = {
   locale: Locale;
   settings: MenuSettings;
   appearance?: AppearanceSettings;
+  /** Cafe logo from branding — shown when the item has no photo. */
+  logoUrl?: string;
   onViewDetails?: (item: MenuItem) => void;
   quantity?: number;
   onAdd?: () => void;
@@ -204,7 +206,7 @@ function ClassicCard(props: MenuItemCardProps) {
     >
       {props.settings.showImages !== false ? (
         <div className={cn("relative overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10", imageAspectClass(props.appearance))}>
-          <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />
+          <FallbackMenuImage src={item.imageUrl} alt={title} fallbackSrc={props.logoUrl} priority={priority} lcp={lcp} />
           {item.isSoldOut ? <SoldOutBadge locale={locale} /> : null}
         </div>
       ) : null}
@@ -236,7 +238,7 @@ function CompactCard(props: MenuItemCardProps) {
       className={cn("group relative flex gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4", surfaceClasses(props.appearance), hoverClasses(props.appearance))}    >
       {props.settings.showImages !== false ? (
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-accent via-primary/5 to-secondary/10 sm:h-28 sm:w-28">
-          <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />
+          <FallbackMenuImage src={item.imageUrl} alt={title} fallbackSrc={props.logoUrl} priority={priority} lcp={lcp} />
           {item.isSoldOut ? <SoldOutBadge locale={locale} /> : null}
         </div>
       ) : null}
@@ -266,7 +268,7 @@ function OverlayCard(props: MenuItemCardProps) {
       className={cn("group relative flex flex-col overflow-hidden", surfaceClasses(props.appearance), hoverClasses(props.appearance))}
     >
       <div className={cn("relative w-full overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10", imageAspectClass(props.appearance, "aspect-[4/5]"))}>
-        <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />
+        <FallbackMenuImage src={item.imageUrl} alt={title} fallbackSrc={props.logoUrl} priority={priority} lcp={lcp} />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
         {item.isSoldOut ? <SoldOutBadge locale={locale} /> : null}
 
@@ -324,7 +326,7 @@ function PosterCard(props: MenuItemCardProps) {
       className={cn("group relative flex flex-col overflow-hidden", surfaceClasses(props.appearance), hoverClasses(props.appearance))}
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10">
-        <FallbackMenuImage src={item.imageUrl} alt={title} priority={priority} lcp={lcp} />
+        <FallbackMenuImage src={item.imageUrl} alt={title} fallbackSrc={props.logoUrl} priority={priority} lcp={lcp} />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
         {item.isSoldOut ? <SoldOutBadge locale={locale} /> : null}
         <div className="absolute inset-x-0 bottom-0 space-y-2 p-4">

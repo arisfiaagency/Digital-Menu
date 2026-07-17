@@ -155,7 +155,8 @@ export function CartSheet({
   cart,
   locale,
   textDir,
-  serviceFeePercent
+  serviceFeePercent,
+  logoUrl
 }: {
   open: boolean;
   onClose: () => void;
@@ -163,6 +164,7 @@ export function CartSheet({
   locale: Locale;
   textDir: LocaleDirection;
   serviceFeePercent: number;
+  logoUrl?: string;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -218,7 +220,7 @@ export function CartSheet({
               {lines.map((line) => (
                 <li key={line.key} className="mb-2 flex items-center gap-3 rounded-2xl border bg-background/60 p-2.5 last:mb-0">
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted">
-                    <FallbackMenuImage src={line.imageUrl} alt={localized(line.name, locale)} />
+                    <FallbackMenuImage src={line.imageUrl} alt={localized(line.name, locale)} fallbackSrc={logoUrl} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{localized(line.name, locale)}</p>

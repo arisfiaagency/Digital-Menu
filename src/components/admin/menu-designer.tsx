@@ -2678,7 +2678,7 @@ function DesignPreview({
             <div className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">Coffee</div>
             <div className={gridClass}>
               {SAMPLE_ITEMS.map((item) => (
-                <MenuItemCard key={item.id} item={item} locale={locale} settings={menu} appearance={appearance} />
+                <MenuItemCard key={item.id} item={item} locale={locale} settings={menu} appearance={appearance} logoUrl={general.logoUrl} />
               ))}
             </div>
           </div>
