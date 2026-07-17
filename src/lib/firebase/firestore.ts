@@ -605,9 +605,6 @@ export async function recordClientPayment(input: {
         expiresAt: expiresAtAfter,
         note: client.subscription?.note
       },
-      blocked: false,
-      blockedReason: "",
-      blockedAt: "",
       updatedAt: serverTimestamp()
     }),
     { merge: true }

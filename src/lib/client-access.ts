@@ -78,20 +78,11 @@ export function formatExpiryDate(expiresAt?: string | null): string {
   return end.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-/** Public menu + cafe admin stay available only when active, not blocked, and not expired. */
+/** Public menu + cafe admin stay available when active and not manually blocked. Expiry is informational only. */
 export function isClientServiceActive(client: ClientAccount | null | undefined): boolean {
   if (!client) return false;
   if (client.status !== "active") return false;
   if (client.blocked) return false;
-  if (client.subscription?.status === "canceled") return false;
-
-  const state = getAccessExpiryState(client);
-  if (state === "expired") return false;
-  if (state === "live" || state === "near_expiry") return true;
-
-  // Legacy cafes with no trial/subscription expiry stay online until blocked.
-  const subStatus = client.subscription?.status ?? "none";
-  if (subStatus === "past_due") return false;
   return true;
 }
 

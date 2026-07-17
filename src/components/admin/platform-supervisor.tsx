@@ -611,12 +611,12 @@ function ClientRow({
           </p>
           {expiryState === "near_expiry" ? (
             <p className="mt-1 text-sm font-medium text-amber-800 dark:text-amber-300">
-              Near expiry — renew within 5 days or the menu will go offline.
+              Near expiry — renew soon, or block the cafe manually if unpaid.
             </p>
           ) : null}
           {expiryState === "expired" && !client.blocked ? (
             <p className="mt-1 text-sm font-medium text-destructive">
-              Expired — record a monthly payment to restore access.
+              Expired — cafe stays online until you Block it manually.
             </p>
           ) : null}
           <p className="text-sm text-muted-foreground">
