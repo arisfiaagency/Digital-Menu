@@ -137,6 +137,7 @@ export const adminText: Record<Locale, AdminText> = {
     logout: "Logout",
     adminProfile: "Admin profile",
     profilePreferences: "Language & theme",
+    language: "Language",
     employeeSettings: "Employee settings",
     comingSoon: "Coming soon",
     reports: "Reports",
@@ -577,6 +578,7 @@ export const adminText: Record<Locale, AdminText> = {
     logout: "تسجيل الخروج",
     adminProfile: "ملف الإدارة",
     profilePreferences: "اللغة والسمة",
+    language: "اللغة",
     employeeSettings: "إعدادات الموظفين",
     comingSoon: "قريبا",
     reports: "التقارير",
@@ -1017,6 +1019,7 @@ export const adminText: Record<Locale, AdminText> = {
     logout: "چوونەدەرەوە",
     adminProfile: "پرۆفایلی بەڕێوەبردن",
     profilePreferences: "زمان و ڕووکار",
+    language: "زمان",
     employeeSettings: "ڕێکخستنی کارمەندان",
     comingSoon: "بەم زووانە",
     reports: "ڕاپۆرتەکان",
@@ -1474,13 +1477,19 @@ export function useAdminLocale() {
   return { locale, setLocale, dir, text: adminText[locale] };
 }
 
-export function AdminPreferences({ compact = false }: { compact?: boolean }) {
+export function AdminPreferences({ compact = false, showTheme = true }: { compact?: boolean; showTheme?: boolean }) {
   const { locale, setLocale } = useAdminLocale();
 
   return (
     <div dir="ltr" className={compact ? "flex shrink-0 items-center gap-2" : "flex items-center gap-2"}>
       <LanguageGlobe locale={locale} onChange={setLocale} menuAlign="left" />
-      <ThemeToggle storageKey={adminThemeStorageKey} changeEvent={adminThemeChangeEvent} />
+      {showTheme ? <ThemeToggle storageKey={adminThemeStorageKey} changeEvent={adminThemeChangeEvent} /> : null}
     </div>
   );
+}
+
+// Standalone admin theme toggle for placing outside the profile menu. Being
+// always-mounted, its effect applies the saved theme on page load.
+export function AdminThemeToggle({ className }: { className?: string }) {
+  return <ThemeToggle storageKey={adminThemeStorageKey} changeEvent={adminThemeChangeEvent} className={className} />;
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
-import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-preferences";
+import { AdminPreferences, AdminThemeToggle, useAdminLocale } from "@/components/admin/admin-preferences";
 import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from "@/components/admin/clients-panel";
 import { MenuDesigner } from "@/components/admin/menu-designer";
 import { PaymentReports } from "@/components/admin/payment-reports";
@@ -252,15 +252,18 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
             <h1 className="text-3xl font-semibold">Digital Menu Supervisor</h1>
             <p className="text-muted-foreground">Clients, billing, menu design, and QR codes.</p>
           </div>
-          <SupervisorProfileMenu
-            profileName={auth.profile?.displayName || auth.profile?.username || "Supervisor"}
-            profileHandle={auth.profile?.username ? `@${auth.profile.username}` : auth.user.email || ""}
-            roleLabel={auth.role === "employee" ? text.roleEmployee : text.roleAdmin}
-            text={text}
-            textDir={textDir}
-            onRefresh={refresh}
-            onLogout={signOut}
-          />
+          <div className="flex items-center gap-2">
+            <AdminThemeToggle />
+            <SupervisorProfileMenu
+              profileName={auth.profile?.displayName || auth.profile?.username || "Supervisor"}
+              profileHandle={auth.profile?.username ? `@${auth.profile.username}` : auth.user.email || ""}
+              roleLabel={auth.role === "employee" ? text.roleEmployee : text.roleAdmin}
+              text={text}
+              textDir={textDir}
+              onRefresh={refresh}
+              onLogout={signOut}
+            />
+          </div>
         </header>
 
         {message ? <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm text-primary">{message}</p> : null}
@@ -422,11 +425,11 @@ function SupervisorProfileMenu({
             <div className="mt-3 flex items-center justify-between gap-3">
               <span className="min-w-0">
                 <span dir={textDir} className="block truncate text-xs font-semibold uppercase text-muted-foreground">
-                  {text.profilePreferences}
+                  {text.language}
                 </span>
                 <span dir={textDir} className="block truncate text-xs text-muted-foreground">{roleLabel}</span>
               </span>
-              <AdminPreferences compact />
+              <AdminPreferences compact showTheme={false} />
             </div>
           </div>
           <button

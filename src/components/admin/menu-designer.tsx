@@ -1168,6 +1168,7 @@ export function MenuDesigner() {
   const [editing, setEditing] = useState<{ id: string; kind: "custom" | "builtin" } | null>(null);
   const [editName, setEditName] = useState("");
   const [editBlurb, setEditBlurb] = useState("");
+  const [editColors, setEditColors] = useState<[string, string, string]>(["#9a7b4f", "#c6a46b", "#f7f1e8"]);
 
   useEffect(() => {
     listClients()
@@ -1283,6 +1284,7 @@ export function MenuDesigner() {
     setEditing({ id: preset.id, kind });
     setEditName(preset.name);
     setEditBlurb(preset.blurb);
+    setEditColors([preset.swatch[0], preset.swatch[1], preset.swatch[2]]);
     setError("");
     setMessage("");
   }
@@ -1290,6 +1292,13 @@ export function MenuDesigner() {
   function cancelEditPreset() {
     setEditing(null);
   }
+
+  const setEditColor = (index: 0 | 1 | 2, value: string) =>
+    setEditColors((prev) => {
+      const next = [...prev] as [string, string, string];
+      next[index] = value;
+      return next;
+    });
 
   // Save an edit. Custom presets are updated in place; built-in presets are code
   // constants, so editing one forks it into a custom preset and hides the original.
@@ -1300,8 +1309,19 @@ export function MenuDesigner() {
     try {
       const name = editName.trim() || source.name;
       const blurb = editBlurb.trim() || source.blurb || "Custom saved look";
-      const patch = recapture ? appearanceToPresetPatch(appearance) : source.patch;
-      const swatch = recapture ? presetSwatchFromAppearance(appearance) : source.swatch;
+      const swatch: [string, string, string] = recapture ? presetSwatchFromAppearance(appearance) : editColors;
+      // Non-recapture edits fold the three swatch colors back into the patch so
+      // applying the preset actually recolors the menu (surface also updates the
+      // solid background when the preset uses one).
+      const patch = recapture
+        ? appearanceToPresetPatch(appearance)
+        : {
+            ...source.patch,
+            primaryColor: editColors[0],
+            secondaryColor: editColors[1],
+            pageSurfaceColor: editColors[2],
+            ...(source.patch.backgroundColor !== undefined ? { backgroundColor: editColors[2] } : {})
+          };
       if (kind === "custom") {
         const next = customPresets.map((p) => (p.id === source.id ? { ...p, name, blurb, patch, swatch } : p));
         await saveCustomLookPresets(next);
@@ -1369,17 +1389,38 @@ export function MenuDesigner() {
   const morePresets = availableBuiltInPresets.slice(6);
   const visibleBuiltInPresets = showAllPresets ? availableBuiltInPresets : featuredPresets;
 
+  // While editing, the card's gradient/dots (and the editor's own preview bar)
+  // reflect the in-progress colors instead of the saved swatch.
+  const previewSwatch = (source: PresetLike, kind: "custom" | "builtin"): [string, string, string] =>
+    editing && editing.kind === kind && editing.id === source.id ? editColors : source.swatch;
+  const gradientFor = (sw: [string, string, string]) => `linear-gradient(135deg, ${sw[2]} 0%, ${sw[0]} 48%, ${sw[1]} 100%)`;
+
   const renderPresetEditor = (source: PresetLike, kind: "custom" | "builtin") =>
     editing && editing.kind === kind && editing.id === source.id ? (
-      <div className="space-y-2 border-t bg-muted/40 p-3">
+      <div className="space-y-3 border-t bg-muted/40 p-3">
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
+          <div
+            className="h-12 w-full rounded-lg border"
+            style={{ backgroundImage: `linear-gradient(135deg, ${editColors[2]} 0%, ${editColors[0]} 48%, ${editColors[1]} 100%)` }}
+          />
+        </div>
         <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Preset name" maxLength={48} />
         <Input value={editBlurb} onChange={(e) => setEditBlurb(e.target.value)} placeholder="Short description" maxLength={80} />
+        <div className="grid grid-cols-3 gap-2">
+          {([["Primary", 0], ["Secondary", 1], ["Surface", 2]] as const).map(([label, index]) => (
+            <div key={label} className="space-y-1">
+              <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+              <Input type="color" value={editColors[index]} onChange={(e) => setEditColor(index, e.target.value)} className="h-9 w-full p-1" />
+            </div>
+          ))}
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" onClick={() => void saveEditedPreset(source, kind, false)} disabled={savingPreset}>
-            Save name
+            Save changes
           </Button>
           <Button type="button" size="sm" variant="outline" onClick={() => void saveEditedPreset(source, kind, true)} disabled={savingPreset || !slug}>
-            Save current design
+            Capture current design
           </Button>
           <Button type="button" size="sm" variant="ghost" onClick={cancelEditPreset} disabled={savingPreset} aria-label="Close editor">
             <X className="h-4 w-4" />
@@ -1831,15 +1872,13 @@ export function MenuDesigner() {
                           <button type="button" className="w-full text-start" onClick={() => update(preset.patch)}>
                             <div
                               className="h-16 w-full"
-                              style={{
-                                backgroundImage: `linear-gradient(135deg, ${preset.swatch[2]} 0%, ${preset.swatch[0]} 48%, ${preset.swatch[1]} 100%)`
-                              }}
+                              style={{ backgroundImage: gradientFor(previewSwatch(preset, "custom")) }}
                             />
                             <div className="space-y-2 p-3 pe-16">
                               <div className="flex items-center gap-1.5">
-                                {preset.swatch.map((color) => (
+                                {previewSwatch(preset, "custom").map((color, index) => (
                                   <span
-                                    key={`${preset.id}-${color}`}
+                                    key={`${preset.id}-${index}`}
                                     className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
                                     style={{ backgroundColor: color }}
                                   />
@@ -1909,15 +1948,13 @@ export function MenuDesigner() {
                         <button type="button" className="w-full text-start" onClick={() => update(preset.patch)}>
                           <div
                             className="h-16 w-full"
-                            style={{
-                              backgroundImage: `linear-gradient(135deg, ${preset.swatch[2]} 0%, ${preset.swatch[0]} 48%, ${preset.swatch[1]} 100%)`
-                            }}
+                            style={{ backgroundImage: gradientFor(previewSwatch(preset, "builtin")) }}
                           />
                           <div className="space-y-2 p-3 pe-16">
                             <div className="flex items-center gap-1.5">
-                              {preset.swatch.map((color) => (
+                              {previewSwatch(preset, "builtin").map((color, index) => (
                                 <span
-                                  key={color}
+                                  key={`${preset.id}-${index}`}
                                   className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
                                   style={{ backgroundColor: color }}
                                 />
