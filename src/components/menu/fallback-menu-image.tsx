@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const defaultMenuImage = "/stone-cafe-logo.jpg";
+const defaultMenuImage = "/default-menu-item.svg";
 
 export function FallbackMenuImage({
   src,

@@ -21,7 +21,7 @@ export const defaultGeneralSettings: GeneralSettings = {
     ar: "قهوة طازجة، خصيصاً لك",
     ckb: "قاوەی تازە، تایبەت بۆ تۆ"
   },
-  logoUrl: "/stone-cafe-logo.jpg",
+  logoUrl: "/site-icon.png",
   phone: "+964 750 000 0000",
   whatsapp: "+9647500000000",
   email: "hello@stone-cafe.example",

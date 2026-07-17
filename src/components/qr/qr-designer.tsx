@@ -60,7 +60,7 @@ export function QrDesigner({ printMode = false, printVariant = "design", tableLa
 
   useEffect(() => {
     let active = true;
-    const logoUrl = settings.logoUrl || "/stone-cafe-logo.jpg";
+    const logoUrl = settings.logoUrl || "/site-icon.png";
     (async () => {
       try {
         // Error correction "H" (30% recovery) so the centered Stone logo can sit
@@ -184,7 +184,7 @@ export function QrDesigner({ printMode = false, printVariant = "design", tableLa
   const safeContrast = hasSafeQrContrast(settings.foregroundColor, settings.backgroundColor);
   const validMenuUrl = isValidUrl(settings.menuUrl);
   const readyToScan = validMenuUrl && safeContrast && Boolean(dataUrl);
-  const logoSrc = settings.logoUrl || "/stone-cafe-logo.jpg";
+  const logoSrc = settings.logoUrl || "/site-icon.png";
   const displayUrl = settings.menuUrl.replace(/^https?:\/\//, "").replace(/\/+$/, "");
 
   if (printMode) {

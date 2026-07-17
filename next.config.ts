@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
   // Make sure the logo file is bundled with the Open Graph image route so it can
   // be read at runtime on Vercel (otherwise process.cwd()/public isn't traced).
   outputFileTracingIncludes: {
-    "/opengraph-image": ["./public/stone-cafe-logo.jpg"]
+    "/opengraph-image": ["./public/site-icon.png"]
   },
   images: {
     remotePatterns: [
