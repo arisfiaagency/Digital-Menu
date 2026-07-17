@@ -28,9 +28,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { formatMoney, isClientServiceActive, trialDaysRemaining } from "@/lib/client-access";
 import { hasFirebaseClientConfig } from "@/lib/firebase/client";
-import { deleteClient, listClients, patchClient, saveClient } from "@/lib/firebase/firestore";
+import { deleteClient, listClients, patchClient, recordClientPayment, saveClient } from "@/lib/firebase/firestore";
 import { logoutAdmin } from "@/lib/firebase/auth";
 import { clientAdminPath, clientMenuPath, clientPublicPath, normalizeClientSlug } from "@/lib/tenant";
+import { PaymentReports } from "@/components/admin/payment-reports";
 import type {
   ClientAccount,
   ClientBilling,
@@ -68,7 +69,7 @@ function defaultBilling(currency: Currency, owed = 0): ClientBilling {
   return { amountPaid: 0, amountOwed: owed, currency };
 }
 
-type SupervisorTab = "clients" | "design" | "qr";
+type SupervisorTab = "clients" | "design" | "qr" | "payments";
 
 export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: SupervisorTab }) {
   const auth = useAdminAuth();
@@ -225,24 +226,13 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
   async function recordPayment(client: ClientAccount, amount: number) {
     if (!amount || amount <= 0) return;
     const currency = client.billing?.currency || client.subscription?.currency || client.defaultCurrency || "IQD";
-    const paid = (client.billing?.amountPaid || 0) + amount;
-    const owed = Math.max(0, (client.billing?.amountOwed || 0) - amount);
     setUpdatingSlug(client.slug);
     setError("");
     try {
-      await patchClient(client.slug, {
-        billing: { amountPaid: paid, amountOwed: owed, currency },
-        subscription: {
-          plan: client.subscription?.plan || "basic",
-          price: client.subscription?.price || 0,
-          currency,
-          status: owed === 0 ? "active" : client.subscription?.status || "past_due",
-          period: client.subscription?.period || "monthly",
-          note: client.subscription?.note
-        },
-        blocked: owed === 0 ? false : client.blocked,
-        blockedReason: owed === 0 ? "" : client.blockedReason,
-        blockedAt: owed === 0 ? "" : client.blockedAt
+      await recordClientPayment({
+        client,
+        amount,
+        recordedByEmail: auth.user?.email || undefined
       });
       setMessage(`Recorded ${formatMoney(amount, currency)} for /${client.slug}.`);
       await refresh();
@@ -322,6 +312,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           {(
             [
               ["clients", "Clients"],
+              ["payments", "Payments"],
               ["design", "Menu Design"],
               ["qr", "QR Codes"]
             ] as const
@@ -338,6 +329,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         </div>
 
         {tab === "design" ? <MenuDesigner /> : null}
+        {tab === "payments" ? <PaymentReports /> : null}
 
         {tab === "qr" ? (
           <Card>

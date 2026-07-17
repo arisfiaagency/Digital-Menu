@@ -495,6 +495,20 @@ export type ClientBilling = {
   currency: Currency;
 };
 
+/** Platform supervisor payment ledger entry (cafe subscription payments). */
+export type PlatformPayment = {
+  id: string;
+  clientSlug: string;
+  clientName: string;
+  amount: number;
+  currency: Currency;
+  note?: string;
+  amountPaidAfter: number;
+  amountOwedAfter: number;
+  recordedByEmail?: string;
+  createdAt?: string;
+};
+
 export type ClientAccount = {
   id: string;
   name: string;

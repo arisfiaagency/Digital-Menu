@@ -115,6 +115,11 @@ service cloud.firestore {
       allow create, update, delete: if isPlatformFullAdmin();
     }
 
+    match /platformPayments/{paymentId} {
+      allow read: if isPlatformAdmin();
+      allow create, update, delete: if isPlatformFullAdmin();
+    }
+
     match /clients/{clientId} {
       allow get, list: if (resource.data.status == 'active' && resource.data.get('blocked', false) != true) || isPlatformAdmin();
       allow create, update, delete: if isPlatformFullAdmin();
