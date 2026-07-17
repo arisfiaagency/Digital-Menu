@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, LogOut, Plus, RefreshCw, ShieldCheck } from "lucide-react";
+import { ExternalLink, LogOut, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-preferences";
 import { MenuDesigner } from "@/components/admin/menu-designer";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { hasFirebaseClientConfig } from "@/lib/firebase/client";
-import { listClients, saveClient } from "@/lib/firebase/firestore";
+import { deleteClient, listClients, saveClient } from "@/lib/firebase/firestore";
 import { logoutAdmin } from "@/lib/firebase/auth";
 import { clientAdminPath, clientMenuPath, clientPublicPath, normalizeClientSlug } from "@/lib/tenant";
 import type { ClientAccount, ClientStatus, Currency, Locale } from "@/types/models";
@@ -27,6 +27,7 @@ export function PlatformSupervisor() {
   const [clients, setClients] = useState<ClientAccount[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [name, setName] = useState("");
@@ -85,6 +86,30 @@ export function PlatformSupervisor() {
       setError(err instanceof Error ? err.message : "Could not save client.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function removeClient(client: ClientAccount) {
+    const confirmed = window.confirm(
+      `Delete client "/${client.slug}" and ALL of its data?\n\nThis permanently removes menu items, categories, settings, staff accounts, POS/orders, and expenses for this cafe. This cannot be undone.`
+    );
+    if (!confirmed) return;
+    const typed = window.prompt(`Type the slug "${client.slug}" to confirm deletion:`);
+    if (typed !== client.slug) {
+      setError("Deletion cancelled — slug did not match.");
+      return;
+    }
+    setMessage("");
+    setError("");
+    setDeletingSlug(client.slug);
+    try {
+      await deleteClient(client.slug);
+      setMessage(`Deleted /${client.slug} and all of its data.`);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete client.");
+    } finally {
+      setDeletingSlug(null);
     }
   }
 
@@ -257,6 +282,16 @@ export function PlatformSupervisor() {
                             <ExternalLink className="h-4 w-4" aria-hidden />
                             Admin
                           </Link>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          disabled={deletingSlug === client.slug}
+                          onClick={() => void removeClient(client)}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                          {deletingSlug === client.slug ? "Deleting…" : "Delete"}
                         </Button>
                       </div>
                     </div>

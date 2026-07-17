@@ -134,6 +134,63 @@ export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: stri
   return payload;
 }
 
+const CLIENT_SUBCOLLECTIONS = [
+  "categories",
+  "menuItems",
+  "settings",
+  "adminProfiles",
+  "usernames",
+  "completedOrders",
+  "expenses",
+  "auditLogs"
+] as const;
+
+/** Delete a cafe tenant and all nested data. Prefer the Admin API; fall back to client SDK. */
+export async function deleteClient(slugInput: string) {
+  const slug = normalizeClientSlug(slugInput);
+  if (!slug) throw new Error("Client slug is required.");
+  if (isReservedClientSlug(slug)) throw new Error(`Slug "${slug}" is reserved.`);
+
+  const { getFirebaseAuth } = await import("@/lib/firebase/client");
+  const auth = getFirebaseAuth();
+  const token = await auth?.currentUser?.getIdToken();
+  if (!token) throw new Error("You must be signed in to delete a client.");
+
+  const res = await fetch("/api/admin/clients", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ slug })
+  });
+
+  if (res.status !== 503) {
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !data.ok) {
+      throw new Error(typeof data.error === "string" ? data.error : "Failed to delete client.");
+    }
+    return;
+  }
+
+  // Admin SDK unavailable — wipe known subcollections from the client SDK.
+  const db = getFirebaseDb();
+  if (!db) throw new Error("Firestore is not configured.");
+  for (const name of CLIENT_SUBCOLLECTIONS) {
+    await deleteQueryBatch(db, collection(db, "clients", slug, name));
+  }
+  await deleteDoc(doc(db, "clients", slug));
+}
+
+async function deleteQueryBatch(db: Firestore, colRef: ReturnType<typeof collection>) {
+  const pageSize = 400;
+  for (;;) {
+    const snap = await getDocs(query(colRef, limit(pageSize)));
+    if (snap.empty) break;
+    const batch = writeBatch(db);
+    for (const entry of snap.docs) batch.delete(entry.ref);
+    await batch.commit();
+    if (snap.size < pageSize) break;
+  }
+}
+
 async function seedClientDefaults(slug: string, client: ClientAccount) {
   const db = getFirebaseDb();
   if (!db) return;
