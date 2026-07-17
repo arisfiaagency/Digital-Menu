@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
+import { ChevronDown, LogOut, ShieldCheck } from "lucide-react";
 import { AdminPreferences, AdminThemeToggle, useAdminLocale } from "@/components/admin/admin-preferences";
 import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from "@/components/admin/clients-panel";
 import { MenuDesigner } from "@/components/admin/menu-designer";
+import { DESIGN_TEMPLATES } from "@/data/design-templates";
 import { PaymentReports } from "@/components/admin/payment-reports";
 import { QrDesigner } from "@/components/qr/qr-designer";
 import { TenantProvider } from "@/components/tenant-provider";
@@ -71,6 +72,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
     defaultLanguage: Locale;
     trialDays: number;
     planPrice: number;
+    designId: string;
   }) {
     setMessage("");
     setError("");
@@ -86,19 +88,24 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         expiresAt: trial.endAt
       };
       const billing = defaultBilling(input.defaultCurrency, Math.max(0, input.planPrice || 0));
-      await saveClient({
-        name: input.name,
-        slug: input.slug,
-        ownerEmail: input.ownerEmail,
-        status: input.status,
-        defaultCurrency: input.defaultCurrency,
-        defaultLanguage: input.defaultLanguage,
-        blocked: false,
-        subscription,
-        trial,
-        billing
-      });
-      setMessage(`Cafe /${input.slug} is ready with a ${trial.days}-day free trial.`);
+      const template = DESIGN_TEMPLATES.find((entry) => entry.id === input.designId);
+      await saveClient(
+        {
+          name: input.name,
+          slug: input.slug,
+          ownerEmail: input.ownerEmail,
+          status: input.status,
+          defaultCurrency: input.defaultCurrency,
+          defaultLanguage: input.defaultLanguage,
+          blocked: false,
+          subscription,
+          trial,
+          billing
+        },
+        template && Object.keys(template.patch).length ? { appearancePatch: template.patch } : undefined
+      );
+      const designNote = template && template.id !== "default" ? ` with the ${template.name} design` : "";
+      setMessage(`Cafe /${input.slug} is ready${designNote} and a ${trial.days}-day free trial.`);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save client.");
@@ -260,7 +267,6 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
               roleLabel={auth.role === "employee" ? text.roleEmployee : text.roleAdmin}
               text={text}
               textDir={textDir}
-              onRefresh={refresh}
               onLogout={signOut}
             />
           </div>
@@ -355,7 +361,6 @@ function SupervisorProfileMenu({
   roleLabel,
   text,
   textDir,
-  onRefresh,
   onLogout
 }: {
   profileName: string;
@@ -363,7 +368,6 @@ function SupervisorProfileMenu({
   roleLabel: string;
   text: Record<string, string>;
   textDir: "ltr" | "rtl";
-  onRefresh: () => void | Promise<void>;
   onLogout: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
@@ -392,11 +396,6 @@ function SupervisorProfileMenu({
       document.removeEventListener("keydown", handleKey);
     };
   }, [open]);
-
-  async function handleRefresh() {
-    setOpen(false);
-    await onRefresh();
-  }
 
   async function handleLogout() {
     setOpen(false);
@@ -435,17 +434,8 @@ function SupervisorProfileMenu({
           <button
             type="button"
             role="menuitem"
-            onClick={() => void handleRefresh()}
-            className="focus-ring mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
-          >
-            <RefreshCw className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-            <span dir={textDir}>Refresh</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
             onClick={() => void handleLogout()}
-            className="focus-ring flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+            className="focus-ring mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
           >
             <LogOut className="h-4 w-4 shrink-0" aria-hidden />
             <span dir={textDir}>{text.logout}</span>

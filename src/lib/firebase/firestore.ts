@@ -24,7 +24,7 @@ import { removeImage } from "@/lib/supabase/storage";
 import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { extendSubscriptionExpiry } from "@/lib/client-access";
 import { slugify } from "@/lib/utils/format";
-import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, SavedLookPreset } from "@/types/models";
+import type { AdminPermissions, AdminProfile, AdminRole, AppData, AppearanceSettings, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, SavedLookPreset } from "@/types/models";
 
 function converter<T extends { id: string }>(): FirestoreDataConverter<T> {
   return {
@@ -109,7 +109,10 @@ export async function getClient(slug: string): Promise<ClientAccount | null> {
   return snap.exists() ? snap.data() : null;
 }
 
-export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: string }) {
+export async function saveClient(
+  client: Omit<ClientAccount, "id"> & { id?: string },
+  options?: { appearancePatch?: Partial<AppearanceSettings> }
+) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const slug = normalizeClientSlug(client.slug || client.id || client.name);
@@ -138,7 +141,7 @@ export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: stri
     updatedAt: serverTimestamp()
   } as ClientAccount;
   await setDoc(clientRef, payload, { merge: true });
-  if (!existing.exists()) await seedClientDefaults(slug, payload);
+  if (!existing.exists()) await seedClientDefaults(slug, payload, options?.appearancePatch);
   return payload;
 }
 
@@ -217,7 +220,7 @@ async function deleteQueryBatch(db: Firestore, colRef: ReturnType<typeof collect
   }
 }
 
-async function seedClientDefaults(slug: string, client: ClientAccount) {
+async function seedClientDefaults(slug: string, client: ClientAccount, appearancePatch?: Partial<AppearanceSettings>) {
   const db = getFirebaseDb();
   if (!db) return;
   const batch = writeBatch(db);
@@ -234,7 +237,7 @@ async function seedClientDefaults(slug: string, client: ClientAccount) {
   };
   batch.set(doc(db, "clients", slug, "settings", "general"), stripUndefined(general));
   batch.set(doc(db, "clients", slug, "settings", "menu"), { ...defaultAppData.menu, updatedAt: serverTimestamp() });
-  batch.set(doc(db, "clients", slug, "settings", "appearance"), { ...defaultAppData.appearance, updatedAt: serverTimestamp() });
+  batch.set(doc(db, "clients", slug, "settings", "appearance"), stripUndefined({ ...defaultAppData.appearance, ...(appearancePatch || {}), updatedAt: serverTimestamp() }));
   batch.set(doc(db, "clients", slug, "settings", "qr"), { ...defaultAppData.qr, menuUrl: `${getSiteOrigin()}/${slug}`, updatedAt: serverTimestamp() });
   batch.set(doc(db, "clients", slug, "settings", "pos"), { ...serializePosState(defaultPosState), updatedAt: serverTimestamp() });
   await batch.commit();

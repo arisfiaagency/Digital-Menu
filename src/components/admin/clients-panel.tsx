@@ -34,6 +34,7 @@ import {
   isClientServiceActive
 } from "@/lib/client-access";
 import { clientAdminPath, clientMenuPath, clientPublicPath, normalizeClientSlug } from "@/lib/tenant";
+import { DESIGN_TEMPLATES } from "@/data/design-templates";
 import { cn } from "@/lib/utils/cn";
 import type {
   ClientAccount,
@@ -106,6 +107,7 @@ export function ClientsPanel({
     defaultLanguage: Locale;
     trialDays: number;
     planPrice: number;
+    designId: string;
   }) => Promise<void>;
   onBlock: (client: ClientAccount) => void;
   onDelete: (client: ClientAccount) => void;
@@ -134,6 +136,7 @@ export function ClientsPanel({
   const [defaultLanguage, setDefaultLanguage] = useState<Locale>("ckb");
   const [trialDays, setTrialDays] = useState(14);
   const [planPrice, setPlanPrice] = useState(0);
+  const [designId, setDesignId] = useState("default");
 
   const resolvedSlug = useMemo(() => normalizeClientSlug(slug || name), [name, slug]);
 
@@ -202,7 +205,8 @@ export function ClientsPanel({
       defaultCurrency,
       defaultLanguage,
       trialDays,
-      planPrice
+      planPrice,
+      designId
     });
     setName("");
     setSlug("");
@@ -212,6 +216,7 @@ export function ClientsPanel({
     setDefaultLanguage("ckb");
     setTrialDays(14);
     setPlanPrice(0);
+    setDesignId("default");
     setShowCreate(false);
   }
 
@@ -297,6 +302,39 @@ export function ClientsPanel({
                     <option value="disabled">Disabled</option>
                   </Select>
                 </Field>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Design template</p>
+                <p className="text-xs text-muted-foreground">
+                  Pick the starting look for this cafe — not just colors, but cards, layout, background, and welcome screen. You can fine-tune everything later in Menu Design.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {DESIGN_TEMPLATES.map((template) => {
+                    const selected = designId === template.id;
+                    return (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => setDesignId(template.id)}
+                        aria-pressed={selected}
+                        className={cn(
+                          "flex items-center gap-3 overflow-hidden rounded-xl border p-2.5 text-start transition-all hover:border-primary/50",
+                          selected ? "border-primary ring-2 ring-primary/30" : "border-border"
+                        )}
+                      >
+                        <span
+                          className="h-10 w-10 shrink-0 rounded-lg border border-black/10 shadow-sm"
+                          style={{ backgroundImage: `linear-gradient(135deg, ${template.swatch[2]} 0%, ${template.swatch[0]} 50%, ${template.swatch[1]} 100%)` }}
+                          aria-hidden
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">{template.name}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{template.blurb}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" disabled={saving}>
