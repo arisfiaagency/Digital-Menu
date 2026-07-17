@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, Loader2, Save, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, Loader2, Pencil, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -17,7 +17,9 @@ import {
   getAdminAppData,
   listClients,
   listCustomLookPresets,
+  listHiddenBuiltInPresetIds,
   saveCustomLookPresets,
+  saveHiddenBuiltInPresetIds,
   saveSettings
 } from "@/lib/firebase/firestore";
 import { setActiveClientSlug } from "@/lib/tenant";
@@ -52,6 +54,10 @@ type LookPreset = {
   swatch: [string, string, string];
   patch: Partial<AppearanceSettings>;
 };
+
+// Shared shape between built-in LOOK_PRESETS and SavedLookPreset, so the edit
+// flow can treat either kind uniformly.
+type PresetLike = { id: string; name: string; blurb: string; swatch: [string, string, string]; patch: Partial<AppearanceSettings> };
 
 function appearanceToPresetPatch(appearance: AppearanceSettings): Partial<AppearanceSettings> {
   const { updatedAt: _updatedAt, ...rest } = appearance;
@@ -1154,10 +1160,14 @@ export function MenuDesigner() {
   const [welcomePhase, setWelcomePhase] = useState<WelcomePhase>("content");
   const [showAllPresets, setShowAllPresets] = useState(false);
   const [customPresets, setCustomPresets] = useState<SavedLookPreset[]>([]);
+  const [hiddenBuiltInIds, setHiddenBuiltInIds] = useState<string[]>([]);
   const [presetName, setPresetName] = useState("");
   const [presetBlurb, setPresetBlurb] = useState("");
   const [savingPreset, setSavingPreset] = useState(false);
   const [deletingPresetId, setDeletingPresetId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ id: string; kind: "custom" | "builtin" } | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editBlurb, setEditBlurb] = useState("");
 
   useEffect(() => {
     listClients()
@@ -1167,6 +1177,11 @@ export function MenuDesigner() {
       .then(setCustomPresets)
       .catch(() => {
         /* custom presets are optional; ignore load failures */
+      });
+    listHiddenBuiltInPresetIds()
+      .then(setHiddenBuiltInIds)
+      .catch(() => {
+        /* hidden ids are optional; ignore load failures */
       });
   }, []);
 
@@ -1264,6 +1279,82 @@ export function MenuDesigner() {
     }
   }
 
+  function startEditPreset(preset: PresetLike, kind: "custom" | "builtin") {
+    setEditing({ id: preset.id, kind });
+    setEditName(preset.name);
+    setEditBlurb(preset.blurb);
+    setError("");
+    setMessage("");
+  }
+
+  function cancelEditPreset() {
+    setEditing(null);
+  }
+
+  // Save an edit. Custom presets are updated in place; built-in presets are code
+  // constants, so editing one forks it into a custom preset and hides the original.
+  async function saveEditedPreset(source: PresetLike, kind: "custom" | "builtin", recapture: boolean) {
+    setSavingPreset(true);
+    setError("");
+    setMessage("");
+    try {
+      const name = editName.trim() || source.name;
+      const blurb = editBlurb.trim() || source.blurb || "Custom saved look";
+      const patch = recapture ? appearanceToPresetPatch(appearance) : source.patch;
+      const swatch = recapture ? presetSwatchFromAppearance(appearance) : source.swatch;
+      if (kind === "custom") {
+        const next = customPresets.map((p) => (p.id === source.id ? { ...p, name, blurb, patch, swatch } : p));
+        await saveCustomLookPresets(next);
+        setCustomPresets(next);
+      } else {
+        // Always give the fork a distinct id so restoring the built-in later can't collide.
+        const id = `${source.id}-${Date.now().toString(36)}`;
+        const forked: SavedLookPreset = { id, name, blurb, swatch, patch, createdAt: new Date().toISOString() };
+        const nextPresets = [forked, ...customPresets];
+        const nextHidden = hiddenBuiltInIds.includes(source.id) ? hiddenBuiltInIds : [...hiddenBuiltInIds, source.id];
+        await saveCustomLookPresets(nextPresets);
+        await saveHiddenBuiltInPresetIds(nextHidden);
+        setCustomPresets(nextPresets);
+        setHiddenBuiltInIds(nextHidden);
+      }
+      setEditing(null);
+      setMessage(recapture ? "Preset updated with the current design." : "Preset updated.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update the look preset.");
+    } finally {
+      setSavingPreset(false);
+    }
+  }
+
+  async function hideBuiltInPreset(id: string) {
+    setDeletingPresetId(id);
+    setError("");
+    setMessage("");
+    try {
+      const next = hiddenBuiltInIds.includes(id) ? hiddenBuiltInIds : [...hiddenBuiltInIds, id];
+      await saveHiddenBuiltInPresetIds(next);
+      setHiddenBuiltInIds(next);
+      if (editing?.id === id && editing.kind === "builtin") setEditing(null);
+      setMessage("Built-in preset hidden.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not hide the built-in preset.");
+    } finally {
+      setDeletingPresetId(null);
+    }
+  }
+
+  async function restoreBuiltInPresets() {
+    setError("");
+    setMessage("");
+    try {
+      await saveHiddenBuiltInPresetIds([]);
+      setHiddenBuiltInIds([]);
+      setMessage("Restored hidden built-in presets.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not restore built-in presets.");
+    }
+  }
+
   function toggleEnabledLanguage(entry: Locale) {
     const current = general.enabledLanguages?.length ? general.enabledLanguages : ALL_LOCALES;
     const next = current.includes(entry) ? current.filter((locale) => locale !== entry) : [...current, entry];
@@ -1273,9 +1364,32 @@ export function MenuDesigner() {
 
   const enabledLanguageList = general.enabledLanguages?.length ? general.enabledLanguages : ALL_LOCALES;
   const selectedClient = clients.find((client) => client.slug === slug);
-  const featuredPresets = LOOK_PRESETS.slice(0, 6);
-  const morePresets = LOOK_PRESETS.slice(6);
-  const visibleBuiltInPresets = showAllPresets ? LOOK_PRESETS : featuredPresets;
+  const availableBuiltInPresets = LOOK_PRESETS.filter((preset) => !hiddenBuiltInIds.includes(preset.id));
+  const featuredPresets = availableBuiltInPresets.slice(0, 6);
+  const morePresets = availableBuiltInPresets.slice(6);
+  const visibleBuiltInPresets = showAllPresets ? availableBuiltInPresets : featuredPresets;
+
+  const renderPresetEditor = (source: PresetLike, kind: "custom" | "builtin") =>
+    editing && editing.kind === kind && editing.id === source.id ? (
+      <div className="space-y-2 border-t bg-muted/40 p-3">
+        <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Preset name" maxLength={48} />
+        <Input value={editBlurb} onChange={(e) => setEditBlurb(e.target.value)} placeholder="Short description" maxLength={80} />
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" onClick={() => void saveEditedPreset(source, kind, false)} disabled={savingPreset}>
+            Save name
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => void saveEditedPreset(source, kind, true)} disabled={savingPreset || !slug}>
+            Save current design
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={cancelEditPreset} disabled={savingPreset} aria-label="Close editor">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        {kind === "builtin" ? (
+          <p className="text-[11px] text-muted-foreground">Editing a built-in saves it as a custom preset and hides the original.</p>
+        ) : null}
+      </div>
+    ) : null;
 
   function menuHidden(phase: MenuPhase) {
     return activeDesignerTab !== "menu" || menuPhase !== phase;
@@ -1721,7 +1835,7 @@ export function MenuDesigner() {
                                 backgroundImage: `linear-gradient(135deg, ${preset.swatch[2]} 0%, ${preset.swatch[0]} 48%, ${preset.swatch[1]} 100%)`
                               }}
                             />
-                            <div className="space-y-2 p-3 pe-10">
+                            <div className="space-y-2 p-3 pe-16">
                               <div className="flex items-center gap-1.5">
                                 {preset.swatch.map((color) => (
                                   <span
@@ -1740,19 +1854,30 @@ export function MenuDesigner() {
                               </div>
                             </div>
                           </button>
-                          <button
-                            type="button"
-                            aria-label={`Delete ${preset.name}`}
-                            disabled={deletingPresetId === preset.id}
-                            onClick={() => void deleteCustomPreset(preset.id)}
-                            className="absolute end-2 top-2 rounded-full border bg-background/90 p-1.5 text-muted-foreground opacity-80 transition hover:bg-destructive hover:text-destructive-foreground hover:opacity-100"
-                          >
-                            {deletingPresetId === preset.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </button>
+                          <div className="absolute end-2 top-2 flex gap-1">
+                            <button
+                              type="button"
+                              aria-label={`Edit ${preset.name}`}
+                              onClick={() => (editing?.id === preset.id && editing.kind === "custom" ? cancelEditPreset() : startEditPreset(preset, "custom"))}
+                              className="rounded-full border bg-background/90 p-1.5 text-muted-foreground opacity-80 transition hover:bg-primary hover:text-primary-foreground hover:opacity-100"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Delete ${preset.name}`}
+                              disabled={deletingPresetId === preset.id}
+                              onClick={() => void deleteCustomPreset(preset.id)}
+                              className="rounded-full border bg-background/90 p-1.5 text-muted-foreground opacity-80 transition hover:bg-destructive hover:text-destructive-foreground hover:opacity-100"
+                            >
+                              {deletingPresetId === preset.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                          {renderPresetEditor(preset, "custom")}
                         </div>
                       ))}
                     </div>
@@ -1762,47 +1887,78 @@ export function MenuDesigner() {
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Built-in presets</p>
-                    {morePresets.length ? (
-                      <Button type="button" variant="outline" size="sm" onClick={() => setShowAllPresets((v) => !v)}>
-                        {showAllPresets ? "Show fewer" : `Show all ${LOOK_PRESETS.length}`}
-                      </Button>
-                    ) : null}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {hiddenBuiltInIds.length ? (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => void restoreBuiltInPresets()}>
+                          <RotateCcw className="me-1.5 h-3.5 w-3.5" /> Restore {hiddenBuiltInIds.length} hidden
+                        </Button>
+                      ) : null}
+                      {morePresets.length ? (
+                        <Button type="button" variant="outline" size="sm" onClick={() => setShowAllPresets((v) => !v)}>
+                          {showAllPresets ? "Show fewer" : `Show all ${availableBuiltInPresets.length}`}
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {visibleBuiltInPresets.map((preset) => (
-                      <button
+                      <div
                         key={preset.id}
-                        type="button"
-                        onClick={() => update(preset.patch)}
-                        className="group overflow-hidden rounded-2xl border bg-card text-start shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
+                        className="group relative overflow-hidden rounded-2xl border bg-card text-start shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
                       >
-                        <div
-                          className="h-16 w-full"
-                          style={{
-                            backgroundImage: `linear-gradient(135deg, ${preset.swatch[2]} 0%, ${preset.swatch[0]} 48%, ${preset.swatch[1]} 100%)`
-                          }}
-                        />
-                        <div className="space-y-2 p-3">
-                          <div className="flex items-center gap-1.5">
-                            {preset.swatch.map((color) => (
-                              <span
-                                key={color}
-                                className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
-                                style={{ backgroundColor: color }}
-                              />
-                            ))}
+                        <button type="button" className="w-full text-start" onClick={() => update(preset.patch)}>
+                          <div
+                            className="h-16 w-full"
+                            style={{
+                              backgroundImage: `linear-gradient(135deg, ${preset.swatch[2]} 0%, ${preset.swatch[0]} 48%, ${preset.swatch[1]} 100%)`
+                            }}
+                          />
+                          <div className="space-y-2 p-3 pe-16">
+                            <div className="flex items-center gap-1.5">
+                              {preset.swatch.map((color) => (
+                                <span
+                                  key={color}
+                                  className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold tracking-tight">{preset.name}</p>
+                              <p className="text-xs text-muted-foreground">{preset.blurb}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold tracking-tight">{preset.name}</p>
-                            <p className="text-xs text-muted-foreground">{preset.blurb}</p>
-                          </div>
+                        </button>
+                        <div className="absolute end-2 top-2 flex gap-1">
+                          <button
+                            type="button"
+                            aria-label={`Edit ${preset.name}`}
+                            onClick={() => (editing?.id === preset.id && editing.kind === "builtin" ? cancelEditPreset() : startEditPreset(preset, "builtin"))}
+                            className="rounded-full border bg-background/90 p-1.5 text-muted-foreground opacity-80 transition hover:bg-primary hover:text-primary-foreground hover:opacity-100"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Delete ${preset.name}`}
+                            disabled={deletingPresetId === preset.id}
+                            onClick={() => void hideBuiltInPreset(preset.id)}
+                            className="rounded-full border bg-background/90 p-1.5 text-muted-foreground opacity-80 transition hover:bg-destructive hover:text-destructive-foreground hover:opacity-100"
+                          >
+                            {deletingPresetId === preset.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
                         </div>
-                      </button>
+                        {renderPresetEditor(preset, "builtin")}
+                      </div>
                     ))}
                   </div>
                   {!showAllPresets && morePresets.length ? (
                     <p className="text-xs text-muted-foreground">
-                      Showing {featuredPresets.length} of {LOOK_PRESETS.length}. Tap a swatch to apply, then continue to Essentials.
+                      Showing {featuredPresets.length} of {availableBuiltInPresets.length}. Tap a swatch to apply, then continue to Essentials.
                     </p>
                   ) : null}
                 </div>

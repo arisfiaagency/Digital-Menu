@@ -550,6 +550,27 @@ export async function saveCustomLookPresets(presets: SavedLookPreset[]) {
   );
 }
 
+// Built-in presets are code constants, so "deleting" one just records its id as
+// hidden (stored alongside the custom presets on the same platform doc).
+export async function listHiddenBuiltInPresetIds(): Promise<string[]> {
+  const db = getFirebaseDb();
+  if (!db) return [];
+  const snap = await getDoc(doc(db, "platformSettings", "lookPresets"));
+  if (!snap.exists()) return [];
+  const ids = snap.data()?.hiddenBuiltInIds;
+  return Array.isArray(ids) ? (ids as string[]) : [];
+}
+
+export async function saveHiddenBuiltInPresetIds(ids: string[]) {
+  const db = getFirebaseDb();
+  if (!db) throw new Error("Firestore is not configured.");
+  await setDoc(
+    doc(db, "platformSettings", "lookPresets"),
+    { hiddenBuiltInIds: ids, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
 const paymentConverter = converter<PlatformPayment>();
 
 /** Record a cafe subscription payment, extend expiry by months, and update billing totals. */
