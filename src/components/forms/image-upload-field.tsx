@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { RotateCcw, Trash2, Upload } from "lucide-react";
+import { ImagePlus, RotateCcw, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { adminErrorText } from "@/components/admin/admin-preferences";
+import { cn } from "@/lib/utils/cn";
 import { hasSupabaseConfig } from "@/lib/supabase/client";
 import { compressImage, mediaTypeForFile, uploadImage, uploadMedia, validateImageFile, validateMediaFile, type UploadMediaType } from "@/lib/supabase/storage";
 import type { ImageHistoryEntry } from "@/types/models";
@@ -111,47 +111,61 @@ export function ImageUploadField({
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">{label}</label>
-      {preview ? (
-        previewMediaType === "video" ? (
-          <video src={preview} className="h-32 w-full rounded-md border object-cover" muted loop playsInline autoPlay aria-hidden />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className="h-32 w-full rounded-md border object-cover" />
-        )
-      ) : null}
-      {helpText ? <p className="text-xs text-muted-foreground">{helpText}</p> : null}
-      <div className="flex items-center gap-2">
-        <Input
-          ref={inputRef}
-          type="file"
-          accept={accept}
-          onChange={handleChange}
-          disabled={isUploading}
-        />
-        {inputHint ? <p className="hidden max-w-56 text-xs leading-snug text-muted-foreground sm:block">{inputHint}</p> : null}
-        <Button
+      {/* Tap / hover the tile to upload. When something is uploaded we only keep a
+          delete button; the file picker is triggered by tapping the tile itself. */}
+      <div className="group relative">
+        <button
           type="button"
-          variant="outline"
-          size="icon"
-          aria-label={text?.uploadImage || "Upload image"}
-          disabled={isUploading}
           onClick={() => inputRef.current?.click()}
+          disabled={isUploading}
+          aria-label={preview ? text?.changeImage || "Change image" : text?.uploadImage || "Upload image"}
+          className={cn(
+            "relative flex h-36 w-full items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/30 text-center transition-colors hover:border-primary/60 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60",
+            preview && "border-solid"
+          )}
         >
-          <Upload className="h-4 w-4" aria-hidden />
-        </Button>
-        {imageUrl && onRemoved ? (
+          {preview ? (
+            previewMediaType === "video" ? (
+              <video src={preview} className="h-full w-full object-cover" muted loop playsInline autoPlay aria-hidden />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="" className="h-full w-full object-cover" />
+            )
+          ) : (
+            <span className="flex flex-col items-center gap-1.5 px-4 text-muted-foreground">
+              <ImagePlus className="h-6 w-6" aria-hidden />
+              <span className="text-sm font-medium">{text?.noImageYet || "No picture uploaded yet"}</span>
+            </span>
+          )}
+          <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            <Upload className="h-6 w-6" aria-hidden />
+            <span className="text-sm font-medium">{preview ? text?.changeImage || "Change photo" : text?.uploadImage || "Upload photo"}</span>
+          </span>
+        </button>
+        {preview && onRemoved ? (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="icon"
             aria-label={text?.removeImage || "Remove image"}
             disabled={isUploading}
             onClick={removeCurrentImage}
+            className="absolute right-2 top-2 h-8 w-8 bg-background/90 shadow-sm hover:bg-background"
           >
             <Trash2 className="h-4 w-4" aria-hidden />
           </Button>
         ) : null}
       </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        onChange={handleChange}
+        disabled={isUploading}
+        className="hidden"
+      />
+      {helpText ? <p className="text-xs text-muted-foreground">{helpText}</p> : null}
+      {inputHint ? <p className="text-xs leading-snug text-muted-foreground">{inputHint}</p> : null}
       {imageHistory.length > 0 && onRollback ? (
         <div className="flex flex-wrap gap-2">
           {imageHistory.map((entry) => (
