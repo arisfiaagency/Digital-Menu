@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LogOut, QrCode, RefreshCw, ShieldCheck } from "lucide-react";
+import { LogOut, RefreshCw, ShieldCheck } from "lucide-react";
 import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-preferences";
 import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from "@/components/admin/clients-panel";
 import { MenuDesigner } from "@/components/admin/menu-designer";
@@ -10,7 +10,7 @@ import { PaymentReports } from "@/components/admin/payment-reports";
 import { QrDesigner } from "@/components/qr/qr-designer";
 import { TenantProvider } from "@/components/tenant-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -291,35 +291,37 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         {tab === "payments" ? <PaymentReports /> : null}
 
         {tab === "qr" ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <QrCode className="h-5 w-5 text-primary" aria-hidden />
-                Menu QR codes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Field label="Cafe" htmlFor="qr-client">
-                <Select id="qr-client" value={qrSlug} onChange={(e) => setQrSlug(e.target.value)}>
-                  <option value="">Select a cafe…</option>
-                  {clients.map((client) => (
-                    <option key={client.slug} value={client.slug}>
-                      {client.name} (/{client.slug})
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              {qrSlug ? (
-                <TenantProvider clientSlug={qrSlug}>
-                  <QrDesigner printPath="/admin/qr-code/print" />
-                </TenantProvider>
-              ) : (
-                <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Choose a cafe to generate its menu QR code.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-2xl font-semibold">QR Codes</h2>
+              <p className="text-sm text-muted-foreground">
+                Choose a cafe, design the scan link, then print table cards.
+              </p>
+            </div>
+            <Card>
+              <CardContent className="space-y-4 pt-5">
+                <Field label="Cafe" htmlFor="qr-client">
+                  <Select id="qr-client" value={qrSlug} onChange={(e) => setQrSlug(e.target.value)}>
+                    <option value="">Select a cafe…</option>
+                    {clients.map((client) => (
+                      <option key={client.slug} value={client.slug}>
+                        {client.name} (/{client.slug})
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                {qrSlug ? (
+                  <TenantProvider clientSlug={qrSlug}>
+                    <QrDesigner printPath="/admin/qr-code/print" embedded />
+                  </TenantProvider>
+                ) : (
+                  <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    Choose a cafe to design and print its menu QR code.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         ) : null}
 
         {tab === "clients" ? (

@@ -1082,6 +1082,22 @@ const HOUR_OPTIONS = Array.from({ length: 25 }, (_, hour) => hour);
 const WELCOME_BACKGROUND_MEDIA_HINT = "Supports images or videos. Recommended: 1080x1920 px mobile / 1920x1080 px desktop. Max upload: 100 MB.";
 const WELCOME_BACKGROUND_MEDIA_MAX_BYTES = 100 * 1024 * 1024;
 type DesignerTab = "menu" | "welcome";
+type MenuPhase = "look" | "essentials" | "chrome" | "cards" | "hours";
+type WelcomePhase = "content" | "style" | "background";
+
+const MENU_PHASES: { id: MenuPhase; label: string; hint: string }[] = [
+  { id: "look", label: "1. Look", hint: "Start with a preset" },
+  { id: "essentials", label: "2. Essentials", hint: "Display, languages, brand, colors" },
+  { id: "chrome", label: "3. Page", hint: "Layout, header, search, categories" },
+  { id: "cards", label: "4. Cards", hint: "Item cards & background" },
+  { id: "hours", label: "5. Contact", hint: "Hours & social links" }
+];
+
+const WELCOME_PHASES: { id: WelcomePhase; label: string; hint: string }[] = [
+  { id: "content", label: "1. Content", hint: "Name, logo, languages" },
+  { id: "style", label: "2. Style", hint: "Theme, form, colors" },
+  { id: "background", label: "3. Background", hint: "Welcome screen backdrop" }
+];
 
 // A design section rendered as a tap-to-open card. Every section starts minimized
 // so the designer is a tidy list of headers; tapping a header reveals its form.
@@ -1100,15 +1116,15 @@ function CollapsibleCard({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <Card className={cn(hidden && "hidden")}>
+    <Card className={cn("overflow-hidden", hidden && "hidden")}>
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-lg p-5 text-start transition-colors hover:bg-muted/40"
+        className="flex w-full items-center justify-between gap-3 p-4 text-start transition-colors hover:bg-muted/40 sm:p-5"
       >
         <span className="space-y-1">
-          <span className="block text-lg font-semibold leading-none">{title}</span>
+          <span className="block text-base font-semibold leading-none sm:text-lg">{title}</span>
           {hint ? <span className="block text-sm font-normal text-muted-foreground">{hint}</span> : null}
         </span>
         <ChevronDown className={cn("h-5 w-5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
@@ -1134,6 +1150,9 @@ export function MenuDesigner() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [activeDesignerTab, setActiveDesignerTab] = useState<DesignerTab>("menu");
+  const [menuPhase, setMenuPhase] = useState<MenuPhase>("look");
+  const [welcomePhase, setWelcomePhase] = useState<WelcomePhase>("content");
+  const [showAllPresets, setShowAllPresets] = useState(false);
   const [customPresets, setCustomPresets] = useState<SavedLookPreset[]>([]);
   const [presetName, setPresetName] = useState("");
   const [presetBlurb, setPresetBlurb] = useState("");
@@ -1253,64 +1272,154 @@ export function MenuDesigner() {
   }
 
   const enabledLanguageList = general.enabledLanguages?.length ? general.enabledLanguages : ALL_LOCALES;
+  const selectedClient = clients.find((client) => client.slug === slug);
+  const featuredPresets = LOOK_PRESETS.slice(0, 6);
+  const morePresets = LOOK_PRESETS.slice(6);
+  const visibleBuiltInPresets = showAllPresets ? LOOK_PRESETS : featuredPresets;
+
+  function menuHidden(phase: MenuPhase) {
+    return activeDesignerTab !== "menu" || menuPhase !== phase;
+  }
+
+  function welcomeHidden(phase: WelcomePhase) {
+    return activeDesignerTab !== "welcome" || welcomePhase !== phase;
+  }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="space-y-6">
-        <Card>
-          <CardHeader><CardTitle>Menu Design</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <Field label="Cafe">
-              <Select value={slug} onChange={(e) => loadCafe(e.target.value)}>
-                <option value="">Select a cafe…</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.slug}>
-                    {client.name} (/{client.slug})
-                  </option>
-                ))}
-              </Select>
-            </Field>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold">Menu Design</h2>
+          <p className="text-sm text-muted-foreground">
+            Pick a cafe, choose a look, then fine-tune the menu and welcome screens. Save when you are done.
+          </p>
+        </div>
+        {slug && !loading ? (
+          <Button onClick={() => void save()} disabled={saving} className="shrink-0">
+            {saving ? <Loader2 className="me-2 h-4 w-4 animate-spin" aria-hidden /> : <Save className="me-2 h-4 w-4" aria-hidden />}
+            {saving ? "Saving…" : "Save design"}
+          </Button>
+        ) : null}
+      </div>
+
+      {message ? (
+        <p className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm text-primary">
+          <CheckCircle2 className="h-4 w-4" aria-hidden /> {message}
+        </p>
+      ) : null}
+      {error ? <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p> : null}
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="space-y-5">
+        <Card className="border-primary/15">
+          <CardContent className="space-y-4 pt-5">
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <Field label="Cafe to design">
+                <Select value={slug} onChange={(e) => void loadCafe(e.target.value)}>
+                  <option value="">Select a cafe…</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.slug}>
+                      {client.name} (/{client.slug})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              {selectedClient ? (
+                <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground sm:mb-0.5">
+                  Editing <span className="font-medium text-foreground">{selectedClient.name}</span>
+                </p>
+              ) : null}
+            </div>
             {loading ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Loading…
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Loading cafe design…
               </p>
             ) : null}
             {!clients.length ? (
               <p className="text-sm text-muted-foreground">No cafes yet. Create one in the Clients tab first.</p>
+            ) : null}
+            {!slug && !loading && clients.length ? (
+              <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                Choose a cafe above to start. Recommended order: Look → Essentials → Page → Cards.
+              </p>
             ) : null}
           </CardContent>
         </Card>
 
         {slug && !loading ? (
           <>
-            <div className="inline-flex w-full max-w-md gap-1 rounded-lg border bg-muted/40 p-1" role="tablist" aria-label="Design sections">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeDesignerTab === "menu"}
-                onClick={() => setActiveDesignerTab("menu")}
-                className={cn(
-                  "flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
-                  activeDesignerTab === "menu" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Menu Page
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeDesignerTab === "welcome"}
-                onClick={() => setActiveDesignerTab("welcome")}
-                className={cn(
-                  "flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
-                  activeDesignerTab === "welcome" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Welcome Page
-              </button>
+            <div className="space-y-3">
+              <div className="inline-flex w-full max-w-lg gap-1 rounded-lg border bg-muted/40 p-1" role="tablist" aria-label="Design surface">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeDesignerTab === "menu"}
+                  onClick={() => setActiveDesignerTab("menu")}
+                  className={cn(
+                    "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                    activeDesignerTab === "menu" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Menu page
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeDesignerTab === "welcome"}
+                  onClick={() => setActiveDesignerTab("welcome")}
+                  className={cn(
+                    "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                    activeDesignerTab === "welcome" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Welcome page
+                </button>
+              </div>
+
+              {activeDesignerTab === "menu" ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {MENU_PHASES.map((phase) => (
+                    <button
+                      key={phase.id}
+                      type="button"
+                      title={phase.hint}
+                      onClick={() => setMenuPhase(phase.id)}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                        menuPhase === phase.id ? "border-primary bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {phase.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {WELCOME_PHASES.map((phase) => (
+                    <button
+                      key={phase.id}
+                      type="button"
+                      title={phase.hint}
+                      onClick={() => setWelcomePhase(phase.id)}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                        welcomePhase === phase.id ? "border-primary bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {phase.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                {activeDesignerTab === "menu"
+                  ? MENU_PHASES.find((phase) => phase.id === menuPhase)?.hint
+                  : WELCOME_PHASES.find((phase) => phase.id === welcomePhase)?.hint}
+              </p>
             </div>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "welcome"} title="Header & cafe name" hint={`This controls the first screen at /${slug} before customers enter the menu.`}>
+            <CollapsibleCard hidden={welcomeHidden("content")} defaultOpen title="Header & cafe name" hint={`This controls the first screen at /${slug} before customers enter the menu.`}>
               <CardContent className="grid gap-4">
                   <div className="grid gap-4 md:grid-cols-3">
                     <Field label="Cafe name (English)"><Input value={general.restaurantName.en} onChange={(e) => setGeneral({ ...general, restaurantName: { ...general.restaurantName, en: e.target.value } })} /></Field>
@@ -1330,7 +1439,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "welcome"} title="Logo" hint="Shown on the welcome card before guests enter the menu.">
+            <CollapsibleCard hidden={welcomeHidden("content")} title="Logo" hint="Shown on the welcome card before guests enter the menu.">
               <CardContent className="grid gap-4">
                   <ImageUploadField
                     label="Welcome logo"
@@ -1358,7 +1467,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "welcome"} title="Languages on welcome" hint="Choose which languages guests can pick before entering the menu.">
+            <CollapsibleCard hidden={welcomeHidden("content")} title="Languages on welcome" hint="Choose which languages guests can pick before entering the menu.">
               <CardContent className="grid gap-4">
                   <div className="flex flex-wrap gap-2">
                     {ALL_LOCALES.map((entry) => {
@@ -1388,7 +1497,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "welcome"} title="Theme, language & layout">
+            <CollapsibleCard hidden={welcomeHidden("style")} defaultOpen title="Theme, language & layout">
               <CardContent className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center justify-between gap-3 rounded-md border p-3 md:col-span-2">
                     <div>
@@ -1451,7 +1560,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "welcome"} title="Form / card styling">
+            <CollapsibleCard hidden={welcomeHidden("style")} title="Form / card styling">
               <CardContent className="grid gap-4 md:grid-cols-2">
                   <Field label="Form/card design">
                     <Select value={appearance.welcomeCardStyle ?? "glass"} onChange={(e) => update({ welcomeCardStyle: e.target.value as AppearanceSettings["welcomeCardStyle"] })}>
@@ -1496,7 +1605,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "welcome"} title="Welcome background" hint={`Choose a background style, pattern, and colors for the /${slug} welcome screen.`}>
+            <CollapsibleCard hidden={welcomeHidden("background")} defaultOpen title="Welcome background" hint={`Choose a background style, pattern, and colors for the /${slug} welcome screen.`}>
               <CardContent className="grid gap-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label="Background design">
@@ -1551,7 +1660,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Look Presets" hint="See suggested presets for the menu">
+            <CollapsibleCard hidden={menuHidden("look")} defaultOpen title="Look Presets" hint="Apply colors & layout to the menu and welcome. Refine anything in the next steps.">
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   Curated luxury looks for different venues. Apply one, then refine colors, cards, and welcome styling below — or save your current look as a reusable custom preset.
@@ -1651,9 +1760,16 @@ export function MenuDesigner() {
                 ) : null}
 
                 <div className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Built-in presets</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Built-in presets</p>
+                    {morePresets.length ? (
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowAllPresets((v) => !v)}>
+                        {showAllPresets ? "Show fewer" : `Show all ${LOOK_PRESETS.length}`}
+                      </Button>
+                    ) : null}
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {LOOK_PRESETS.map((preset) => (
+                    {visibleBuiltInPresets.map((preset) => (
                       <button
                         key={preset.id}
                         type="button"
@@ -1684,11 +1800,16 @@ export function MenuDesigner() {
                       </button>
                     ))}
                   </div>
+                  {!showAllPresets && morePresets.length ? (
+                    <p className="text-xs text-muted-foreground">
+                      Showing {featuredPresets.length} of {LOOK_PRESETS.length}. Tap a swatch to apply, then continue to Essentials.
+                    </p>
+                  ) : null}
                 </div>
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Menu Display & Behavior">
+            <CollapsibleCard hidden={menuHidden("essentials")} defaultOpen title="Menu Display & Behavior">
               <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {Object.entries(menu)
                   .filter(([key]) => key !== "updatedAt" && key !== "enableFilters")
@@ -1705,7 +1826,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Languages & Currency">
+            <CollapsibleCard hidden={menuHidden("essentials")} title="Languages & Currency">
               <CardContent className="grid gap-4">
                 <div>
                   <p className="mb-2 text-sm font-medium">Enabled menu languages</p>
@@ -1747,7 +1868,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Branding">
+            <CollapsibleCard hidden={menuHidden("essentials")} title="Branding">
               <CardContent className="grid gap-4">
                 <ImageUploadField
                   label="Logo"
@@ -1764,7 +1885,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Colors & Theme">
+            <CollapsibleCard hidden={menuHidden("essentials")} title="Colors & Theme">
               <CardContent className="grid gap-4 md:grid-cols-4">
                 <Field label="Primary color"><Input type="color" value={appearance.primaryColor} onChange={(e) => update({ primaryColor: e.target.value })} /></Field>
                 <Field label="Secondary color"><Input type="color" value={appearance.secondaryColor} onChange={(e) => update({ secondaryColor: e.target.value })} /></Field>
@@ -1814,7 +1935,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Layout">
+            <CollapsibleCard hidden={menuHidden("chrome")} defaultOpen title="Layout">
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="Menu layout">
                   <Select value={appearance.menuLayout} onChange={(e) => update({ menuLayout: e.target.value as AppearanceSettings["menuLayout"] })}>
@@ -1868,7 +1989,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Header">
+            <CollapsibleCard hidden={menuHidden("chrome")} title="Header">
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="Logo design">
                   <Select value={appearance.menuLogoStyle ?? "rounded"} onChange={(e) => update({ menuLogoStyle: e.target.value as AppearanceSettings["menuLogoStyle"] })}>
@@ -1951,7 +2072,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Hours & Contact Links">
+            <CollapsibleCard hidden={menuHidden("hours")} defaultOpen title="Hours & Contact Links">
               <CardContent className="grid gap-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Open time">
@@ -2008,7 +2129,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Search Bar">
+            <CollapsibleCard hidden={menuHidden("chrome")} title="Search Bar">
               <CardContent className="grid gap-4 md:grid-cols-3">
                 <Field label="Shape">
                   <Select value={appearance.searchShape ?? "pill"} onChange={(e) => update({ searchShape: e.target.value as AppearanceSettings["searchShape"] })}>
@@ -2061,7 +2182,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Item Cards">
+            <CollapsibleCard hidden={menuHidden("cards")} defaultOpen title="Item Cards">
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="Card design">
                   <Select value={appearance.cardDesign ?? "classic"} onChange={(e) => update({ cardDesign: e.target.value as AppearanceSettings["cardDesign"] })}>
@@ -2107,7 +2228,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Categories">
+            <CollapsibleCard hidden={menuHidden("chrome")} title="Categories">
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="Category nav style">
                   <Select value={appearance.categoryNavStyle ?? "pills"} onChange={(e) => update({ categoryNavStyle: e.target.value as AppearanceSettings["categoryNavStyle"] })}>
@@ -2146,7 +2267,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Above Categories">
+            <CollapsibleCard hidden={menuHidden("chrome")} title="Above Categories">
               <CardContent className="grid gap-4">
                 <Field label="Region">
                   <Select value={appearance.aboveCategory ?? "none"} onChange={(e) => update({ aboveCategory: e.target.value as AppearanceSettings["aboveCategory"] })}>
@@ -2217,7 +2338,7 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Background">
+            <CollapsibleCard hidden={menuHidden("cards")} title="Background">
               <CardContent className="grid gap-4">
                 <Field label="Background type">
                   <Select value={backgroundType} onChange={(e) => update({ backgroundType: e.target.value as AppearanceSettings["backgroundType"] })}>
@@ -2302,17 +2423,42 @@ export function MenuDesigner() {
               </CardContent>
             </CollapsibleCard>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={save} disabled={saving}>
+            <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur">
+              <Button onClick={() => void save()} disabled={saving}>
                 {saving ? <Loader2 className="me-2 h-4 w-4 animate-spin" aria-hidden /> : <Save className="me-2 h-4 w-4" aria-hidden />}
                 {saving ? "Saving…" : "Save design"}
               </Button>
-              {message ? (
-                <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600">
-                  <CheckCircle2 className="h-4 w-4" aria-hidden /> {message}
-                </span>
+              <p className="text-sm text-muted-foreground">
+                {selectedClient ? `Saving to ${selectedClient.name}` : "Save when ready"} · live menu updates in ~20s
+              </p>
+              {activeDesignerTab === "menu" && menuPhase !== "hours" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="ms-auto"
+                  onClick={() => {
+                    const order: MenuPhase[] = ["look", "essentials", "chrome", "cards", "hours"];
+                    const index = order.indexOf(menuPhase);
+                    if (index >= 0 && index < order.length - 1) setMenuPhase(order[index + 1]);
+                  }}
+                >
+                  Next step
+                </Button>
               ) : null}
-              {error ? <span className="text-sm text-destructive">{error}</span> : null}
+              {activeDesignerTab === "welcome" && welcomePhase !== "background" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="ms-auto"
+                  onClick={() => {
+                    const order: WelcomePhase[] = ["content", "style", "background"];
+                    const index = order.indexOf(welcomePhase);
+                    if (index >= 0 && index < order.length - 1) setWelcomePhase(order[index + 1]);
+                  }}
+                >
+                  Next step
+                </Button>
+              ) : null}
             </div>
           </>
         ) : null}
@@ -2322,13 +2468,19 @@ export function MenuDesigner() {
       {slug && !loading ? (
         <div className="xl:sticky xl:top-4 xl:self-start">
           <Card>
-            <CardHeader><CardTitle>Preview</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Live preview</CardTitle>
+              <p className="text-sm font-normal text-muted-foreground">
+                {activeDesignerTab === "menu" ? "Menu page appearance" : "Welcome page appearance"}
+              </p>
+            </CardHeader>
             <CardContent>
               <DesignPreview activeTab={activeDesignerTab} appearance={appearance} general={general} menu={menu} />
             </CardContent>
           </Card>
         </div>
       ) : null}
+      </div>
     </div>
   );
 }

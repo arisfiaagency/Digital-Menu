@@ -23,13 +23,16 @@ export function QrDesigner({
   printMode = false,
   printVariant = "design",
   tableLabels = [],
-  printPath
+  printPath,
+  embedded = false
 }: {
   printMode?: boolean;
   printVariant?: QrPrintVariant;
   tableLabels?: string[];
   /** Supervisor print route (e.g. /admin/qr-code/print). Defaults to cafe admin print path. */
   printPath?: string;
+  /** Hide the page-level title when shown inside the supervisor shell. */
+  embedded?: boolean;
 }) {
   const { text, dir: textDir } = useAdminLocale();
   const { clientSlug, adminBasePath, menuPath, publicPath } = useTenant();
@@ -39,6 +42,7 @@ export function QrDesigner({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [job, setJob] = useState<"design" | "print">("design");
   const [tableSource, setTableSource] = useState<"pos" | "custom">("pos");
   const [posTables, setPosTables] = useState<string[]>([]);
   const [customInput, setCustomInput] = useState("");
@@ -48,10 +52,35 @@ export function QrDesigner({
   const directMenuUrl = `${siteOrigin}${menuPath}`;
 
   useEffect(() => {
-    getAdminAppData().then((data) => {
-      setSettings({ ...data.qr, menuUrl: normalizeQrUrl(data.qr.menuUrl, menuUrl, directMenuUrl, menuPath, siteOrigin) });
-    });
-  }, [directMenuUrl, menuPath, menuUrl, siteOrigin]);
+    let cancelled = false;
+    setError("");
+    setMessage("");
+    setSettings({ ...defaultQrSettings, menuUrl });
+    getAdminAppData()
+      .then((data) => {
+        if (cancelled) return;
+        const nextUrl = normalizeQrUrl(data.qr?.menuUrl, menuUrl, directMenuUrl, menuPath, siteOrigin) || menuUrl;
+        setSettings({
+          ...defaultQrSettings,
+          ...data.qr,
+          menuUrl: nextUrl,
+          foregroundColor: data.qr?.foregroundColor || defaultQrSettings.foregroundColor,
+          backgroundColor: data.qr?.backgroundColor || defaultQrSettings.backgroundColor,
+          title: {
+            en: data.qr?.title?.en || defaultQrSettings.title.en,
+            ar: data.qr?.title?.ar || defaultQrSettings.title.ar,
+            ckb: data.qr?.title?.ckb || defaultQrSettings.title.ckb
+          }
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSettings({ ...defaultQrSettings, menuUrl });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientSlug, directMenuUrl, menuPath, menuUrl, siteOrigin]);
 
   // Load the real POS tables (active, in display order) for the "All POS tables"
   // mode. The custom text field is never touched by this, so what you type stays.
@@ -67,33 +96,47 @@ export function QrDesigner({
         setPosTables(names);
       })
       .catch(() => setPosTables([]));
-  }, [printMode]);
+  }, [printMode, clientSlug]);
 
   useEffect(() => {
     let active = true;
+    const url = settings.menuUrl?.trim() || "";
+    if (!url || !isValidUrl(url)) {
+      setDataUrl("");
+      setSvg("");
+      // Don't flash the generation error while the cafe URL is still loading.
+      return () => {
+        active = false;
+      };
+    }
+
     const logoUrl = settings.logoUrl || "/site-icon.png";
+    const dark = normalizeHexColor(settings.foregroundColor, defaultQrSettings.foregroundColor);
+    const light = normalizeHexColor(settings.backgroundColor, defaultQrSettings.backgroundColor);
+
     (async () => {
       try {
-        // Error correction "H" (30% recovery) so the centered Stone logo can sit
+        // Error correction "H" (30% recovery) so a centered logo can sit
         // over the QR without breaking scanning.
         const [baseDataUrl, nextSvg] = await Promise.all([
-          QRCode.toDataURL(settings.menuUrl, {
+          QRCode.toDataURL(url, {
             errorCorrectionLevel: "H",
             margin: 4,
             width: 640,
-            color: { dark: settings.foregroundColor, light: settings.backgroundColor }
+            color: { dark, light }
           }),
-          QRCode.toString(settings.menuUrl, {
+          QRCode.toString(url, {
             type: "svg",
             errorCorrectionLevel: "H",
             margin: 4,
-            color: { dark: settings.foregroundColor, light: settings.backgroundColor }
+            color: { dark, light }
           })
         ]);
         const withLogo = await composeQrWithLogo(baseDataUrl, logoUrl, 640).catch(() => baseDataUrl);
         if (!active) return;
         setDataUrl(withLogo);
         setSvg(nextSvg);
+        setError((prev) => (prev === text.qrGenerationFailed ? "" : prev));
       } catch {
         if (!active) return;
         setDataUrl("");
@@ -105,7 +148,13 @@ export function QrDesigner({
     return () => {
       active = false;
     };
-  }, [settings, text.qrGenerationFailed]);
+  }, [
+    settings.menuUrl,
+    settings.foregroundColor,
+    settings.backgroundColor,
+    settings.logoUrl,
+    text.qrGenerationFailed
+  ]);
 
   useEffect(() => {
     if (!printMode) return;
@@ -237,117 +286,185 @@ export function QrDesigner({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold">{text.mainMenuQrCode}</h1>
-          <p dir={textDir} className="text-muted-foreground">{text.qrDescription}</p>
+    <div className="space-y-5">
+      {!embedded ? (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-semibold">{text.mainMenuQrCode}</h1>
+            <p dir={textDir} className="text-muted-foreground">{text.qrDescription}</p>
+          </div>
+          <Badge className={readyToScan ? "border-primary/30 bg-primary/10 text-primary" : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"}>
+            {readyToScan ? text.readyToScan : text.needsAttention}
+          </Badge>
         </div>
-        <Badge className={readyToScan ? "border-primary/30 bg-primary/10 text-primary" : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"}>
-          {readyToScan ? text.readyToScan : text.needsAttention}
-        </Badge>
-      </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Design the cafe QR, save it, then print table cards when needed.
+            </p>
+          </div>
+          <Badge className={readyToScan ? "border-primary/30 bg-primary/10 text-primary" : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"}>
+            {readyToScan ? text.readyToScan : text.needsAttention}
+          </Badge>
+        </div>
+      )}
 
       {message ? <p className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm text-primary">{message}</p> : null}
       {error ? <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error}</p> : null}
+
+      <div className="inline-flex gap-1 rounded-lg border bg-muted/40 p-1">
+        <button
+          type="button"
+          onClick={() => setJob("design")}
+          className={cn(
+            "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+            job === "design" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          1. Design & save
+        </button>
+        <button
+          type="button"
+          onClick={() => setJob("print")}
+          className={cn(
+            "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+            job === "print" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          2. Print table cards
+        </button>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <QrHealthCard icon={validMenuUrl ? CheckCircle2 : AlertTriangle} label={text.menuUrl} value={validMenuUrl ? text.ready : text.invalidUrl} good={validMenuUrl} />
         <QrHealthCard icon={safeContrast ? CheckCircle2 : AlertTriangle} label={text.scanContrast} value={safeContrast ? text.goodContrast : text.needsAttention} good={safeContrast} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <Card className="settings-panel">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Palette className="h-5 w-5 text-primary" aria-hidden />
-              {text.qrDesign}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <section className="space-y-3 rounded-lg border bg-muted/15 p-4">
-              <h3 className="text-sm font-semibold">{text.destination}</h3>
-              <Field label={text.menuUrl}>
-                <Input value={settings.menuUrl} onChange={(e) => setSettings({ ...settings, menuUrl: e.target.value.trim() })} />
-              </Field>
-            </section>
+      {job === "design" ? (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Palette className="h-5 w-5 text-primary" aria-hidden />
+                QR design
+              </CardTitle>
+              <p className="text-sm font-normal text-muted-foreground">
+                Set the destination link and colors, then save before printing.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <section className="space-y-3 rounded-xl border bg-muted/15 p-4">
+                <h3 className="text-sm font-semibold">{text.destination}</h3>
+                <Field label={text.menuUrl}>
+                  <Input value={settings.menuUrl} onChange={(e) => setSettings({ ...settings, menuUrl: e.target.value.trim() })} />
+                </Field>
+                <p className="text-xs text-muted-foreground">Usually the cafe welcome or menu URL guests should open when they scan.</p>
+              </section>
 
-            <section className="space-y-3 rounded-lg border bg-muted/15 p-4">
-              <h3 className="text-sm font-semibold">{text.colors}</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={text.foregroundColor}><Input type="color" value={settings.foregroundColor} onChange={(e) => setSettings({ ...settings, foregroundColor: e.target.value })} /></Field>
-                <Field label={text.backgroundColor}><Input type="color" value={settings.backgroundColor} onChange={(e) => setSettings({ ...settings, backgroundColor: e.target.value })} /></Field>
-              </div>
-              {!safeContrast ? <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{text.poorQrContrast}</p> : null}
-            </section>
-
-            <section className="space-y-3 rounded-lg border bg-muted/15 p-4">
-              <h3 className="text-sm font-semibold">{text.printTitles}</h3>
-              <div className="grid gap-4">
-                <Field label={text.titleEnglish}><Input value={settings.title.en} onChange={(e) => setSettings({ ...settings, title: { ...settings.title, en: e.target.value } })} /></Field>
-                <Field label={text.titleArabic}><Input dir="rtl" value={settings.title.ar} onChange={(e) => setSettings({ ...settings, title: { ...settings.title, ar: e.target.value } })} /></Field>
-                <Field label={text.titleKurdish}><Input dir="rtl" value={settings.title.ckb} onChange={(e) => setSettings({ ...settings, title: { ...settings.title, ckb: e.target.value } })} /></Field>
-              </div>
-            </section>
-
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={saveQr} disabled={saving || !readyToScan}>
-                <Save className="h-4 w-4" aria-hidden />
-                {saving ? text.saving : text.save}
-              </Button>
-              <Button variant="outline" onClick={reset}><RotateCcw className="h-4 w-4" aria-hidden /> {text.reset}</Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="settings-panel">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <QrCode className="h-5 w-5 text-primary" aria-hidden />
-              {text.preview}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border bg-muted/25 p-4">
-              <div className="flex flex-col items-center gap-4 text-center">
-                <div>
-                  <h2 className="text-xl font-semibold">{settings.title.en}</h2>
-                  <p dir="rtl" className="text-sm text-muted-foreground">{settings.title.ar}</p>
-                  <p dir="rtl" className="text-sm text-muted-foreground">{settings.title.ckb}</p>
+              <section className="space-y-3 rounded-xl border bg-muted/15 p-4">
+                <h3 className="text-sm font-semibold">{text.colors}</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label={text.foregroundColor}><Input type="color" value={settings.foregroundColor} onChange={(e) => setSettings({ ...settings, foregroundColor: e.target.value })} /></Field>
+                  <Field label={text.backgroundColor}><Input type="color" value={settings.backgroundColor} onChange={(e) => setSettings({ ...settings, backgroundColor: e.target.value })} /></Field>
                 </div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {dataUrl ? <img src={dataUrl} alt={text.menuQrCode} className="h-72 w-72 rounded-md border bg-white p-3" /> : null}
-                <p className="break-all text-sm text-muted-foreground">{settings.menuUrl}</p>
-              </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <Button onClick={copyUrl}><Copy className="h-4 w-4" aria-hidden /> {text.copyUrl}</Button>
-                <Button variant="secondary" onClick={copyQr} disabled={!dataUrl}><Copy className="h-4 w-4" aria-hidden /> {text.copyQr}</Button>
-                <Button variant="outline" onClick={downloadPng} disabled={!dataUrl}><Download className="h-4 w-4" aria-hidden /> PNG</Button>
-                <Button variant="outline" onClick={downloadSvg} disabled={!svg}><Download className="h-4 w-4" aria-hidden /> SVG</Button>
-                {validMenuUrl ? (
-                  <Button asChild variant="outline" className="sm:col-span-2">
-                    <Link href={settings.menuUrl} target="_blank"><ExternalLink className="h-4 w-4" aria-hidden /> {text.testLink}</Link>
-                  </Button>
-                ) : null}
-              </div>
+                {!safeContrast ? <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{text.poorQrContrast}</p> : null}
+              </section>
 
-              <section className="mt-4 space-y-3 border-t pt-4">
-                <h3 className="text-sm font-semibold">{text.tableCards}</h3>
-                <p dir={textDir} className="text-xs text-muted-foreground">{text.tableCardsHint}</p>
+              <section className="space-y-3 rounded-xl border bg-muted/15 p-4">
+                <h3 className="text-sm font-semibold">{text.printTitles}</h3>
+                <p className="text-xs text-muted-foreground">These titles appear on printed table cards (full design), not on the basic QR tile.</p>
+                <div className="grid gap-4">
+                  <Field label={text.titleEnglish}><Input value={settings.title.en} onChange={(e) => setSettings({ ...settings, title: { ...settings.title, en: e.target.value } })} /></Field>
+                  <Field label={text.titleArabic}><Input dir="rtl" value={settings.title.ar} onChange={(e) => setSettings({ ...settings, title: { ...settings.title, ar: e.target.value } })} /></Field>
+                  <Field label={text.titleKurdish}><Input dir="rtl" value={settings.title.ckb} onChange={(e) => setSettings({ ...settings, title: { ...settings.title, ckb: e.target.value } })} /></Field>
+                </div>
+              </section>
 
-                <div className="inline-flex rounded-md border bg-muted/30 p-0.5 text-sm">
-                  <button type="button" onClick={() => setTableSource("pos")} className={cn("rounded px-3 py-1.5", tableSource === "pos" ? "bg-background font-medium shadow-sm" : "text-muted-foreground")}>
-                    {text.allTables}
-                  </button>
-                  <button type="button" onClick={() => setTableSource("custom")} className={cn("rounded px-3 py-1.5", tableSource === "custom" ? "bg-background font-medium shadow-sm" : "text-muted-foreground")}>
-                    {text.specificTables}
-                  </button>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => void saveQr()} disabled={saving || !readyToScan}>
+                  <Save className="h-4 w-4" aria-hidden />
+                  {saving ? text.saving : text.save}
+                </Button>
+                <Button variant="outline" onClick={reset}><RotateCcw className="h-4 w-4" aria-hidden /> {text.reset}</Button>
+                <Button type="button" variant="outline" onClick={() => setJob("print")} disabled={!readyToScan}>
+                  Continue to print
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <QrCode className="h-5 w-5 text-primary" aria-hidden />
+                {text.preview}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-xl border bg-muted/25 p-4">
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <div>
+                    <h2 className="text-xl font-semibold">{settings.title.en}</h2>
+                    <p dir="rtl" className="text-sm text-muted-foreground">{settings.title.ar}</p>
+                    <p dir="rtl" className="text-sm text-muted-foreground">{settings.title.ckb}</p>
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {dataUrl ? <img src={dataUrl} alt={text.menuQrCode} className="h-64 w-64 rounded-md border bg-white p-3 sm:h-72 sm:w-72" /> : null}
+                  <p className="break-all text-sm text-muted-foreground">{settings.menuUrl}</p>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <Button onClick={() => void copyUrl()}><Copy className="h-4 w-4" aria-hidden /> {text.copyUrl}</Button>
+                  <Button variant="secondary" onClick={() => void copyQr()} disabled={!dataUrl}><Copy className="h-4 w-4" aria-hidden /> {text.copyQr}</Button>
+                  <Button variant="outline" onClick={downloadPng} disabled={!dataUrl}><Download className="h-4 w-4" aria-hidden /> PNG</Button>
+                  <Button variant="outline" onClick={downloadSvg} disabled={!svg}><Download className="h-4 w-4" aria-hidden /> SVG</Button>
+                  {validMenuUrl ? (
+                    <Button asChild variant="outline" className="sm:col-span-2">
+                      <Link href={settings.menuUrl} target="_blank"><ExternalLink className="h-4 w-4" aria-hidden /> {text.testLink}</Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Printer className="h-5 w-5 text-primary" aria-hidden />
+              {text.tableCards}
+            </CardTitle>
+            <p dir={textDir} className="text-sm font-normal text-muted-foreground">{text.tableCardsHint}</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!readyToScan ? (
+              <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-200">
+                Finish Design & save first (valid URL + good contrast) before printing.
+              </p>
+            ) : null}
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-2 text-sm font-medium">Which tables?</p>
+                  <div className="inline-flex rounded-md border bg-muted/30 p-0.5 text-sm">
+                    <button type="button" onClick={() => setTableSource("pos")} className={cn("rounded px-3 py-1.5", tableSource === "pos" ? "bg-background font-medium shadow-sm" : "text-muted-foreground")}>
+                      {text.allTables}
+                    </button>
+                    <button type="button" onClick={() => setTableSource("custom")} className={cn("rounded px-3 py-1.5", tableSource === "custom" ? "bg-background font-medium shadow-sm" : "text-muted-foreground")}>
+                      {text.specificTables}
+                    </button>
+                  </div>
                 </div>
 
                 {tableSource === "pos" ? (
-                  <p className="rounded-md border bg-muted/15 p-3 text-sm text-muted-foreground">
-                    {posTables.length ? posTables.join(" · ") : text.noPosTables}
-                  </p>
+                  <div className="rounded-xl border bg-muted/15 p-4">
+                    <p className="text-sm font-medium">{posTables.length} POS tables</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {posTables.length ? posTables.join(" · ") : text.noPosTables}
+                    </p>
+                  </div>
                 ) : (
                   <Field label={text.numberOfTables}>
                     <Input
@@ -358,8 +475,11 @@ export function QrDesigner({
                   </Field>
                 )}
 
-                <p className="text-xs text-muted-foreground">{tablesForPrint.length} {text.tableCards}</p>
-                <div className="flex flex-wrap items-end gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Ready to print: <span className="font-medium text-foreground">{tablesForPrint.length}</span> {text.tableCards}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3">
                   <div className="relative inline-block">
                     <Button type="button" onClick={() => setPrintMenuOpen((v) => !v)} disabled={!readyToScan || !tablesForPrint.length}>
                       <Printer className="h-4 w-4" aria-hidden /> {text.print}
@@ -379,12 +499,21 @@ export function QrDesigner({
                       </>
                     ) : null}
                   </div>
+                  {!tablesForPrint.length ? (
+                    <p className="text-sm text-muted-foreground">Add POS tables or enter custom labels to enable print.</p>
+                  ) : null}
                 </div>
-              </section>
+              </div>
+
+              <div className="rounded-xl border bg-muted/20 p-4 text-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {dataUrl ? <img src={dataUrl} alt="" className="mx-auto h-40 w-40 rounded-md border bg-white p-2" /> : null}
+                <p className="mt-3 text-xs text-muted-foreground break-all">{settings.menuUrl}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
     </div>
   );
 }
@@ -463,6 +592,16 @@ function isValidUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function normalizeHexColor(value: string | undefined, fallback: string) {
+  const raw = (value || "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw;
+  if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+    const [, r, g, b] = raw;
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return fallback;
 }
 
 function getSiteOrigin() {
