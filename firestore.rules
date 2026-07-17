@@ -56,7 +56,9 @@ service cloud.firestore {
     }
 
     function clientActive(clientId) {
-      return clientExists(clientId) && clientData(clientId).status == 'active';
+      return clientExists(clientId)
+        && clientData(clientId).status == 'active'
+        && clientData(clientId).get('blocked', false) != true;
     }
 
     function tenantProfileRef(clientId) {
@@ -114,7 +116,7 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      allow get, list: if resource.data.status == 'active' || isPlatformAdmin();
+      allow get, list: if (resource.data.status == 'active' && resource.data.get('blocked', false) != true) || isPlatformAdmin();
       allow create, update, delete: if isPlatformFullAdmin();
 
       match /categories/{categoryId} {

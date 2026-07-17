@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { defaultAppData } from "@/data/default-data";
+import { isClientServiceActive } from "@/lib/client-access";
 import { normalizeClientSlug, DEMO_CLIENT_SLUG } from "@/lib/tenant";
 import type {
   AppData,
@@ -138,7 +139,7 @@ async function fetchPublicAppData(clientSlug: string): Promise<AppData> {
   if (!slug) return defaultAppData;
   try {
     const client = await getRestDocument(`clients/${slug}`) as ClientAccount | null;
-    if (!client || client.status !== "active") return defaultAppData;
+    if (!isClientServiceActive(client)) return defaultAppData;
     const parentPath = `clients/${slug}`;
     const [categories, menuItemsRaw, settings] = await Promise.all([
       runBoolQuery(parentPath, "categories", "isActive", "displayOrder", 100),
@@ -176,7 +177,7 @@ async function fetchPublicClient(clientSlug: string): Promise<ClientAccount | nu
   }
   try {
     const client = await getRestDocument(`clients/${slug}`) as ClientAccount | null;
-    if (client && client.status === "active") return client;
+    if (isClientServiceActive(client)) return client;
     // Keep /demo usable even when the tenant has not been seeded yet.
     return slug === DEMO_CLIENT_SLUG ? offlineDemoClient() : null;
   } catch {

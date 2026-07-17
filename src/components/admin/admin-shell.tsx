@@ -16,7 +16,6 @@ import {
   Menu,
   MenuSquare,
   Palette,
-  QrCode,
   ReceiptText,
   Settings,
   SlidersHorizontal,
@@ -42,7 +41,6 @@ const nav: { path: string; labelKey: string; icon: LucideIcon; feature: AdminFea
   { path: "/pos", labelKey: "pos", icon: Table2, feature: "pos" },
   { path: "/reports", labelKey: "reports", icon: LineChart, feature: "reports" },
   { path: "/expenses", labelKey: "expenses", icon: ReceiptText, feature: "expenses" },
-  { path: "/qr-code", labelKey: "qrCode", icon: QrCode, feature: "qrCode" },
   { path: "/settings", labelKey: "settings", icon: Settings, feature: "settings" }
 ];
 

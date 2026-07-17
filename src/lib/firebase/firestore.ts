@@ -118,20 +118,45 @@ export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: stri
   }
   const clientRef = doc(db, "clients", slug).withConverter(clientConverter);
   const existing = await getDoc(clientRef);
+  const prev = existing.exists() ? existing.data() : null;
   const payload: ClientAccount = {
     id: slug,
     name: client.name.trim(),
     slug,
-    status: client.status || "active",
-    ownerEmail: client.ownerEmail?.trim() || undefined,
-    defaultCurrency: client.defaultCurrency || "IQD",
-    defaultLanguage: client.defaultLanguage || "ckb",
-    createdAt: existing.exists() ? existing.data().createdAt : serverTimestamp(),
+    status: client.status || prev?.status || "active",
+    ownerEmail: client.ownerEmail?.trim() || prev?.ownerEmail || undefined,
+    defaultCurrency: client.defaultCurrency || prev?.defaultCurrency || "IQD",
+    defaultLanguage: client.defaultLanguage || prev?.defaultLanguage || "ckb",
+    blocked: client.blocked ?? prev?.blocked ?? false,
+    blockedReason: client.blockedReason ?? prev?.blockedReason,
+    blockedAt: client.blockedAt ?? prev?.blockedAt,
+    subscription: client.subscription ?? prev?.subscription,
+    trial: client.trial ?? prev?.trial,
+    billing: client.billing ?? prev?.billing,
+    createdAt: prev?.createdAt ?? serverTimestamp(),
     updatedAt: serverTimestamp()
   } as ClientAccount;
   await setDoc(clientRef, payload, { merge: true });
   if (!existing.exists()) await seedClientDefaults(slug, payload);
   return payload;
+}
+
+/** Partial update for supervisor billing / block controls. */
+export async function patchClient(slugInput: string, patch: Partial<ClientAccount>) {
+  const db = getFirebaseDb();
+  if (!db) throw new Error("Firestore is not configured.");
+  const slug = normalizeClientSlug(slugInput);
+  if (!slug) throw new Error("Client slug is required.");
+  const clientRef = doc(db, "clients", slug);
+  const existing = await getDoc(clientRef.withConverter(clientConverter));
+  if (!existing.exists()) throw new Error("Client not found.");
+  const { id: _id, slug: _slug, createdAt: _createdAt, ...safe } = patch;
+  await setDoc(
+    clientRef,
+    stripUndefined({ ...safe, updatedAt: serverTimestamp() }),
+    { merge: true }
+  );
+  return { ...existing.data(), ...safe, slug, id: slug } as ClientAccount;
 }
 
 const CLIENT_SUBCOLLECTIONS = [

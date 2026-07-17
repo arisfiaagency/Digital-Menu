@@ -471,6 +471,30 @@ export type AdminProfile = {
 
 export type ClientStatus = "active" | "disabled";
 
+export type ClientSubscriptionPlan = "free" | "basic" | "pro" | "custom";
+export type ClientSubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "none";
+
+export type ClientSubscription = {
+  plan: ClientSubscriptionPlan;
+  price: number;
+  currency: Currency;
+  status: ClientSubscriptionStatus;
+  period?: "monthly" | "yearly";
+  note?: string;
+};
+
+export type ClientTrial = {
+  startAt: string;
+  endAt: string;
+  days?: number;
+};
+
+export type ClientBilling = {
+  amountPaid: number;
+  amountOwed: number;
+  currency: Currency;
+};
+
 export type ClientAccount = {
   id: string;
   name: string;
@@ -479,6 +503,13 @@ export type ClientAccount = {
   ownerEmail?: string;
   defaultCurrency?: Currency;
   defaultLanguage?: Locale;
+  /** Supervisor kill-switch (e.g. unpaid). Overrides trial/subscription access. */
+  blocked?: boolean;
+  blockedReason?: string;
+  blockedAt?: string;
+  subscription?: ClientSubscription;
+  trial?: ClientTrial;
+  billing?: ClientBilling;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };

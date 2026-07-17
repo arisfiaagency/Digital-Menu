@@ -1,5 +1,6 @@
-import { QrDesigner } from "@/components/qr/qr-designer";
+import { redirect } from "next/navigation";
 
-export default function ClientAdminQrCodePage() {
-  return <QrDesigner />;
+/** QR generation moved to supervisor admin at /admin (QR Codes tab). */
+export default function ClientQrCodePage() {
+  redirect("/admin");
 }

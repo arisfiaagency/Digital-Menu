@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
+import { PlatformSupervisor } from "@/components/admin/platform-supervisor";
 
+/** Deep-link into supervisor QR Codes tab. */
 export default function AdminQrCodePage() {
-  notFound();
+  return <PlatformSupervisor initialTab="qr" />;
 }

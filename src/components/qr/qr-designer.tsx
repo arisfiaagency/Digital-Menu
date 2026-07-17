@@ -19,9 +19,20 @@ import type { LocalizedText, QrSettings } from "@/types/models";
 
 export type QrPrintVariant = "qr" | "design";
 
-export function QrDesigner({ printMode = false, printVariant = "design", tableLabels = [] }: { printMode?: boolean; printVariant?: QrPrintVariant; tableLabels?: string[] }) {
+export function QrDesigner({
+  printMode = false,
+  printVariant = "design",
+  tableLabels = [],
+  printPath
+}: {
+  printMode?: boolean;
+  printVariant?: QrPrintVariant;
+  tableLabels?: string[];
+  /** Supervisor print route (e.g. /admin/qr-code/print). Defaults to cafe admin print path. */
+  printPath?: string;
+}) {
   const { text, dir: textDir } = useAdminLocale();
-  const { adminBasePath, menuPath, publicPath } = useTenant();
+  const { clientSlug, adminBasePath, menuPath, publicPath } = useTenant();
   const [settings, setSettings] = useState<QrSettings>(defaultQrSettings);
   const [dataUrl, setDataUrl] = useState("");
   const [svg, setSvg] = useState("");
@@ -178,7 +189,13 @@ export function QrDesigner({ printMode = false, printVariant = "design", tableLa
   function openPrint(mode: QrPrintVariant) {
     setPrintMenuOpen(false);
     if (!tablesForPrint.length) return;
-    window.open(`${adminBasePath}/qr-code/print?mode=${mode}&tables=${encodeURIComponent(tablesForPrint.join(","))}`, "_blank", "noopener");
+    const base = printPath || `${adminBasePath}/qr-code/print`;
+    const params = new URLSearchParams({
+      mode,
+      tables: tablesForPrint.join(",")
+    });
+    if (printPath && clientSlug) params.set("client", clientSlug);
+    window.open(`${base}?${params.toString()}`, "_blank", "noopener");
   }
 
   const safeContrast = hasSafeQrContrast(settings.foregroundColor, settings.backgroundColor);

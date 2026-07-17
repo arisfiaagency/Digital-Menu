@@ -13,7 +13,6 @@ import {
   ListTree,
   MenuSquare,
   Plus,
-  QrCode,
   Receipt,
   ReceiptText,
   Settings,
@@ -103,7 +102,6 @@ export function DashboardStats() {
     { href: `${adminBasePath}/pos`, icon: Table2, label: text.pos, show: auth.can("pos") },
     { href: `${adminBasePath}/reports`, icon: BarChart3, label: text.reports, show: auth.can("reports") },
     { href: `${adminBasePath}/expenses`, icon: ReceiptText, label: text.expenses, show: auth.can("expenses") },
-    { href: `${adminBasePath}/qr-code`, icon: QrCode, label: text.qrCode, show: auth.can("qrCode") },
     { href: `${adminBasePath}/settings`, icon: Settings, label: text.settings, show: auth.can("settings") },
     { href: menuPath, icon: ExternalLink, label: text.viewPublicMenu, show: true, target: "_blank" }
   ];
