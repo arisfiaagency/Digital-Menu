@@ -17,6 +17,7 @@ import { CategoryIcon } from "@/components/menu/category-icon";
 import { LocationPinIcon, PhoneSignalIcon, WhatsappSendIcon } from "@/components/menu/menu-contact-icons";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { MenuItemCard } from "@/components/menu/menu-item-card";
+import { LuxuryMenu } from "@/components/menu/luxury-menu";
 import { LanguageGlobe } from "@/components/menu/language-globe";
 import { LanguageSelector } from "@/components/menu/language-selector";
 import { MenuBackground } from "@/components/menu/menu-background";
@@ -28,11 +29,19 @@ import { defaultAppData } from "@/data/default-data";
 import { localized, translate, locales } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney, normalizeSearch, serviceFeeAmount } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-import { menuDarkThemeCss, menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
+import { menuThemeCss, readableForegroundHslVar } from "@/lib/utils/color";
 import { useLocale } from "@/hooks/use-locale";
 import type { AppData, Category, CategoryNavStyle, ContactChipStyle, ContactLayout, Locale, MenuItem, MenuLogoStyle, MenuSettings, SearchStyle, SectionHeaderStyle } from "@/types/models";
 
-export function MenuApp({
+// Entry point: pick the structural skin, then render its layout. Each skin owns
+// its own layout/animation but shares the cart, item detail, and data helpers.
+export function MenuApp(props: { initialCategorySlug?: string; initialData?: AppData }) {
+  const skin = (props.initialData ?? defaultAppData).appearance?.menuSkin ?? "default";
+  if (skin === "luxury") return <LuxuryMenu {...props} />;
+  return <DefaultMenu {...props} />;
+}
+
+function DefaultMenu({
   initialCategorySlug,
   initialData
 }: {
@@ -363,8 +372,8 @@ export function MenuApp({
   );
 
   return (
-    <main dir="ltr" className="no-select relative min-h-screen" style={menuThemeStyle(appearance)}>
-      {menuDarkThemeCss(appearance) ? <style dangerouslySetInnerHTML={{ __html: menuDarkThemeCss(appearance)! }} /> : null}
+    <main dir="ltr" className="menu-theme-root no-select relative min-h-screen">
+      <style dangerouslySetInnerHTML={{ __html: menuThemeCss(appearance) }} />
       <MenuBackground appearance={appearance} />
       {/* Branded header */}
       <header className={cn("relative overflow-hidden border-b", headerBgType === "theme" && "bg-gradient-to-b from-accent/55 via-card/95 to-card/90")} style={headerStyle}>
@@ -906,7 +915,7 @@ function SectionHeader({
   );
 }
 
-function MenuItemDetailModal({
+export function MenuItemDetailModal({
   item,
   category,
   settings,

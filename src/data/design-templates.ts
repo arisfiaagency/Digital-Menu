@@ -23,9 +23,10 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "luxury",
     name: "Luxury",
-    blurb: "Champagne gold on cream, elevated & elegant.",
+    blurb: "Editorial luxury layout — champagne gold, serif display, generous space.",
     swatch: ["#9a7b4f", "#c6a46b", "#f7f1e8"],
     patch: {
+      menuSkin: "luxury",
       primaryColor: "#9a7b4f",
       secondaryColor: "#c6a46b",
       defaultTheme: "light",

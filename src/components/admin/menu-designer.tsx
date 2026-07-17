@@ -1817,6 +1817,17 @@ export function MenuDesigner() {
 
             <CollapsibleCard hidden={menuHidden("look")} defaultOpen title="Look Presets" hint="Apply colors & layout to the menu and welcome. Refine anything in the next steps.">
               <CardContent className="space-y-4">
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <Field label="Menu design (skin)">
+                    <Select value={appearance.menuSkin ?? "default"} onChange={(e) => update({ menuSkin: e.target.value as AppearanceSettings["menuSkin"] })}>
+                      <option value="default">Default — standard café layout</option>
+                      <option value="luxury">Luxury — editorial hero, index nav, refined rows</option>
+                    </Select>
+                  </Field>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Changes the whole layout &amp; interactions, not just colors. Colors and the presets below still apply on top of the chosen skin.
+                  </p>
+                </div>
                 <p className="text-sm text-muted-foreground">
                   Curated luxury looks for different venues. Apply one, then refine colors, cards, and welcome styling below — or save your current look as a reusable custom preset.
                 </p>

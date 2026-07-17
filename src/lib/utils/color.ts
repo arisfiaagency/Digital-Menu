@@ -197,6 +197,100 @@ export function menuDarkThemeCss(appearance?: AppearanceSettings): string | null
   return `.dark { ${rules.join("; ")}; }`;
 }
 
+/**
+ * Full menu theme as a scoped stylesheet (light + dark) for the live menu root.
+ * Colors/fonts are emitted as CSS rules — NOT inline styles — so the dark rule
+ * `.dark <scope>` can actually override the light `<scope>` values. (Inline
+ * custom properties on the menu root would otherwise win over any `.dark {}`
+ * rule, which left dark mode only partially applied.) Dark surfaces fall back to
+ * sensible defaults whenever the cafe uses custom light surfaces, so toggling
+ * dark always darkens the whole menu.
+ */
+export function menuThemeCss(appearance?: AppearanceSettings, scope = ".menu-theme-root"): string {
+  const light: string[] = [];
+  const dark: string[] = [];
+
+  if (appearance?.primaryColor) {
+    const primary = hexToHslVar(appearance.primaryColor);
+    if (primary) {
+      light.push(`--primary: ${primary}`);
+      const fg = readableForegroundHslVar(appearance.primaryColor);
+      if (fg) light.push(`--primary-foreground: ${fg}`);
+      light.push(`--ring: ${primary}`);
+    }
+  }
+  if (appearance?.secondaryColor) {
+    const secondary = hexToHslVar(appearance.secondaryColor);
+    if (secondary) {
+      light.push(`--secondary: ${secondary}`);
+      const fg = readableForegroundHslVar(appearance.secondaryColor);
+      if (fg) light.push(`--secondary-foreground: ${fg}`);
+    }
+  }
+  if (typeof appearance?.borderRadius === "number" && Number.isFinite(appearance.borderRadius)) {
+    light.push(`--radius: ${Math.max(0, appearance.borderRadius) / 16}rem`);
+  }
+  if (appearance?.pageSurfaceColor) {
+    const page = hexToHslVar(appearance.pageSurfaceColor);
+    if (page) light.push(`--background: ${page}`);
+  }
+  if (appearance?.cardSurfaceColor) {
+    const card = hexToHslVar(appearance.cardSurfaceColor);
+    if (card) {
+      light.push(`--card: ${card}`);
+      const fg = readableForegroundHslVar(appearance.cardSurfaceColor);
+      if (fg) light.push(`--card-foreground: ${fg}`);
+    }
+  }
+  const fontPreset = (appearance?.fontPreset || appearance?.font || "brand") as MenuFontPreset;
+  const fonts = FONT_PRESETS[fontPreset] || FONT_PRESETS.brand;
+  light.push(`font-family: ${fonts.body}`);
+  light.push(`--menu-heading-font: ${fonts.heading}`);
+  const scale = appearance?.fontScale ?? "md";
+  light.push(`font-size: ${FONT_SCALE[scale] || FONT_SCALE.md}`);
+  if (appearance?.headingWeight) {
+    const weight =
+      appearance.headingWeight === "normal"
+        ? "400"
+        : appearance.headingWeight === "semibold"
+          ? "600"
+          : appearance.headingWeight === "extrabold"
+            ? "800"
+            : "700";
+    light.push(`--menu-heading-weight: ${weight}`);
+  }
+
+  const darkPageHex = appearance?.darkPageSurfaceColor || (appearance?.pageSurfaceColor ? "#0f172a" : undefined);
+  if (darkPageHex) {
+    const page = hexToHslVar(darkPageHex);
+    if (page) dark.push(`--background: ${page}`);
+  }
+  const darkCardHex = appearance?.darkCardSurfaceColor || (appearance?.cardSurfaceColor ? "#1e293b" : undefined);
+  if (darkCardHex) {
+    const card = hexToHslVar(darkCardHex);
+    if (card) {
+      dark.push(`--card: ${card}`);
+      const fg = readableForegroundHslVar(darkCardHex);
+      if (fg) dark.push(`--card-foreground: ${fg}`);
+    }
+  }
+  const darkPrimaryHex = appearance?.darkPrimaryColor || appearance?.primaryColor;
+  if (darkPrimaryHex) {
+    const primary = hexToHslVar(darkPrimaryHex);
+    if (primary) {
+      dark.push(`--primary: ${primary}`);
+      const fg = readableForegroundHslVar(darkPrimaryHex);
+      if (fg) dark.push(`--primary-foreground: ${fg}`);
+      dark.push(`--ring: ${primary}`);
+    }
+  }
+
+  const blocks: string[] = [];
+  if (light.length) blocks.push(`${scope} { ${light.join("; ")}; }`);
+  if (dark.length) blocks.push(`.dark ${scope} { ${dark.join("; ")}; }`);
+  return blocks.join("\n");
+}
+
 export function menuHeadingFontStyle(appearance?: AppearanceSettings): CSSProperties {
   const fontPreset = (appearance?.fontPreset || appearance?.font || "brand") as MenuFontPreset;
   const fonts = FONT_PRESETS[fontPreset] || FONT_PRESETS.brand;

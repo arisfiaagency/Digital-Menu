@@ -311,7 +311,12 @@ export type WelcomeEnterStyle = "pill" | "rounded" | "square" | "outline";
 export type WelcomeCardWidth = "narrow" | "normal" | "wide";
 export type WelcomeCardAlign = "center" | "bottom";
 
+export type MenuSkin = "default" | "luxury";
+
 export type AppearanceSettings = {
+  // The structural skin (whole layout/UX), independent of colors. "default" is
+  // the standard café layout; "luxury" renders an editorial, distinct design.
+  menuSkin?: MenuSkin;
   primaryColor: string;
   secondaryColor: string;
   font: string;

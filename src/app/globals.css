@@ -298,6 +298,18 @@ body.overflow-lock {
   animation: pop-in 0.15s ease-out;
 }
 
+/* Luxury skin: fade + rise as blocks scroll into view (JS toggles .is-in). */
+.lux-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: opacity, transform;
+}
+.lux-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
 /* Admin settings section entrance */
 @keyframes settings-panel-open {
   from {
@@ -844,6 +856,11 @@ body.overflow-lock {
   .cart-fab-in,
   .cart-bump {
     animation: none;
+  }
+  .lux-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 
