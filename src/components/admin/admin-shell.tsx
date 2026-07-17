@@ -178,6 +178,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           text={text}
           textDir={textDir}
           userEmail={auth.user.email || ""}
+          profileName={auth.profile?.displayName || auth.profile?.username || text.adminProfile}
+          profileHandle={auth.profile?.username ? `@${auth.profile.username}` : auth.user.email || ""}
+          roleLabel={auth.role === "employee" ? text.roleEmployee : text.roleAdmin}
           navItems={allowedNav}
           canManageUsers={auth.canManageUsers}
           canSettings={auth.can("settings")}
@@ -218,6 +221,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           text={text}
           textDir={textDir}
           userEmail={auth.user.email || ""}
+          profileName={auth.profile?.displayName || auth.profile?.username || text.adminProfile}
+          profileHandle={auth.profile?.username ? `@${auth.profile.username}` : auth.user.email || ""}
+          roleLabel={auth.role === "employee" ? text.roleEmployee : text.roleAdmin}
           navItems={allowedNav}
           canManageUsers={auth.canManageUsers}
           canSettings={auth.can("settings")}
@@ -243,6 +249,9 @@ function AdminNavigation({
   text,
   textDir,
   userEmail,
+  profileName,
+  profileHandle,
+  roleLabel,
   navItems,
   canManageUsers,
   canSettings,
@@ -256,6 +265,9 @@ function AdminNavigation({
   text: Record<string, string>;
   textDir: "ltr" | "rtl";
   userEmail: string;
+  profileName: string;
+  profileHandle: string;
+  roleLabel: string;
   navItems: { href: string; labelKey: string; icon: LucideIcon; feature: AdminFeature }[];
   canManageUsers: boolean;
   canSettings: boolean;
@@ -294,13 +306,13 @@ function AdminNavigation({
           );
         })}
       </nav>
-      <div className="mt-6 rounded-md border p-3">
-        <AdminPreferences />
-      </div>
       <AdminProfileMenu
         text={text}
         textDir={textDir}
         userEmail={userEmail}
+        profileName={profileName}
+        profileHandle={profileHandle}
+        roleLabel={roleLabel}
         canManageUsers={canManageUsers}
         canSettings={canSettings}
         usersHref={usersHref}
@@ -317,6 +329,9 @@ function AdminProfileMenu({
   text,
   textDir,
   userEmail,
+  profileName,
+  profileHandle,
+  roleLabel,
   canManageUsers,
   canSettings,
   usersHref,
@@ -328,6 +343,9 @@ function AdminProfileMenu({
   text: Record<string, string>;
   textDir: "ltr" | "rtl";
   userEmail: string;
+  profileName: string;
+  profileHandle: string;
+  roleLabel: string;
   canManageUsers: boolean;
   canSettings: boolean;
   usersHref: string;
@@ -372,6 +390,9 @@ function AdminProfileMenu({
     await onLogout();
   }
 
+  const avatarText = getProfileInitials(profileName || userEmail || text.adminProfile);
+  const secondaryProfileText = profileHandle || userEmail || text.email;
+
   return (
     <div ref={ref} className="relative mt-auto pt-4">
       {open ? (
@@ -379,8 +400,37 @@ function AdminProfileMenu({
           role="menu"
           className="pop-in absolute bottom-full left-0 z-20 mb-2 max-h-[calc(100vh-7rem)] w-full overflow-y-auto rounded-2xl border bg-card p-1.5 shadow-xl"
         >
+          <div className="mb-1 rounded-xl bg-muted/40 p-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                {avatarText}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span dir={textDir} className="block truncate text-sm font-semibold">
+                  {profileName}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">{secondaryProfileText}</span>
+              </span>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="min-w-0">
+                <span dir={textDir} className="block truncate text-xs font-semibold uppercase text-muted-foreground">
+                  {text.profilePreferences}
+                </span>
+                <span dir={textDir} className="block truncate text-xs text-muted-foreground">{roleLabel}</span>
+              </span>
+              <AdminPreferences compact />
+            </div>
+          </div>
           {canSettings ? (
             <div className="rounded-xl bg-muted/40 p-1">
+              <ProfileMenuLink
+                href={`${settingsHref}#account`}
+                icon={CircleUserRound}
+                label={text.adminProfile}
+                textDir={textDir}
+                onClick={handleNavigate}
+              />
               <ProfileMenuLink href={settingsHref} icon={Settings} label={text.settings} textDir={textDir} onClick={handleNavigate} />
               <ProfileMenuLink
                 href={`${settingsHref}#general`}
@@ -441,18 +491,26 @@ function AdminProfileMenu({
         onClick={() => setOpen((value) => !value)}
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <CircleUserRound className="h-5 w-5" aria-hidden />
+          <span className="text-xs font-bold">{avatarText}</span>
         </span>
         <span className="min-w-0 flex-1">
           <span dir={textDir} className="block truncate text-sm font-semibold">
-            {text.adminProfile}
+            {profileName}
           </span>
-          <span className="block truncate text-xs text-muted-foreground">{userEmail || text.email}</span>
+          <span className="block truncate text-xs text-muted-foreground">{secondaryProfileText}</span>
         </span>
         <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
       </button>
     </div>
   );
+}
+
+function getProfileInitials(value: string) {
+  const cleaned = value.trim();
+  const name = cleaned.includes("@") ? cleaned.split("@")[0] : cleaned;
+  const parts = name.split(/\s+/).filter(Boolean);
+  const letters = parts.length > 1 ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}` : name.slice(0, 2);
+  return (letters || "A").toLocaleUpperCase();
 }
 
 function ProfileMenuLink({
