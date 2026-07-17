@@ -446,6 +446,7 @@ export type QrSettings = {
   backgroundColor: string;
   includeLogo: boolean;
   logoUrl?: string;
+  logoPath?: string;
   title: LocalizedText;
   subtitle: OptionalLocalizedText;
   updatedAt?: Timestamp;

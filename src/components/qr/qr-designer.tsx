@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useAdminLocale } from "@/components/admin/admin-preferences";
+import { ImageUploadField } from "@/components/forms/image-upload-field";
 import { getAdminAppData, getPosState, saveSettings } from "@/lib/firebase/firestore";
 import { hasSafeQrContrast } from "@/lib/utils/qr";
 import { cn } from "@/lib/utils/cn";
@@ -64,6 +66,9 @@ export function QrDesigner({
           ...defaultQrSettings,
           ...data.qr,
           menuUrl: nextUrl,
+          includeLogo: data.qr?.includeLogo === true,
+          logoUrl: data.qr?.logoUrl,
+          logoPath: data.qr?.logoPath,
           foregroundColor: data.qr?.foregroundColor || defaultQrSettings.foregroundColor,
           backgroundColor: data.qr?.backgroundColor || defaultQrSettings.backgroundColor,
           title: {
@@ -110,7 +115,8 @@ export function QrDesigner({
       };
     }
 
-    const logoUrl = settings.logoUrl || "/site-icon.png";
+    const shouldEmbedLogo = settings.includeLogo && Boolean(settings.logoUrl);
+    const logoUrl = shouldEmbedLogo ? settings.logoUrl! : "";
     const dark = normalizeHexColor(settings.foregroundColor, defaultQrSettings.foregroundColor);
     const light = normalizeHexColor(settings.backgroundColor, defaultQrSettings.backgroundColor);
 
@@ -132,7 +138,10 @@ export function QrDesigner({
             color: { dark, light }
           })
         ]);
-        const withLogo = await composeQrWithLogo(baseDataUrl, logoUrl, 640).catch(() => baseDataUrl);
+        const withLogo =
+          shouldEmbedLogo && logoUrl
+            ? await composeQrWithLogo(baseDataUrl, logoUrl, 640).catch(() => baseDataUrl)
+            : baseDataUrl;
         if (!active) return;
         setDataUrl(withLogo);
         setSvg(nextSvg);
@@ -153,6 +162,7 @@ export function QrDesigner({
     settings.foregroundColor,
     settings.backgroundColor,
     settings.logoUrl,
+    settings.includeLogo,
     text.qrGenerationFailed
   ]);
 
@@ -223,7 +233,7 @@ export function QrDesigner({
   }
 
   function reset() {
-    setSettings({ ...defaultQrSettings, menuUrl });
+    setSettings({ ...defaultQrSettings, menuUrl, includeLogo: false, logoUrl: undefined, logoPath: undefined });
     setMessage("");
     setError("");
   }
@@ -251,6 +261,7 @@ export function QrDesigner({
   const validMenuUrl = isValidUrl(settings.menuUrl);
   const readyToScan = validMenuUrl && safeContrast && Boolean(dataUrl);
   const logoSrc = settings.logoUrl || "/site-icon.png";
+  const uploadPath = clientSlug ? `clients/${clientSlug}/qr-logo` : "qr-logo";
   const displayUrl = settings.menuUrl.replace(/^https?:\/\//, "").replace(/\/+$/, "");
 
   if (printMode) {
@@ -369,6 +380,49 @@ export function QrDesigner({
                   <Field label={text.backgroundColor}><Input type="color" value={settings.backgroundColor} onChange={(e) => setSettings({ ...settings, backgroundColor: e.target.value })} /></Field>
                 </div>
                 {!safeContrast ? <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{text.poorQrContrast}</p> : null}
+              </section>
+
+              <section className="space-y-3 rounded-xl border bg-muted/15 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">{text.logoProtection}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Upload a square logo to place in the center of the QR. Keep it simple so phones can still scan it.
+                    </p>
+                  </div>
+                  <Switch
+                    label={text.includeLogo}
+                    checked={settings.includeLogo}
+                    onCheckedChange={(checked) => setSettings({ ...settings, includeLogo: checked })}
+                  />
+                </div>
+                {settings.includeLogo ? (
+                  <ImageUploadField
+                    label={text.logo}
+                    path={uploadPath}
+                    imageUrl={settings.logoUrl}
+                    helpText="PNG or JPG works best. A square logo scans more reliably."
+                    onUploaded={(result) =>
+                      setSettings({
+                        ...settings,
+                        includeLogo: true,
+                        logoUrl: result.imageUrl,
+                        logoPath: result.imagePath
+                      })
+                    }
+                    onRemoved={() =>
+                      setSettings({
+                        ...settings,
+                        logoUrl: undefined,
+                        logoPath: undefined
+                      })
+                    }
+                  />
+                ) : (
+                  <p className="rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                    Turn on “{text.includeLogo}” to upload a cafe logo into the QR.
+                  </p>
+                )}
               </section>
 
               <section className="space-y-3 rounded-xl border bg-muted/15 p-4">
@@ -626,6 +680,7 @@ function download(href: string, filename: string) {
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
