@@ -9,7 +9,6 @@ import {
   ChevronDown,
   CircleUserRound,
   ExternalLink,
-  KeyRound,
   LineChart,
   ListTree,
   LogOut,
@@ -394,7 +393,7 @@ function AdminProfileMenu({
   const secondaryProfileText = profileHandle || userEmail || text.email;
 
   return (
-    <div ref={ref} className="relative mt-auto pt-4">
+    <div ref={ref} className="relative mt-auto flex justify-center pt-4">
       {open ? (
         <div
           role="menu"
@@ -456,14 +455,6 @@ function AdminProfileMenu({
                 onClick={handleNavigate}
                 nested
               />
-              <ProfileMenuLink
-                href={`${settingsHref}#account`}
-                icon={KeyRound}
-                label={text.accountSettings}
-                textDir={textDir}
-                onClick={handleNavigate}
-                nested
-              />
             </div>
           ) : null}
           {canManageUsers ? (
@@ -484,22 +475,23 @@ function AdminProfileMenu({
 
       <button
         type="button"
-        className="focus-ring flex w-full items-center gap-3 rounded-2xl border bg-background/60 p-2.5 text-start transition-colors hover:bg-muted"
+        className="focus-ring group relative flex h-12 w-12 items-center justify-center rounded-full border bg-background/70 text-primary shadow-sm transition-colors hover:bg-muted"
         aria-label={text.adminProfile}
         aria-haspopup="menu"
         aria-expanded={open}
+        title={`${profileName} - ${secondaryProfileText}`}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <span className="text-xs font-bold">{avatarText}</span>
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-xs font-bold">
+          {avatarText}
         </span>
-        <span className="min-w-0 flex-1">
-          <span dir={textDir} className="block truncate text-sm font-semibold">
-            {profileName}
-          </span>
-          <span className="block truncate text-xs text-muted-foreground">{secondaryProfileText}</span>
-        </span>
-        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
+        <ChevronDown
+          className={cn(
+            "absolute -right-1 bottom-3 h-3.5 w-3.5 rounded-full bg-card text-muted-foreground shadow-sm transition-transform group-hover:text-foreground",
+            open && "rotate-180"
+          )}
+          aria-hidden
+        />
       </button>
     </div>
   );
