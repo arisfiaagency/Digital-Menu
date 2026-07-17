@@ -525,8 +525,9 @@ export async function cancelExpense(expenseId: string, cancelledByUid?: string) 
 export async function saveSettings(section: "general" | "menu" | "appearance" | "qr", value: Record<string, unknown>) {
   const db = getFirebaseDb();
   if (!db) return;
-  await updateDoc(tenantDoc(db, "settings", section), { ...value, updatedAt: serverTimestamp() }).catch(async () => {
-    await setDoc(tenantDoc(db, "settings", section), { ...value, updatedAt: serverTimestamp() });
+  const payload = stripUndefined({ ...value, updatedAt: serverTimestamp() }) as Record<string, unknown>;
+  await updateDoc(tenantDoc(db, "settings", section), payload).catch(async () => {
+    await setDoc(tenantDoc(db, "settings", section), payload, { merge: true });
   });
 }
 

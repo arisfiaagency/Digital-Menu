@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils/cn";
 import { defaultQrSettings } from "@/data/default-data";
 import { useTenant } from "@/components/tenant-provider";
 import type { LocalizedText, QrSettings } from "@/types/models";
+import { deleteField } from "firebase/firestore";
 
 export type QrPrintVariant = "qr" | "design";
 
@@ -181,7 +182,16 @@ export function QrDesigner({
     }
     setSaving(true);
     try {
-      await saveSettings("qr", settings as unknown as Record<string, unknown>);
+      await saveSettings("qr", {
+        menuUrl: settings.menuUrl,
+        foregroundColor: settings.foregroundColor,
+        backgroundColor: settings.backgroundColor,
+        includeLogo: settings.includeLogo,
+        title: settings.title,
+        subtitle: settings.subtitle,
+        logoUrl: settings.logoUrl || deleteField(),
+        logoPath: settings.logoPath || deleteField()
+      } as unknown as Record<string, unknown>);
       setMessage(text.qrSettingsSaved);
     } catch (err) {
       setError(err instanceof Error ? err.message : text.settingsSaveFailed);
