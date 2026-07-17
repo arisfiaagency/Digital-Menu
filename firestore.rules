@@ -108,6 +108,11 @@ service cloud.firestore {
       allow list, create, update, delete: if isPlatformFullAdmin();
     }
 
+    match /platformSettings/{docId} {
+      allow read: if isPlatformAdmin();
+      allow create, update, delete: if isPlatformFullAdmin();
+    }
+
     match /clients/{clientId} {
       allow get, list: if resource.data.status == 'active' || isPlatformAdmin();
       allow create, update, delete: if isPlatformFullAdmin();

@@ -23,7 +23,7 @@ import { getFirebaseDb } from "@/lib/firebase/client";
 import { removeImage } from "@/lib/supabase/storage";
 import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { slugify } from "@/lib/utils/format";
-import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape } from "@/types/models";
+import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, SavedLookPreset } from "@/types/models";
 
 function converter<T extends { id: string }>(): FirestoreDataConverter<T> {
   return {
@@ -502,6 +502,25 @@ export async function saveSettings(section: "general" | "menu" | "appearance" | 
   await updateDoc(tenantDoc(db, "settings", section), { ...value, updatedAt: serverTimestamp() }).catch(async () => {
     await setDoc(tenantDoc(db, "settings", section), { ...value, updatedAt: serverTimestamp() });
   });
+}
+
+export async function listCustomLookPresets(): Promise<SavedLookPreset[]> {
+  const db = getFirebaseDb();
+  if (!db) return [];
+  const snap = await getDoc(doc(db, "platformSettings", "lookPresets"));
+  if (!snap.exists()) return [];
+  const presets = snap.data()?.presets;
+  return Array.isArray(presets) ? (presets as SavedLookPreset[]) : [];
+}
+
+export async function saveCustomLookPresets(presets: SavedLookPreset[]) {
+  const db = getFirebaseDb();
+  if (!db) throw new Error("Firestore is not configured.");
+  await setDoc(
+    doc(db, "platformSettings", "lookPresets"),
+    { presets, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
 }
 
 export async function getPosState(): Promise<PosState> {

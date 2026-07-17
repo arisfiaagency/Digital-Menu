@@ -430,6 +430,16 @@ export type AppearanceSettings = {
   updatedAt?: Timestamp;
 };
 
+/** Supervisor-saved look preset (platform-wide), shown next to built-in Look Presets. */
+export type SavedLookPreset = {
+  id: string;
+  name: string;
+  blurb: string;
+  swatch: [string, string, string];
+  patch: Partial<AppearanceSettings>;
+  createdAt?: string;
+};
+
 export type QrSettings = {
   menuUrl: string;
   foregroundColor: string;

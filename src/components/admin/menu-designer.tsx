@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, Loader2, Save } from "lucide-react";
+import { CheckCircle2, ChevronDown, Loader2, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -13,7 +13,13 @@ import { ImageUploadField } from "@/components/forms/image-upload-field";
 import { MenuItemCard } from "@/components/menu/menu-item-card";
 import { cn } from "@/lib/utils/cn";
 import { hexToRgba, menuThemeStyle, readableForegroundHslVar } from "@/lib/utils/color";
-import { getAdminAppData, listClients, saveSettings } from "@/lib/firebase/firestore";
+import {
+  getAdminAppData,
+  listClients,
+  listCustomLookPresets,
+  saveCustomLookPresets,
+  saveSettings
+} from "@/lib/firebase/firestore";
 import { setActiveClientSlug } from "@/lib/tenant";
 import { defaultAppearanceSettings, defaultGeneralSettings, defaultMenuItems, defaultMenuSettings } from "@/data/default-data";
 import { localeLabels } from "@/lib/i18n/config";
@@ -23,7 +29,7 @@ import {
   isFloatingIconPattern,
   PATTERN_SELECT_OPTIONS
 } from "@/lib/menu-patterns";
-import type { AppearanceSettings, ClientAccount, GeneralSettings, Locale, MenuSettings } from "@/types/models";
+import type { AppearanceSettings, ClientAccount, GeneralSettings, Locale, MenuSettings, SavedLookPreset } from "@/types/models";
 
 const MENU_SETTING_LABELS: Record<string, string> = {
   showImages: "Show item photos",
@@ -46,6 +52,29 @@ type LookPreset = {
   swatch: [string, string, string];
   patch: Partial<AppearanceSettings>;
 };
+
+function appearanceToPresetPatch(appearance: AppearanceSettings): Partial<AppearanceSettings> {
+  const { updatedAt: _updatedAt, ...rest } = appearance;
+  return rest;
+}
+
+function presetSwatchFromAppearance(appearance: AppearanceSettings): [string, string, string] {
+  return [
+    appearance.primaryColor || "#9a7b4f",
+    appearance.secondaryColor || "#c6a46b",
+    appearance.pageSurfaceColor || appearance.backgroundColor || "#f7f1e8"
+  ];
+}
+
+function slugifyPresetId(name: string) {
+  const base = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  return base || `custom-${Date.now().toString(36)}`;
+}
 
 const LOOK_PRESETS: LookPreset[] = [
   {
@@ -1105,11 +1134,21 @@ export function MenuDesigner() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [activeDesignerTab, setActiveDesignerTab] = useState<DesignerTab>("menu");
+  const [customPresets, setCustomPresets] = useState<SavedLookPreset[]>([]);
+  const [presetName, setPresetName] = useState("");
+  const [presetBlurb, setPresetBlurb] = useState("");
+  const [savingPreset, setSavingPreset] = useState(false);
+  const [deletingPresetId, setDeletingPresetId] = useState<string | null>(null);
 
   useEffect(() => {
     listClients()
       .then(setClients)
       .catch(() => setError("Could not load cafes."));
+    listCustomLookPresets()
+      .then(setCustomPresets)
+      .catch(() => {
+        /* custom presets are optional; ignore load failures */
+      });
   }, []);
 
   async function loadCafe(next: string) {
@@ -1156,6 +1195,55 @@ export function MenuDesigner() {
   const update = (patch: Partial<AppearanceSettings>) => setAppearance((prev) => ({ ...prev, ...patch }));
   const updateMenu = (patch: Partial<MenuSettings>) => setMenu((prev) => ({ ...prev, ...patch }));
   const backgroundType = appearance.backgroundType ?? "preset";
+
+  async function saveCurrentLookAsPreset() {
+    const name = presetName.trim();
+    if (!name) {
+      setError("Enter a name for your custom look preset.");
+      return;
+    }
+    setSavingPreset(true);
+    setError("");
+    setMessage("");
+    try {
+      const idBase = slugifyPresetId(name);
+      const id = customPresets.some((p) => p.id === idBase) ? `${idBase}-${Date.now().toString(36)}` : idBase;
+      const next: SavedLookPreset = {
+        id,
+        name,
+        blurb: presetBlurb.trim() || "Custom saved look",
+        swatch: presetSwatchFromAppearance(appearance),
+        patch: appearanceToPresetPatch(appearance),
+        createdAt: new Date().toISOString()
+      };
+      const presets = [next, ...customPresets];
+      await saveCustomLookPresets(presets);
+      setCustomPresets(presets);
+      setPresetName("");
+      setPresetBlurb("");
+      setMessage(`Saved “${name}” to Look Presets.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the look preset.");
+    } finally {
+      setSavingPreset(false);
+    }
+  }
+
+  async function deleteCustomPreset(id: string) {
+    setDeletingPresetId(id);
+    setError("");
+    setMessage("");
+    try {
+      const presets = customPresets.filter((p) => p.id !== id);
+      await saveCustomLookPresets(presets);
+      setCustomPresets(presets);
+      setMessage("Custom look preset removed.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete the look preset.");
+    } finally {
+      setDeletingPresetId(null);
+    }
+  }
 
   function toggleEnabledLanguage(entry: Locale) {
     const current = general.enabledLanguages?.length ? general.enabledLanguages : ALL_LOCALES;
@@ -1464,41 +1552,138 @@ export function MenuDesigner() {
             </CollapsibleCard>
 
             <CollapsibleCard hidden={activeDesignerTab !== "menu"} title="Look Presets" hint="See suggested presets for the menu">
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Curated luxury looks for different venues. Apply one, then refine colors, cards, and welcome styling below.
+                  Curated luxury looks for different venues. Apply one, then refine colors, cards, and welcome styling below — or save your current look as a reusable custom preset.
                 </p>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {LOOK_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => update(preset.patch)}
-                      className="group overflow-hidden rounded-2xl border bg-card text-start shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
-                    >
-                      <div
-                        className="h-16 w-full"
-                        style={{
-                          backgroundImage: `linear-gradient(135deg, ${preset.swatch[2]} 0%, ${preset.swatch[0]} 48%, ${preset.swatch[1]} 100%)`
-                        }}
+
+                <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                  <p className="text-sm font-medium">Save current look as preset</p>
+                  <p className="text-xs text-muted-foreground">
+                    Captures this cafe’s Menu Design appearance (colors, cards, welcome, backgrounds). Saved presets appear for every cafe.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                    <Field label="Preset name">
+                      <Input
+                        value={presetName}
+                        onChange={(e) => setPresetName(e.target.value)}
+                        placeholder="e.g. Mihrako evening"
+                        maxLength={48}
                       />
-                      <div className="space-y-2 p-3">
-                        <div className="flex items-center gap-1.5">
-                          {preset.swatch.map((color) => (
-                            <span
-                              key={color}
-                              className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
-                              style={{ backgroundColor: color }}
+                    </Field>
+                    <Field label="Short description">
+                      <Input
+                        value={presetBlurb}
+                        onChange={(e) => setPresetBlurb(e.target.value)}
+                        placeholder="Optional blurb"
+                        maxLength={80}
+                      />
+                    </Field>
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        onClick={() => void saveCurrentLookAsPreset()}
+                        disabled={savingPreset || !slug}
+                        className="w-full sm:w-auto"
+                      >
+                        {savingPreset ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        <span className="ms-2">Save preset</span>
+                      </Button>
+                    </div>
+                  </div>
+                  {!slug ? (
+                    <p className="text-xs text-muted-foreground">Load a cafe first so the current look can be captured.</p>
+                  ) : null}
+                </div>
+
+                {customPresets.length ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Your custom presets</p>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {customPresets.map((preset) => (
+                        <div
+                          key={preset.id}
+                          className="group relative overflow-hidden rounded-2xl border bg-card text-start shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
+                        >
+                          <button type="button" className="w-full text-start" onClick={() => update(preset.patch)}>
+                            <div
+                              className="h-16 w-full"
+                              style={{
+                                backgroundImage: `linear-gradient(135deg, ${preset.swatch[2]} 0%, ${preset.swatch[0]} 48%, ${preset.swatch[1]} 100%)`
+                              }}
                             />
-                          ))}
+                            <div className="space-y-2 p-3 pe-10">
+                              <div className="flex items-center gap-1.5">
+                                {preset.swatch.map((color) => (
+                                  <span
+                                    key={`${preset.id}-${color}`}
+                                    className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
+                                    style={{ backgroundColor: color }}
+                                  />
+                                ))}
+                                <span className="ms-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                  Custom
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold tracking-tight">{preset.name}</p>
+                                <p className="text-xs text-muted-foreground">{preset.blurb}</p>
+                              </div>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Delete ${preset.name}`}
+                            disabled={deletingPresetId === preset.id}
+                            onClick={() => void deleteCustomPreset(preset.id)}
+                            className="absolute end-2 top-2 rounded-full border bg-background/90 p-1.5 text-muted-foreground opacity-80 transition hover:bg-destructive hover:text-destructive-foreground hover:opacity-100"
+                          >
+                            {deletingPresetId === preset.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold tracking-tight">{preset.name}</p>
-                          <p className="text-xs text-muted-foreground">{preset.blurb}</p>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Built-in presets</p>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {LOOK_PRESETS.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => update(preset.patch)}
+                        className="group overflow-hidden rounded-2xl border bg-card text-start shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
+                      >
+                        <div
+                          className="h-16 w-full"
+                          style={{
+                            backgroundImage: `linear-gradient(135deg, ${preset.swatch[2]} 0%, ${preset.swatch[0]} 48%, ${preset.swatch[1]} 100%)`
+                          }}
+                        />
+                        <div className="space-y-2 p-3">
+                          <div className="flex items-center gap-1.5">
+                            {preset.swatch.map((color) => (
+                              <span
+                                key={color}
+                                className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold tracking-tight">{preset.name}</p>
+                            <p className="text-xs text-muted-foreground">{preset.blurb}</p>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </CollapsibleCard>
