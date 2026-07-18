@@ -9,7 +9,6 @@ export const ADMIN_FEATURES: AdminFeature[] = [
   "pos",
   "reports",
   "expenses",
-  "qrCode",
   "settings"
 ];
 

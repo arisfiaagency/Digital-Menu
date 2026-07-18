@@ -2,8 +2,6 @@
 
 import { useEffect, type CSSProperties } from "react";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/menu/language-selector";
 import { ThemeToggle } from "@/components/menu/theme-toggle";
 import { useLocale, publicLocaleChangeEvent, publicLocaleStorageKey } from "@/hooks/use-locale";
@@ -24,14 +22,12 @@ export function WelcomeScreen({
   initialGeneral,
   initialSocial,
   initialAppearance,
-  initialMenu,
-  menuHref = "/menu"
+  initialMenu
 }: {
   initialGeneral?: GeneralSettings;
   initialSocial?: GeneralSettings["socialLinks"];
   initialAppearance?: AppearanceSettings;
   initialMenu?: MenuSettings;
-  menuHref?: string;
 }) {
   const { locale, setLocale, dir: textDir } = useLocale(WELCOME_DEFAULT_LOCALE, {
     documentDirection: "ltr",
@@ -52,8 +48,7 @@ export function WelcomeScreen({
   const welcomeLogoShape = appearance.welcomeLogoStyle ?? "circle";
 
   // Brand mint #A4D8A6 (HSL 122 40% 75%) as the accent. Deep-green foreground
-  // keeps text legible on the light mint. Scoped to this subtree so the shared
-  // Button / selectors recolor here without affecting /menu or /admin.
+  // keeps text legible on the light mint.
   const accentColor = appearance.welcomeAccentColor || appearance.primaryColor || "#A4D8A6";
   const accentStyle = welcomeThemeStyle(accentColor);
   const mainStyle = { ...accentStyle, ...welcomeBackgroundStyle(appearance) } as CSSProperties;
@@ -62,19 +57,15 @@ export function WelcomeScreen({
   const welcomeHeaderStyle = { color: appearance.welcomeHeaderTextColor || accentColor };
   const helperTextStyle = appearance.welcomeHelperTextColor ? { color: appearance.welcomeHelperTextColor } : mutedTextStyle;
 
-  // The welcome always shows Kurdish by default, but the menu reads the persisted
-  // locale (`stone-cafe-menu-locale`). Without syncing, a previously chosen language
-  // (e.g. English) lingers in storage, so pressing Enter on the Kurdish-looking
-  // welcome would still load the menu in that old language. Reset storage to the
-  // welcome default on open so "what you see is what you get"; an explicit pick on
-  // the welcome still overwrites it and carries into the menu.
+  // The welcome always shows Kurdish by default regardless of a previously stored
+  // locale. An explicit language choice still updates the shared preference.
   useEffect(() => {
     window.localStorage.setItem(publicLocaleStorageKey, WELCOME_DEFAULT_LOCALE);
     window.dispatchEvent(new CustomEvent(publicLocaleChangeEvent, { detail: WELCOME_DEFAULT_LOCALE }));
   }, []);
 
   // Lock the page to a single, non-scrollable screen (prevents iOS Safari
-  // rubber-band overscroll). Reverted on unmount so /menu can scroll normally.
+  // rubber-band overscroll).
   useEffect(() => {
     document.documentElement.classList.add("overflow-lock");
     document.body.classList.add("overflow-lock");
@@ -83,14 +74,6 @@ export function WelcomeScreen({
       document.body.classList.remove("overflow-lock");
     };
   }, []);
-
-  // The welcome page pins `position: fixed` on <body> for the scroll lock.
-  // Release it before leaving so the browser tears the lock down cleanly and
-  // never shows /menu clipped behind a leftover fixed body.
-  function releaseScrollLock() {
-    document.documentElement.classList.remove("overflow-lock");
-    document.body.classList.remove("overflow-lock");
-  }
 
   return (
     <main
@@ -201,19 +184,6 @@ export function WelcomeScreen({
           </div>
         </div>
 
-        {/* Enter — a plain <a> (hard navigation), NOT next/link. iOS in-app
-            browsers (Instagram / Facebook WKWebView) frequently render a blank
-            screen after a client-side soft navigation and only paint on manual
-            refresh. A full page load reliably paints the server-rendered menu
-            and guarantees the fixed-body scroll lock is fully released. The
-            chosen language still carries over via localStorage. */}
-        <Button asChild size="default" className={cn("mt-8 h-12 w-full text-base font-semibold", welcomeEnterButtonClass(appearance))} variant={welcomeEnterButtonVariant(appearance)}>
-          <a href={menuHref} onClick={releaseScrollLock}>
-            <span dir={textDir}>{translate(locale, "welcome.enter")}</span>
-            <ArrowRight className="h-5 w-5" aria-hidden />
-          </a>
-        </Button>
-
         {appearance.welcomeShowSocialLinks !== false && social && Object.values(social).some((value) => value?.trim()) ? (
           <div className="mt-6 space-y-2">
             <p dir={textDir} className="text-xs font-medium text-muted-foreground" style={helperTextStyle}>
@@ -256,18 +226,6 @@ function welcomeCardWidthClass(appearance: AppearanceSettings) {
   if (width === "narrow") return "max-w-sm";
   if (width === "wide") return "max-w-xl";
   return "max-w-md";
-}
-
-function welcomeEnterButtonClass(appearance: AppearanceSettings) {
-  const style = appearance.welcomeEnterStyle ?? "pill";
-  if (style === "square") return "rounded-md";
-  if (style === "rounded") return "rounded-xl";
-  if (style === "outline") return "rounded-full";
-  return "rounded-full";
-}
-
-function welcomeEnterButtonVariant(appearance: AppearanceSettings): "default" | "outline" {
-  return (appearance.welcomeEnterStyle ?? "pill") === "outline" ? "outline" : "default";
 }
 
 function welcomeLogoClass(style: "circle" | "rounded" | "square") {

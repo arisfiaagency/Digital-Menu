@@ -102,11 +102,6 @@ async function main() {
   batch.set(clientRef.collection("settings").doc("menu"), { ...defaultAppData.menu, updatedAt: now }, { merge: true });
   batch.set(clientRef.collection("settings").doc("appearance"), { ...defaultAppData.appearance, updatedAt: now }, { merge: true });
   batch.set(
-    clientRef.collection("settings").doc("qr"),
-    { ...defaultAppData.qr, menuUrl: `${siteOrigin}/${slug}`, updatedAt: now },
-    { merge: true }
-  );
-  batch.set(
     clientRef.collection("settings").doc("pos"),
     {
       tables: Array.from({ length: 8 }, (_, index) => ({
@@ -140,7 +135,6 @@ async function main() {
   // Drop legacy root collections note is intentional — data now lives under clients/{slug}.
   console.log(`Seeded clients/${slug}`);
   console.log(`  Welcome: ${siteOrigin}/${slug}`);
-  console.log(`  Menu:    ${siteOrigin}/${slug}/menu`);
   console.log(`  Admin:   ${siteOrigin}/${slug}/admin`);
   console.log(`  Sample menu: ${sampleMenu ? "yes" : "no (settings only)"}`);
   console.log("\nTip: create a tenant admin with:");

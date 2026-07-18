@@ -332,7 +332,7 @@ export type AppearanceSettings = {
   categoryNavStyle?: CategoryNavStyle;
   // In-page section heading treatment.
   sectionHeaderStyle?: SectionHeaderStyle;
-  // Public menu background. Fields are read per `backgroundType`.
+  // Catalog appearance fields retained for tenant settings.
   backgroundType?: MenuBackgroundType;
   backgroundColor?: string;
   backgroundGradientFrom?: string;
@@ -435,31 +435,9 @@ export type AppearanceSettings = {
   updatedAt?: Timestamp;
 };
 
-/** Supervisor-saved look preset (platform-wide), shown next to built-in Look Presets. */
-export type SavedLookPreset = {
-  id: string;
-  name: string;
-  blurb: string;
-  swatch: [string, string, string];
-  patch: Partial<AppearanceSettings>;
-  createdAt?: string;
-};
-
-export type QrSettings = {
-  menuUrl: string;
-  foregroundColor: string;
-  backgroundColor: string;
-  includeLogo: boolean;
-  logoUrl?: string;
-  logoPath?: string;
-  title: LocalizedText;
-  subtitle: OptionalLocalizedText;
-  updatedAt?: Timestamp;
-};
-
 export type AdminRole = "admin" | "employee";
 
-export type AdminFeature = "dashboard" | "categories" | "menuItems" | "pos" | "reports" | "expenses" | "qrCode" | "settings";
+export type AdminFeature = "dashboard" | "categories" | "menuItems" | "pos" | "reports" | "expenses" | "settings";
 
 export type AdminPermissions = Partial<Record<AdminFeature, boolean>>;
 
@@ -546,5 +524,4 @@ export type AppData = {
   general: GeneralSettings;
   menu: MenuSettings;
   appearance: AppearanceSettings;
-  qr: QrSettings;
 };

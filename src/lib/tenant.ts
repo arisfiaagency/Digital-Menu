@@ -36,10 +36,6 @@ export function getActiveClientSlug() {
   return activeClientSlug;
 }
 
-export function clientMenuPath(slug: string) {
-  return `/${normalizeClientSlug(slug)}/menu`;
-}
-
 export function clientPublicPath(slug: string) {
   return `/${normalizeClientSlug(slug)}`;
 }

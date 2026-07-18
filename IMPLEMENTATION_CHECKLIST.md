@@ -1,13 +1,12 @@
 # Multilingual Cafe Digital Menu — Implementation Notes
 
-This checklist was originally written for a single-tenant `/menu` app. The product is now multi-tenant.
+The product is multi-tenant.
 
 ## Canonical paths
 
-- Guest: `/{clientSlug}`, `/{clientSlug}/menu`, category/item nested routes
+- Guest welcome: `/{clientSlug}`
 - Tenant admin: `/{clientSlug}/admin/*`
 - Platform: `/admin` (+ `/admin/login`)
-- Legacy `/menu` → `/demo/menu` (or `NEXT_PUBLIC_DEFAULT_CLIENT_SLUG`)
 - Legacy `/admin/{feature}` → `/admin`
 
 ## Folders that matter
@@ -16,7 +15,7 @@ This checklist was originally written for a single-tenant `/menu` app. The produ
 src/app/[clientSlug]/   # guest + tenant admin
 src/app/admin/           # platform supervisor
 src/app/api/             # session, users, cron
-src/components/          # admin, menu, qr, ui
+src/components/          # admin, shared welcome, ui
 src/lib/firebase/        # client, admin, firestore, rest, auth
 src/lib/supabase/        # image storage
 src/lib/tenant.ts        # slug helpers + reserved names
@@ -29,7 +28,7 @@ scripts/                 # seed, create-admin, recompress-images
 All cafe data lives under `clients/{clientId}/…`:
 
 - `categories`, `menuItems`, `expenses`, `completedOrders`, `auditLogs`
-- `settings/general|menu|appearance|qr|pos`
+- `settings/general|menu|appearance|pos`
 - `adminProfiles`, `usernames`
 
 Platform supervisors use root `adminProfiles` + custom claim `admin: true`.
@@ -38,7 +37,7 @@ Platform supervisors use root `adminProfiles` + custom claim `admin: true`.
 
 - Platform supervisor → `/admin`
 - Tenant `admin` → full `/{slug}/admin` including users
-- Tenant `employee` → feature flags (`dashboard`, `categories`, `menuItems`, `pos`, `reports`, `expenses`, `qrCode`, `settings`)
+- Tenant `employee` → feature flags (`dashboard`, `categories`, `menuItems`, `pos`, `reports`, `expenses`, `settings`)
 
 ## Storage
 

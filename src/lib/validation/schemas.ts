@@ -89,13 +89,3 @@ export const passwordChangeSchema = z
     message: "Passwords must match.",
     path: ["confirmPassword"]
   });
-
-export const qrSettingsSchema = z.object({
-  menuUrl: z.string().url(),
-  foregroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  includeLogo: z.boolean(),
-  logoUrl: z.string().url().optional().or(z.literal("")),
-  title: localizedRequired,
-  subtitle: localizedOptional
-});

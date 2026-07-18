@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ExternalLink,
   Plus,
-  QrCode,
   Save,
   Search,
   Trash2,
@@ -33,8 +32,7 @@ import {
   getServiceExpiresAt,
   isClientServiceActive
 } from "@/lib/client-access";
-import { clientAdminPath, clientMenuPath, clientPublicPath, normalizeClientSlug } from "@/lib/tenant";
-import { DESIGN_TEMPLATES } from "@/data/design-templates";
+import { clientAdminPath, clientPublicPath, normalizeClientSlug } from "@/lib/tenant";
 import { cn } from "@/lib/utils/cn";
 import type {
   ClientAccount,
@@ -90,8 +88,7 @@ export function ClientsPanel({
   onBlock,
   onDelete,
   onSaveBilling,
-  onRecordPayment,
-  onOpenQr
+  onRecordPayment
 }: {
   clients: ClientAccount[];
   loading: boolean;
@@ -107,7 +104,6 @@ export function ClientsPanel({
     defaultLanguage: Locale;
     trialDays: number;
     planPrice: number;
-    designId: string;
   }) => Promise<void>;
   onBlock: (client: ClientAccount) => void;
   onDelete: (client: ClientAccount) => void;
@@ -121,7 +117,6 @@ export function ClientsPanel({
     }
   ) => void;
   onRecordPayment: (client: ClientAccount, amount: number, months: number) => void;
-  onOpenQr: (client: ClientAccount) => void;
 }) {
   const [showCreate, setShowCreate] = useState(false);
   const [query, setQuery] = useState("");
@@ -136,7 +131,6 @@ export function ClientsPanel({
   const [defaultLanguage, setDefaultLanguage] = useState<Locale>("ckb");
   const [trialDays, setTrialDays] = useState(14);
   const [planPrice, setPlanPrice] = useState(0);
-  const [designId, setDesignId] = useState("default");
 
   const resolvedSlug = useMemo(() => normalizeClientSlug(slug || name), [name, slug]);
 
@@ -205,8 +199,7 @@ export function ClientsPanel({
       defaultCurrency,
       defaultLanguage,
       trialDays,
-      planPrice,
-      designId
+      planPrice
     });
     setName("");
     setSlug("");
@@ -216,7 +209,6 @@ export function ClientsPanel({
     setDefaultLanguage("ckb");
     setTrialDays(14);
     setPlanPrice(0);
-    setDesignId("default");
     setShowCreate(false);
   }
 
@@ -249,7 +241,7 @@ export function ClientsPanel({
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Add a new cafe</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Creates menu URLs and starts a free trial. You can renew or block later from the list.
+              Creates cafe access and starts a free trial. You can renew or block later from the list.
             </p>
           </CardHeader>
           <CardContent>
@@ -266,7 +258,6 @@ export function ClientsPanel({
                 <p className="font-medium text-foreground">Links that will be created</p>
                 <ul className="mt-2 space-y-1 text-muted-foreground">
                   <li>Welcome page → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}</span></li>
-                  <li>Public menu → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}/menu</span></li>
                   <li>Cafe admin → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}/admin</span></li>
                 </ul>
               </div>
@@ -302,39 +293,6 @@ export function ClientsPanel({
                     <option value="disabled">Disabled</option>
                   </Select>
                 </Field>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Design template</p>
-                <p className="text-xs text-muted-foreground">
-                  Pick the starting look for this cafe — not just colors, but cards, layout, background, and welcome screen. You can fine-tune everything later in Menu Design.
-                </p>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {DESIGN_TEMPLATES.map((template) => {
-                    const selected = designId === template.id;
-                    return (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => setDesignId(template.id)}
-                        aria-pressed={selected}
-                        className={cn(
-                          "flex items-center gap-3 overflow-hidden rounded-xl border p-2.5 text-start transition-all hover:border-primary/50",
-                          selected ? "border-primary ring-2 ring-primary/30" : "border-border"
-                        )}
-                      >
-                        <span
-                          className="h-10 w-10 shrink-0 rounded-lg border border-black/10 shadow-sm"
-                          style={{ backgroundImage: `linear-gradient(135deg, ${template.swatch[2]} 0%, ${template.swatch[0]} 50%, ${template.swatch[1]} 100%)` }}
-                          aria-hidden
-                        />
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold">{template.name}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{template.blurb}</span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" disabled={saving}>
@@ -407,7 +365,6 @@ export function ClientsPanel({
                   onDelete={() => onDelete(client)}
                   onSaveBilling={(next) => onSaveBilling(client, next)}
                   onRecordPayment={(amount, months) => onRecordPayment(client, amount, months)}
-                  onOpenQr={() => onOpenQr(client)}
                 />
               ))}
             </div>
@@ -453,8 +410,7 @@ function ClientCard({
   onBlock,
   onDelete,
   onSaveBilling,
-  onRecordPayment,
-  onOpenQr
+  onRecordPayment
 }: {
   client: ClientAccount;
   expanded: boolean;
@@ -470,7 +426,6 @@ function ClientCard({
     blockedReason?: string;
   }) => void;
   onRecordPayment: (amount: number, months: number) => void;
-  onOpenQr: () => void;
 }) {
   const currency = client.billing?.currency || client.subscription?.currency || client.defaultCurrency || "IQD";
   const tone = statusTone(client);
@@ -572,20 +527,10 @@ function ClientCard({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href={clientMenuPath(client.slug)} target="_blank">
-                <ExternalLink className="h-4 w-4" aria-hidden />
-                Menu
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
               <Link href={clientAdminPath(client.slug)}>
                 <ExternalLink className="h-4 w-4" aria-hidden />
                 Admin
               </Link>
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={onOpenQr}>
-              <QrCode className="h-4 w-4" aria-hidden />
-              QR
             </Button>
             <Button
               type="button"

@@ -24,7 +24,7 @@ import { removeImage } from "@/lib/supabase/storage";
 import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { extendSubscriptionExpiry } from "@/lib/client-access";
 import { slugify } from "@/lib/utils/format";
-import type { AdminPermissions, AdminProfile, AdminRole, AppData, AppearanceSettings, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, SavedLookPreset } from "@/types/models";
+import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape } from "@/types/models";
 
 function converter<T extends { id: string }>(): FirestoreDataConverter<T> {
   return {
@@ -57,10 +57,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null;
 }
 
-function getSiteOrigin() {
-  return (process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")).replace(/\/+$/, "");
-}
-
 const categoryConverter = converter<Category>();
 const itemConverter = converter<MenuItem>();
 const expenseConverter = converter<Expense>();
@@ -89,9 +85,8 @@ function tenantDoc(db: Firestore, collectionName: string, id: string) {
   return clientSlug ? doc(db, "clients", clientSlug, collectionName, id) : doc(db, collectionName, id);
 }
 
-// Public menu data is fetched server-side via the Firestore REST API in
-// src/lib/firebase/rest.ts (getPublicAppDataRest) so the Firebase SDK stays off
-// the customer bundle. Do not add a client getPublicAppData back to public pages.
+// Public welcome data is fetched server-side via the Firestore REST API so the
+// Firebase SDK stays off the customer bundle.
 
 export async function listClients(): Promise<ClientAccount[]> {
   const db = getFirebaseDb();
@@ -109,10 +104,7 @@ export async function getClient(slug: string): Promise<ClientAccount | null> {
   return snap.exists() ? snap.data() : null;
 }
 
-export async function saveClient(
-  client: Omit<ClientAccount, "id"> & { id?: string },
-  options?: { appearancePatch?: Partial<AppearanceSettings> }
-) {
+export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: string }) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const slug = normalizeClientSlug(client.slug || client.id || client.name);
@@ -141,7 +133,7 @@ export async function saveClient(
     updatedAt: serverTimestamp()
   } as ClientAccount;
   await setDoc(clientRef, payload, { merge: true });
-  if (!existing.exists()) await seedClientDefaults(slug, payload, options?.appearancePatch);
+  if (!existing.exists()) await seedClientDefaults(slug, payload);
   return payload;
 }
 
@@ -220,7 +212,7 @@ async function deleteQueryBatch(db: Firestore, colRef: ReturnType<typeof collect
   }
 }
 
-async function seedClientDefaults(slug: string, client: ClientAccount, appearancePatch?: Partial<AppearanceSettings>) {
+async function seedClientDefaults(slug: string, client: ClientAccount) {
   const db = getFirebaseDb();
   if (!db) return;
   const batch = writeBatch(db);
@@ -237,8 +229,7 @@ async function seedClientDefaults(slug: string, client: ClientAccount, appearanc
   };
   batch.set(doc(db, "clients", slug, "settings", "general"), stripUndefined(general));
   batch.set(doc(db, "clients", slug, "settings", "menu"), { ...defaultAppData.menu, updatedAt: serverTimestamp() });
-  batch.set(doc(db, "clients", slug, "settings", "appearance"), stripUndefined({ ...defaultAppData.appearance, ...(appearancePatch || {}), updatedAt: serverTimestamp() }));
-  batch.set(doc(db, "clients", slug, "settings", "qr"), { ...defaultAppData.qr, menuUrl: `${getSiteOrigin()}/${slug}`, updatedAt: serverTimestamp() });
+  batch.set(doc(db, "clients", slug, "settings", "appearance"), { ...defaultAppData.appearance, updatedAt: serverTimestamp() });
   batch.set(doc(db, "clients", slug, "settings", "pos"), { ...serializePosState(defaultPosState), updatedAt: serverTimestamp() });
   await batch.commit();
 }
@@ -247,13 +238,12 @@ export async function getAdminAppData(): Promise<AppData> {
   const db = getFirebaseDb();
   if (!db) return defaultAppData;
 
-  const [categorySnap, itemSnap, generalSnap, menuSnap, appearanceSnap, qrSnap] = await Promise.all([
+  const [categorySnap, itemSnap, generalSnap, menuSnap, appearanceSnap] = await Promise.all([
     getDocs(query(tenantCollection(db, "categories").withConverter(categoryConverter), orderBy("displayOrder"), limit(200))),
     getDocs(query(tenantCollection(db, "menuItems").withConverter(itemConverter), orderBy("displayOrder"), limit(500))),
     getDoc(tenantDoc(db, "settings", "general")),
     getDoc(tenantDoc(db, "settings", "menu")),
-    getDoc(tenantDoc(db, "settings", "appearance")),
-    getDoc(tenantDoc(db, "settings", "qr"))
+    getDoc(tenantDoc(db, "settings", "appearance"))
   ]);
 
   const menuItems = itemSnap.docs.map((entry) => entry.data());
@@ -264,8 +254,7 @@ export async function getAdminAppData(): Promise<AppData> {
     menuItems: menuItems.map(withActiveImageHistory),
     general: generalSnap.exists() ? { ...defaultAppData.general, ...generalSnap.data() } : defaultAppData.general,
     menu: menuSnap.exists() ? { ...defaultAppData.menu, ...menuSnap.data() } : defaultAppData.menu,
-    appearance: appearanceSnap.exists() ? { ...defaultAppData.appearance, ...appearanceSnap.data() } : defaultAppData.appearance,
-    qr: qrSnap.exists() ? { ...defaultAppData.qr, ...qrSnap.data() } : defaultAppData.qr
+    appearance: appearanceSnap.exists() ? { ...defaultAppData.appearance, ...appearanceSnap.data() } : defaultAppData.appearance
   };
 }
 
@@ -525,53 +514,13 @@ export async function cancelExpense(expenseId: string, cancelledByUid?: string) 
   }));
 }
 
-export async function saveSettings(section: "general" | "menu" | "appearance" | "qr", value: Record<string, unknown>) {
+export async function saveSettings(section: "general" | "menu" | "appearance", value: Record<string, unknown>) {
   const db = getFirebaseDb();
   if (!db) return;
   const payload = stripUndefined({ ...value, updatedAt: serverTimestamp() }) as Record<string, unknown>;
   await updateDoc(tenantDoc(db, "settings", section), payload).catch(async () => {
     await setDoc(tenantDoc(db, "settings", section), payload, { merge: true });
   });
-}
-
-export async function listCustomLookPresets(): Promise<SavedLookPreset[]> {
-  const db = getFirebaseDb();
-  if (!db) return [];
-  const snap = await getDoc(doc(db, "platformSettings", "lookPresets"));
-  if (!snap.exists()) return [];
-  const presets = snap.data()?.presets;
-  return Array.isArray(presets) ? (presets as SavedLookPreset[]) : [];
-}
-
-export async function saveCustomLookPresets(presets: SavedLookPreset[]) {
-  const db = getFirebaseDb();
-  if (!db) throw new Error("Firestore is not configured.");
-  await setDoc(
-    doc(db, "platformSettings", "lookPresets"),
-    { presets, updatedAt: serverTimestamp() },
-    { merge: true }
-  );
-}
-
-// Built-in presets are code constants, so "deleting" one just records its id as
-// hidden (stored alongside the custom presets on the same platform doc).
-export async function listHiddenBuiltInPresetIds(): Promise<string[]> {
-  const db = getFirebaseDb();
-  if (!db) return [];
-  const snap = await getDoc(doc(db, "platformSettings", "lookPresets"));
-  if (!snap.exists()) return [];
-  const ids = snap.data()?.hiddenBuiltInIds;
-  return Array.isArray(ids) ? (ids as string[]) : [];
-}
-
-export async function saveHiddenBuiltInPresetIds(ids: string[]) {
-  const db = getFirebaseDb();
-  if (!db) throw new Error("Firestore is not configured.");
-  await setDoc(
-    doc(db, "platformSettings", "lookPresets"),
-    { hiddenBuiltInIds: ids, updatedAt: serverTimestamp() },
-    { merge: true }
-  );
 }
 
 const paymentConverter = converter<PlatformPayment>();

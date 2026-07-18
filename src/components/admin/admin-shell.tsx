@@ -8,7 +8,6 @@ import {
   Building2,
   ChevronDown,
   CircleUserRound,
-  ExternalLink,
   KeyRound,
   LineChart,
   ListTree,
@@ -76,16 +75,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const auth = useAdminAuth();
   const { text, dir: textDir } = useAdminLocale();
-  const { adminBasePath, menuPath } = useTenant();
+  const { adminBasePath } = useTenant();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const loginPath = `${adminBasePath}/login`;
   const usersHref = `${adminBasePath}/users`;
   const settingsHref = `${adminBasePath}/settings`;
   const navItems = nav.map((entry) => ({ ...entry, href: `${adminBasePath}${entry.path}` }));
   const isLogin = pathname === loginPath;
-  const isQrPrint = pathname === `${adminBasePath}/qr-code/print`;
 
-  if (isLogin || isQrPrint) return <>{children}</>;
+  if (isLogin) return <>{children}</>;
 
   if (!auth.isConfigured) {
     return (
@@ -99,11 +97,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <p dir={textDir} className="text-muted-foreground">
               {text.firebaseRequiredDescription}
             </p>
-            <Button asChild>
-              <Link href={menuPath}>
-                <span dir={textDir}>{text.viewPublicMenu}</span>
-              </Link>
-            </Button>
           </CardContent>
         </Card>
       </main>
@@ -140,9 +133,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <h1 dir={textDir} className="text-2xl font-semibold">{text.noAccessTitle}</h1>
             <p dir={textDir} className="text-muted-foreground">{text.noAccessDesc}</p>
             <div className="flex flex-wrap justify-center gap-2">
-              <Button asChild variant="outline">
-                <Link href={menuPath}><span dir={textDir}>{text.viewPublicMenu}</span></Link>
-              </Button>
               <Button type="button" variant="destructive" onClick={() => void handleLogout()}>
                 <span dir={textDir}>{text.logout}</span>
               </Button>
@@ -183,7 +173,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           canSettings={auth.can("settings")}
           usersHref={usersHref}
           settingsHref={settingsHref}
-          menuPath={menuPath}
+          homeHref={adminBasePath}
           onLogout={handleLogout}
         />
       </aside>
@@ -223,7 +213,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           canSettings={auth.can("settings")}
           usersHref={usersHref}
           settingsHref={settingsHref}
-          menuPath={menuPath}
+          homeHref={adminBasePath}
           onNavigate={() => setMobileNavOpen(false)}
           onLogout={handleLogout}
         />
@@ -248,7 +238,7 @@ function AdminNavigation({
   canSettings,
   usersHref,
   settingsHref,
-  menuPath,
+  homeHref,
   onNavigate,
   onLogout
 }: {
@@ -261,7 +251,7 @@ function AdminNavigation({
   canSettings: boolean;
   usersHref: string;
   settingsHref: string;
-  menuPath: string;
+  homeHref: string;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
@@ -271,7 +261,7 @@ function AdminNavigation({
 
   return (
     <div className="flex h-full flex-col">
-      <Link href={menuPath} dir={textDir} className="mb-6 block pr-10 text-xl font-semibold" onClick={onNavigate}>
+      <Link href={homeHref} dir={textDir} className="mb-6 block pr-10 text-xl font-semibold" onClick={onNavigate}>
         {text.brand}
       </Link>
       <nav className="grid gap-1">
@@ -305,7 +295,6 @@ function AdminNavigation({
         canSettings={canSettings}
         usersHref={usersHref}
         settingsHref={settingsHref}
-        menuPath={menuPath}
         onNavigate={onNavigate}
         onLogout={onLogout}
       />
@@ -321,7 +310,6 @@ function AdminProfileMenu({
   canSettings,
   usersHref,
   settingsHref,
-  menuPath,
   onNavigate,
   onLogout
 }: {
@@ -332,7 +320,6 @@ function AdminProfileMenu({
   canSettings: boolean;
   usersHref: string;
   settingsHref: string;
-  menuPath: string;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
@@ -419,7 +406,6 @@ function AdminProfileMenu({
           {canManageUsers ? (
             <ProfileMenuLink href={usersHref} icon={UsersRound} label={text.userManagement} textDir={textDir} onClick={handleNavigate} />
           ) : null}
-          <ProfileMenuLink href={menuPath} icon={ExternalLink} label={text.viewPublicMenu} textDir={textDir} onClick={handleNavigate} />
           <button
             type="button"
             role="menuitem"

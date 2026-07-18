@@ -78,7 +78,7 @@ export function formatExpiryDate(expiresAt?: string | null): string {
   return end.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-/** Public menu + cafe admin stay available when active and not manually blocked. Expiry is informational only. */
+/** Guest welcome + cafe admin stay available when active and not manually blocked. Expiry is informational only. */
 export function isClientServiceActive(client: ClientAccount | null | undefined): boolean {
   if (!client) return false;
   if (client.status !== "active") return false;

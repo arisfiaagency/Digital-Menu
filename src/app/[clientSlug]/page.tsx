@@ -1,23 +1,23 @@
 import { notFound } from "next/navigation";
 import { WelcomeScreen } from "@/components/menu/welcome-screen";
-import { getPublicAppDataRest, getPublicClientRest } from "@/lib/firebase/rest";
-import { clientMenuPath } from "@/lib/tenant";
+import { getPublicClientRest, getPublicWelcomeDataRest } from "@/lib/firebase/rest";
+import { isReservedClientSlug } from "@/lib/tenant";
 
 export const revalidate = 20;
 
 export default async function ClientWelcomePage({ params }: { params: Promise<{ clientSlug: string }> }) {
   const { clientSlug } = await params;
+  if (isReservedClientSlug(clientSlug)) notFound();
   const client = await getPublicClientRest(clientSlug);
   if (!client) notFound();
 
-  const data = await getPublicAppDataRest(client.slug);
+  const data = await getPublicWelcomeDataRest(client.slug);
   return (
     <WelcomeScreen
       initialGeneral={data.general}
       initialSocial={data.general.socialLinks}
       initialAppearance={data.appearance}
       initialMenu={data.menu}
-      menuHref={clientMenuPath(client.slug)}
     />
   );
 }

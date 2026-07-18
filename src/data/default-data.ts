@@ -149,23 +149,6 @@ export const defaultAppearanceSettings = {
   showHeaderDescription: true
 };
 
-export const defaultQrSettings = {
-  menuUrl: "",
-  foregroundColor: "#0f172a",
-  backgroundColor: "#ffffff",
-  includeLogo: false,
-  title: {
-    en: "Scan to View Our Menu",
-    ar: "امسح الرمز لعرض قائمتنا",
-    ckb: "کۆدەکە سکان بکە بۆ بینینی مینیو"
-  },
-  subtitle: {
-    en: "Stone Cafe",
-    ar: "ستون كافيه",
-    ckb: "ستۆن کافێ"
-  }
-};
-
 export const defaultCategories: Category[] = [
   category("breakfast", 1, "Breakfast", "الفطور", "نانی بەیانی"),
   category("hot-drinks", 2, "Hot Drinks", "مشروبات ساخنة", "خواردنەوەی گەرم"),
@@ -195,8 +178,7 @@ export const defaultAppData: AppData = {
   menuItems: defaultMenuItems,
   general: defaultGeneralSettings,
   menu: defaultMenuSettings,
-  appearance: defaultAppearanceSettings,
-  qr: defaultQrSettings
+  appearance: defaultAppearanceSettings
 };
 
 function category(slug: string, order: number, en: string, ar: string, ckb: string): Category {

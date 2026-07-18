@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils/cn";
 /**
  * Site-styled confirm/cancel dialog that replaces the browser's native
  * `window.confirm` / `tel:` prompts. It rises up from the bottom on phones
- * (QR-first) and centers on desktop, dims + blurs the page behind it, and
+ * (mobile-first) and centers on desktop, dims + blurs the page behind it, and
  * closes on Escape or an outside tap. Purely presentational and controlled by
  * `open` so both admin (pass `text.*`) and public (pass translated strings) can
  * reuse it. RTL-aware via `dir`.

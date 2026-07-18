@@ -43,11 +43,6 @@ service firebase.storage {
       allow write: if isApprovedAdmin() && validImage();
     }
 
-    match /qr/{fileName} {
-      allow read: if true;
-      allow write: if isApprovedAdmin() && validImage();
-    }
-
     match /{allPaths=**} {
       allow read, write: if false;
     }

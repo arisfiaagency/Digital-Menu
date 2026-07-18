@@ -1,11 +1,5 @@
 import type { NextConfig } from "next";
 
-const defaultClientSlug = (process.env.NEXT_PUBLIC_DEFAULT_CLIENT_SLUG || "")
-  .trim()
-  .toLowerCase()
-  .replace(/[^a-z0-9-]+/g, "-")
-  .replace(/^-+|-+$/g, "");
-
 const legacyAdminFeatures = [
   "dashboard",
   "categories",
@@ -13,7 +7,6 @@ const legacyAdminFeatures = [
   "pos",
   "reports",
   "expenses",
-  "qr-code",
   "settings",
   "users"
 ];
@@ -32,34 +25,11 @@ const nextConfig: NextConfig = {
     ]
   },
   async redirects() {
-    const redirects = [
-      ...legacyAdminFeatures.map((feature) => ({
-        source: `/admin/${feature}`,
-        destination: "/admin",
-        permanent: false
-      })),
-      {
-        source: "/admin/qr-code/print",
-        destination: "/admin",
-        permanent: false
-      }
-    ];
-
-    if (defaultClientSlug) {
-      redirects.push(
-        { source: "/menu", destination: `/${defaultClientSlug}/menu`, permanent: false },
-        { source: "/menu/category/:slug", destination: `/${defaultClientSlug}/menu/category/:slug`, permanent: false },
-        { source: "/menu/item/:slug", destination: `/${defaultClientSlug}/menu/item/:slug`, permanent: false }
-      );
-    } else {
-      redirects.push(
-        { source: "/menu", destination: "/demo/menu", permanent: false },
-        { source: "/menu/category/:slug", destination: "/demo/menu/category/:slug", permanent: false },
-        { source: "/menu/item/:slug", destination: "/demo/menu/item/:slug", permanent: false }
-      );
-    }
-
-    return redirects;
+    return legacyAdminFeatures.map((feature) => ({
+      source: `/admin/${feature}`,
+      destination: "/admin",
+      permanent: false
+    }));
   }
 };
 

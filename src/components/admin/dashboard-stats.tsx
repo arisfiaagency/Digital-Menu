@@ -7,7 +7,6 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
-  ExternalLink,
   ImageOff,
   Languages,
   ListTree,
@@ -35,7 +34,7 @@ import type { AppData, Currency, PosCompletedOrder } from "@/types/models";
 export function DashboardStats() {
   const { locale, text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
-  const { adminBasePath, menuPath } = useTenant();
+  const { adminBasePath } = useTenant();
   const [data, setData] = useState<AppData | null>(null);
   const [completed, setCompleted] = useState<PosCompletedOrder[]>([]);
 
@@ -102,8 +101,7 @@ export function DashboardStats() {
     { href: `${adminBasePath}/pos`, icon: Table2, label: text.pos, show: auth.can("pos") },
     { href: `${adminBasePath}/reports`, icon: BarChart3, label: text.reports, show: auth.can("reports") },
     { href: `${adminBasePath}/expenses`, icon: ReceiptText, label: text.expenses, show: auth.can("expenses") },
-    { href: `${adminBasePath}/settings`, icon: Settings, label: text.settings, show: auth.can("settings") },
-    { href: menuPath, icon: ExternalLink, label: text.viewPublicMenu, show: true, target: "_blank" }
+    { href: `${adminBasePath}/settings`, icon: Settings, label: text.settings, show: auth.can("settings") }
   ];
   const visibleActions = actions.filter((action) => action.show);
 

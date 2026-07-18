@@ -46,7 +46,6 @@
     "greeting": "أهلاً بك في",
     "tagline": "قهوة طازجة، خصيصاً لك",
     "chooseLanguage": "اختر لغتك",
-    "enter": "عرض القائمة",
     "logoHint": "الشعار",
     "findUsSocial": "تابعونا على وسائل التواصل"
   },
@@ -54,7 +53,6 @@
     "dashboard": "لوحة التحكم",
     "categories": "الأقسام",
     "menuItems": "عناصر القائمة",
-    "qrCode": "رمز QR",
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
     "login": "دخول الإدارة",

@@ -2487,7 +2487,7 @@ function mergeOrderLines(
 
 // Square thumbnail for the menu picker. Real uploaded photos fill the tile
 // (object-cover); items without an image fall back to the default cafe logo,
-// matching the public menu cards. Plain <img> so animated GIFs still play.
+// matching the catalog cards. Plain <img> so animated GIFs still play.
 const POS_THUMB_FALLBACK = "/site-icon.png";
 
 function MenuPickerThumb({ src, alt }: { src?: string; alt: string }) {

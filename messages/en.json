@@ -46,7 +46,6 @@
     "greeting": "Welcome to",
     "tagline": "Freshly brewed, just for you",
     "chooseLanguage": "Choose your language",
-    "enter": "View the Menu",
     "logoHint": "Logo",
     "findUsSocial": "Find us on social media"
   },
@@ -54,7 +53,6 @@
     "dashboard": "Dashboard",
     "categories": "Categories",
     "menuItems": "Menu Items",
-    "qrCode": "QR Code",
     "settings": "Settings",
     "logout": "Logout",
     "login": "Admin Login",

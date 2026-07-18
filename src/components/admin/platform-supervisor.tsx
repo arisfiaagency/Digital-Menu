@@ -5,15 +5,9 @@ import Link from "next/link";
 import { ChevronDown, LogOut, ShieldCheck } from "lucide-react";
 import { AdminPreferences, AdminThemeToggle, useAdminLocale } from "@/components/admin/admin-preferences";
 import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from "@/components/admin/clients-panel";
-import { MenuDesigner } from "@/components/admin/menu-designer";
-import { DESIGN_TEMPLATES } from "@/data/design-templates";
 import { PaymentReports } from "@/components/admin/payment-reports";
-import { QrDesigner } from "@/components/qr/qr-designer";
-import { TenantProvider } from "@/components/tenant-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field } from "@/components/ui/field";
-import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { formatExpiryDate, formatMoney } from "@/lib/client-access";
@@ -31,7 +25,7 @@ import type {
   Locale
 } from "@/types/models";
 
-type SupervisorTab = "clients" | "design" | "qr" | "payments";
+type SupervisorTab = "clients" | "payments";
 
 export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: SupervisorTab }) {
   const auth = useAdminAuth();
@@ -44,14 +38,12 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [tab, setTab] = useState<SupervisorTab>(initialTab);
-  const [qrSlug, setQrSlug] = useState("");
 
   async function refresh() {
     setLoadingClients(true);
     try {
       const list = await listClients();
       setClients(list);
-      if (!qrSlug && list[0]) setQrSlug(list[0].slug);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load clients.");
     } finally {
@@ -72,7 +64,6 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
     defaultLanguage: Locale;
     trialDays: number;
     planPrice: number;
-    designId: string;
   }) {
     setMessage("");
     setError("");
@@ -88,24 +79,19 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         expiresAt: trial.endAt
       };
       const billing = defaultBilling(input.defaultCurrency, Math.max(0, input.planPrice || 0));
-      const template = DESIGN_TEMPLATES.find((entry) => entry.id === input.designId);
-      await saveClient(
-        {
-          name: input.name,
-          slug: input.slug,
-          ownerEmail: input.ownerEmail,
-          status: input.status,
-          defaultCurrency: input.defaultCurrency,
-          defaultLanguage: input.defaultLanguage,
-          blocked: false,
-          subscription,
-          trial,
-          billing
-        },
-        template && Object.keys(template.patch).length ? { appearancePatch: template.patch } : undefined
-      );
-      const designNote = template && template.id !== "default" ? ` with the ${template.name} design` : "";
-      setMessage(`Cafe /${input.slug} is ready${designNote} and a ${trial.days}-day free trial.`);
+      await saveClient({
+        name: input.name,
+        slug: input.slug,
+        ownerEmail: input.ownerEmail,
+        status: input.status,
+        defaultCurrency: input.defaultCurrency,
+        defaultLanguage: input.defaultLanguage,
+        blocked: false,
+        subscription,
+        trial,
+        billing
+      });
+      setMessage(`Cafe /${input.slug} is ready and a ${trial.days}-day free trial.`);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save client.");
@@ -257,7 +243,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl font-semibold">Digital Menu Supervisor</h1>
-            <p className="text-muted-foreground">Clients, billing, menu design, and QR codes.</p>
+            <p className="text-muted-foreground">Clients and billing.</p>
           </div>
           <div className="flex items-center gap-2">
             <AdminThemeToggle />
@@ -279,9 +265,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           {(
             [
               ["clients", "Clients"],
-              ["payments", "Payments"],
-              ["design", "Menu Design"],
-              ["qr", "QR Codes"]
+              ["payments", "Payments"]
             ] as const
           ).map(([id, label]) => (
             <button
@@ -295,42 +279,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           ))}
         </div>
 
-        {tab === "design" ? <MenuDesigner /> : null}
         {tab === "payments" ? <PaymentReports /> : null}
-
-        {tab === "qr" ? (
-          <div className="space-y-5">
-            <div>
-              <h2 className="text-2xl font-semibold">QR Codes</h2>
-              <p className="text-sm text-muted-foreground">
-                Choose a cafe, design the scan link, then print table cards.
-              </p>
-            </div>
-            <Card>
-              <CardContent className="space-y-4 pt-5">
-                <Field label="Cafe" htmlFor="qr-client">
-                  <Select id="qr-client" value={qrSlug} onChange={(e) => setQrSlug(e.target.value)}>
-                    <option value="">Select a cafe…</option>
-                    {clients.map((client) => (
-                      <option key={client.slug} value={client.slug}>
-                        {client.name} (/{client.slug})
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                {qrSlug ? (
-                  <TenantProvider clientSlug={qrSlug}>
-                    <QrDesigner printPath="/admin/qr-code/print" embedded />
-                  </TenantProvider>
-                ) : (
-                  <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                    Choose a cafe to design and print its menu QR code.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        ) : null}
 
         {tab === "clients" ? (
           <ClientsPanel
@@ -344,10 +293,6 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
             onDelete={(client) => void removeClient(client)}
             onSaveBilling={(client, next) => void saveBilling(client, next)}
             onRecordPayment={(client, amount, months) => void recordPayment(client, amount, months)}
-            onOpenQr={(client) => {
-              setQrSlug(client.slug);
-              setTab("qr");
-            }}
           />
         ) : null}
       </div>

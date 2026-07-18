@@ -1,19 +1,17 @@
 import { expect, test } from "@playwright/test";
 
-test("public demo menu opens and switches language", async ({ page }) => {
-  await page.goto("/demo/menu");
-  await expect(page.getByRole("button", { name: "Select language" })).toBeVisible();
+test("removed menu and QR routes return not found", async ({ request }) => {
+  const paths = [
+    "/menu",
+    "/demo/menu",
+    "/demo/menu/category/coffee",
+    "/demo/menu/item/americano",
+    "/admin/qr-code",
+    "/admin/qr-code/print"
+  ];
 
-  await page.getByRole("button", { name: "Select language" }).click();
-  await page.getByRole("menuitemradio", { name: "English" }).click();
-  await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
-
-  await page.getByRole("button", { name: "Select language" }).click();
-  await page.getByRole("menuitemradio", { name: "العربية" }).click();
-  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-});
-
-test("legacy /menu redirects to the demo menu", async ({ page }) => {
-  await page.goto("/menu");
-  await expect(page).toHaveURL(/\/demo\/menu$/);
+  for (const path of paths) {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status(), path).toBe(404);
+  }
 });

@@ -475,15 +475,6 @@ function AppearancePreview({
             </div>
           ))}
         </div>
-        <div className="p-3 pt-0">
-          <button
-            type="button"
-            className="w-full px-3 py-2 text-sm font-semibold"
-            style={{ backgroundColor: appearance.primaryColor, borderRadius: radius, color: "#ffffff" }}
-          >
-            {text.viewPublicMenu}
-          </button>
-        </div>
       </div>
     </div>
   );
