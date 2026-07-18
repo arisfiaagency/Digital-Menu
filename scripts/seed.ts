@@ -134,7 +134,6 @@ async function main() {
 
   // Drop legacy root collections note is intentional — data now lives under clients/{slug}.
   console.log(`Seeded clients/${slug}`);
-  console.log(`  Welcome: ${siteOrigin}/${slug}`);
   console.log(`  Admin:   ${siteOrigin}/${slug}/admin`);
   console.log(`  Sample menu: ${sampleMenu ? "yes" : "no (settings only)"}`);
   console.log("\nTip: create a tenant admin with:");

@@ -4,14 +4,14 @@ import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 
 // The agency that builds & maintains this app. Centralized here so the credit
-// reads the same everywhere (menu footer, welcome screen, admin login, receipt)
+// reads the same everywhere (admin login, receipts, and other shared surfaces)
 // and can be renamed in one place later.
 export const BRAND_AGENCY = "Arisfia Agency";
 export const BRAND_AGENCY_URL = "https://arisfia-agency.vercel.app";
 
 // Subtle "Powered by <agency>" credit with a small logomark. Color is inherited,
 // so pass a text-* class via `className` to recolor it on tinted backgrounds
-// (e.g. the welcome screen). Hovering shows a hint; a single click opens the site.
+// Hovering shows a hint; a single click opens the site.
 export function BrandCredit({ className }: { className?: string }) {
   const [hovered, setHovered] = useState(false);
 

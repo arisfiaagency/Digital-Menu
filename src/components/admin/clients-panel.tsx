@@ -32,7 +32,7 @@ import {
   getServiceExpiresAt,
   isClientServiceActive
 } from "@/lib/client-access";
-import { clientAdminPath, clientPublicPath, normalizeClientSlug } from "@/lib/tenant";
+import { clientAdminPath, normalizeClientSlug } from "@/lib/tenant";
 import { cn } from "@/lib/utils/cn";
 import type {
   ClientAccount,
@@ -255,9 +255,8 @@ export function ClientsPanel({
                 </Field>
               </div>
               <div className="rounded-xl border bg-muted/30 p-3 text-sm">
-                <p className="font-medium text-foreground">Links that will be created</p>
+                <p className="font-medium text-foreground">Admin link that will be created</p>
                 <ul className="mt-2 space-y-1 text-muted-foreground">
-                  <li>Welcome page → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}</span></li>
                   <li>Cafe admin → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}/admin</span></li>
                 </ul>
               </div>
@@ -312,7 +311,7 @@ export function ClientsPanel({
         <SummaryStat label="Online" value={counts.online} hint="Not blocked" className="text-emerald-700 dark:text-emerald-400" />
         <SummaryStat label="Near expiry" value={counts.near} hint="≤ 5 days left" className="text-amber-800 dark:text-amber-300" />
         <SummaryStat label="Expired" value={counts.expired} hint="Still online until you block" className="text-destructive" />
-        <SummaryStat label="Blocked" value={counts.blocked} hint="Offline for guests" className="text-destructive" />
+        <SummaryStat label="Blocked" value={counts.blocked} hint="Admin access disabled" className="text-destructive" />
       </div>
 
       <Card>
@@ -593,7 +592,7 @@ function ClientCard({
         {client.blocked ? (
           <p className="mt-3 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             <Ban className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            Blocked{client.blockedReason ? ` — ${client.blockedReason}` : ""}. Guests and cafe admin are offline.
+            Blocked{client.blockedReason ? ` — ${client.blockedReason}` : ""}. Cafe admin access is offline.
           </p>
         ) : null}
       </div>
@@ -712,12 +711,6 @@ function ClientCard({
                   <Button type="button" disabled={updating} onClick={submitBilling}>
                     <Save className="h-4 w-4" aria-hidden />
                     Save details
-                  </Button>
-                  <Button asChild type="button" variant="outline">
-                    <Link href={clientPublicPath(client.slug)} target="_blank">
-                      <ExternalLink className="h-4 w-4" aria-hidden />
-                      Open welcome
-                    </Link>
                   </Button>
                   <Button type="button" variant="destructive" disabled={deleting} onClick={onDelete}>
                     <Trash2 className="h-4 w-4" aria-hidden />

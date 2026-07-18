@@ -43,24 +43,6 @@ service cloud.firestore {
         );
     }
 
-    function clientRef(clientId) {
-      return /databases/$(database)/documents/clients/$(clientId);
-    }
-
-    function clientExists(clientId) {
-      return exists(clientRef(clientId));
-    }
-
-    function clientData(clientId) {
-      return get(clientRef(clientId)).data;
-    }
-
-    function clientActive(clientId) {
-      return clientExists(clientId)
-        && clientData(clientId).status == 'active'
-        && clientData(clientId).get('blocked', false) != true;
-    }
-
     function tenantProfileRef(clientId) {
       return /databases/$(database)/documents/clients/$(clientId)/adminProfiles/$(request.auth.uid);
     }
@@ -116,24 +98,22 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      allow get, list: if (resource.data.status == 'active' && resource.data.get('blocked', false) != true) || isPlatformAdmin();
+      allow get: if (resource.data.status == 'active' && resource.data.get('blocked', false) != true) || isPlatformAdmin();
+      allow list: if isPlatformAdmin();
       allow create, update, delete: if isPlatformFullAdmin();
 
       match /categories/{categoryId} {
-        allow get, list: if (clientActive(clientId) && resource.data.isActive == true) || isTenantAdmin(clientId);
+        allow get, list: if isTenantAdmin(clientId);
         allow create, update, delete: if hasTenantFeature(clientId, 'categories');
       }
 
       match /menuItems/{menuItemId} {
-        allow get, list: if (clientActive(clientId) && resource.data.isAvailable == true) || isTenantAdmin(clientId);
+        allow get, list: if isTenantAdmin(clientId);
         allow create, update, delete: if hasTenantFeature(clientId, 'menuItems');
       }
 
       match /settings/{settingsId} {
-        allow get, list: if settingsId in ['general', 'menu', 'appearance', 'pos'] && (
-          (clientActive(clientId) && settingsId in ['general', 'menu', 'appearance'])
-          || isTenantAdmin(clientId)
-        );
+        allow get, list: if settingsId in ['general', 'menu', 'appearance', 'pos'] && isTenantAdmin(clientId);
         allow create: if settingsId in ['general', 'menu', 'appearance', 'pos'] && (settingsId == 'pos'
           ? hasTenantFeature(clientId, 'pos')
             && (isTenantFullAdmin(clientId) || request.resource.data.get('completedOrders', []).size() == 0)

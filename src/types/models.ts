@@ -72,10 +72,6 @@ export type GeneralSettings = {
   coverImagePath?: string;
   // Optional announcement shown in the "promo" above-category strip.
   promoText?: OptionalLocalizedText;
-  // Optional headline on the public welcome page, e.g. "Welcome to".
-  welcomeHeader?: OptionalLocalizedText;
-  // Optional tagline on the public welcome page, e.g. "Freshly brewed, just for you".
-  welcomeTagline?: OptionalLocalizedText;
   phone?: string;
   whatsapp?: string;
   email?: string;
@@ -299,17 +295,8 @@ export type TitleCaseStyle = "normal" | "uppercase";
 export type CardHoverStyle = "lift" | "glow" | "border" | "none";
 export type CoverHeight = "sm" | "md" | "lg" | "xl";
 export type MenuLanguageStyle = "globe" | "buttons" | "segmented" | "cards" | "minimal";
-export type WelcomeLogoStyle = "circle" | "rounded" | "square";
-export type WelcomeThemeToggleStyle = "circle" | "pill" | "segmented";
-export type WelcomeThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "contrast";
-export type WelcomeLanguageStyle = "buttons" | "segmented" | "cards" | "minimal";
-export type WelcomeCardStyle = "glass" | "solid" | "outlined" | "floating";
-/** Same pattern vocabulary as the menu background (floating icons + CSS textures). */
-export type WelcomePattern = MenuBackgroundPattern;
-export type WelcomeBackgroundStyle = "gradient" | "solid" | "pattern" | "image";
-export type WelcomeEnterStyle = "pill" | "rounded" | "square" | "outline";
-export type WelcomeCardWidth = "narrow" | "normal" | "wide";
-export type WelcomeCardAlign = "center" | "bottom";
+export type ThemeToggleStyle = "circle" | "pill" | "segmented";
+export type ThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "contrast";
 
 export type MenuSkin = "default" | "luxury";
 
@@ -399,38 +386,9 @@ export type AppearanceSettings = {
   coverOverlay?: number;
   featuredNavStyle?: CategoryNavStyle;
   menuLanguageStyle?: MenuLanguageStyle;
-  menuThemeToggleStyle?: WelcomeThemeToggleStyle;
-  menuThemeIconStyle?: WelcomeThemeIconStyle;
+  menuThemeToggleStyle?: ThemeToggleStyle;
+  menuThemeIconStyle?: ThemeIconStyle;
   showCartButton?: boolean;
-  // Welcome page presentation at /{clientSlug}.
-  welcomeAccentColor?: string;
-  welcomeHeaderTextColor?: string;
-  welcomeHelperTextColor?: string;
-  welcomeThemeToggleStyle?: WelcomeThemeToggleStyle;
-  welcomeThemeIconStyle?: WelcomeThemeIconStyle;
-  welcomeLanguageStyle?: WelcomeLanguageStyle;
-  welcomeCardStyle?: WelcomeCardStyle;
-  welcomeCardPattern?: WelcomePattern;
-  welcomeFormColor?: string;
-  welcomeFormTextColor?: string;
-  welcomeFormBorderColor?: string;
-  welcomeFormBlur?: number;
-  welcomeFormTransparency?: number;
-  welcomeBackgroundStyle?: WelcomeBackgroundStyle;
-  welcomeBackgroundColor?: string;
-  welcomeBackgroundGradientFrom?: string;
-  welcomeBackgroundGradientTo?: string;
-  welcomeBackgroundImageUrl?: string;
-  welcomeBackgroundImagePath?: string;
-  welcomeBackgroundMediaType?: "image" | "video";
-  welcomeBackgroundPattern?: WelcomePattern;
-  welcomeBackgroundPatternColor?: string;
-  welcomeBackgroundOverlay?: number;
-  welcomeLogoStyle?: WelcomeLogoStyle;
-  welcomeShowSocialLinks?: boolean;
-  welcomeEnterStyle?: WelcomeEnterStyle;
-  welcomeCardWidth?: WelcomeCardWidth;
-  welcomeCardAlign?: WelcomeCardAlign;
   showHeaderDescription?: boolean;
   updatedAt?: Timestamp;
 };

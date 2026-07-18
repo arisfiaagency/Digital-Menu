@@ -42,13 +42,6 @@
     "orderWhatsapp": "داواکردن لە واتساپ",
     "itemNotFound": "ئەم بڕگەیە نەدۆزرایەوە."
   },
-  "welcome": {
-    "greeting": "بەخێربێیت بۆ",
-    "tagline": "قاوەی تازە، تایبەت بۆ تۆ",
-    "chooseLanguage": "زمانەکەت هەڵبژێرە",
-    "logoHint": "لۆگۆ",
-    "findUsSocial": "لە تۆڕە کۆمەڵایەتییەکاندا بماندۆزنەوە"
-  },
   "admin": {
     "dashboard": "داشبۆرد",
     "categories": "بەشەکان",

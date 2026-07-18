@@ -85,9 +85,6 @@ function tenantDoc(db: Firestore, collectionName: string, id: string) {
   return clientSlug ? doc(db, "clients", clientSlug, collectionName, id) : doc(db, collectionName, id);
 }
 
-// Public welcome data is fetched server-side via the Firestore REST API so the
-// Firebase SDK stays off the customer bundle.
-
 export async function listClients(): Promise<ClientAccount[]> {
   const db = getFirebaseDb();
   if (!db) return [];

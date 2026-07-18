@@ -4,7 +4,7 @@ import { Coffee, Contrast, Moon, Sparkles, Sun, type LucideIcon } from "lucide-r
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import type { WelcomeThemeIconStyle, WelcomeThemeToggleStyle } from "@/types/models";
+import type { ThemeIconStyle, ThemeToggleStyle } from "@/types/models";
 
 export const publicThemeStorageKey = "stone-cafe-menu-theme";
 export const publicThemeChangeEvent = "stone-cafe-menu-theme-change";
@@ -21,8 +21,8 @@ export function ThemeToggle({
   className?: string;
   storageKey?: string;
   changeEvent?: string;
-  presentation?: WelcomeThemeToggleStyle;
-  iconStyle?: WelcomeThemeIconStyle;
+  presentation?: ThemeToggleStyle;
+  iconStyle?: ThemeIconStyle;
 }) {
   const [dark, setDark] = useState(false);
   const [turns, setTurns] = useState(0);
@@ -114,7 +114,7 @@ export function ThemeToggle({
   );
 }
 
-function themeIcon(style: WelcomeThemeIconStyle, dark: boolean): LucideIcon {
+function themeIcon(style: ThemeIconStyle, dark: boolean): LucideIcon {
   if (style === "coffeeMoon") return dark ? Moon : Coffee;
   if (style === "sparkles") return dark ? Moon : Sparkles;
   if (style === "contrast") return Contrast;

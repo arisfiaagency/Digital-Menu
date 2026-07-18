@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("removed menu and QR routes return not found", async ({ request }) => {
+test("removed welcome, menu, and QR routes return not found", async ({ request }) => {
   const paths = [
+    "/demo",
     "/menu",
     "/demo/menu",
     "/demo/menu/category/coffee",

@@ -126,124 +126,8 @@ textarea {
   font: inherit;
 }
 
-/* Public pages (menu + welcome) feel like an app: text can't be selected and the
-   iOS long-press callout is suppressed, but buttons/links still work. Inputs stay
-   selectable so the search box behaves normally. Admin is left untouched. */
-.no-select {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-
-.no-select input,
-.no-select textarea,
-.no-select [contenteditable="true"] {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
 .focus-ring {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
-}
-
-/* Lock the viewport to a single static screen (welcome page).
-   position:fixed on body stops iOS Safari rubber-band overscroll. */
-html.overflow-lock,
-body.overflow-lock {
-  height: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
-html.overflow-lock {
-  background: #d7efd8; /* matches the welcome gradient base (mint) */
-}
-
-html.overflow-lock.dark {
-  background: #0a140b; /* deep green */
-}
-
-body.overflow-lock {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  touch-action: none;
-}
-
-/* Welcome screen coffee-shop animations */
-@keyframes steam-rise {
-  0% { transform: translateY(4px) scaleX(0.85); opacity: 0; }
-  25% { opacity: 0.75; }
-  60% { opacity: 0.35; }
-  100% { transform: translateY(-26px) scaleX(1.35); opacity: 0; }
-}
-
-.steam-wisp {
-  transform-origin: center bottom;
-  animation: steam-rise 3.2s ease-in-out infinite;
-}
-
-@keyframes bean-float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-18px) rotate(22deg); }
-}
-
-.bean-float {
-  animation: bean-float 8s ease-in-out infinite;
-}
-
-@keyframes menu-pattern-pan {
-  0% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(-32px, 18px, 0); }
-  100% { transform: translate3d(0, 0, 0); }
-}
-
-.menu-pattern-pan {
-  animation: menu-pattern-pan 22s linear infinite;
-}
-
-@keyframes aroma-pan {
-  0% { transform: translate(0, 0); }
-  50% { transform: translate(-14px, 10px); }
-  100% { transform: translate(0, 0); }
-}
-
-.aroma-pan {
-  animation: aroma-pan 18s ease-in-out infinite;
-}
-
-/* Soft aroma glows. Radial-gradient (not a blurred solid circle) so the glow
-   fades to transparent within itself. The old `blur-3xl` circles, when positioned
-   off-screen, got sliced by the small-phone viewport edges into a hard green
-   corner "patch"; a gradient that already fades out has no hard edge to clip. */
-.aroma-1,
-.aroma-2,
-.aroma-3 {
-  border-radius: 9999px;
-}
-
-.aroma-1 { background: radial-gradient(closest-side, rgba(164, 216, 166, 0.38), transparent 72%); }
-.aroma-2 { background: radial-gradient(closest-side, rgba(194, 236, 195, 0.42), transparent 72%); }
-.aroma-3 { background: radial-gradient(closest-side, rgba(255, 255, 255, 0.30), transparent 72%); }
-
-.dark .aroma-1 { background: radial-gradient(closest-side, rgba(164, 216, 166, 0.12), transparent 72%); }
-.dark .aroma-2 { background: radial-gradient(closest-side, rgba(47, 74, 38, 0.26), transparent 72%); }
-.dark .aroma-3 { background: radial-gradient(closest-side, rgba(58, 90, 51, 0.16), transparent 72%); }
-
-/* Primary-tinted corner glow (replaces a blur-3xl circle that could clip into a
-   hard patch on small screens — same issue as the aroma glows above). */
-.glow-primary {
-  border-radius: 9999px;
-  background: radial-gradient(closest-side, hsl(var(--primary) / 0.1), transparent 72%);
-}
-
-@keyframes cup-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-.cup-bob {
-  animation: cup-bob 5s ease-in-out infinite;
 }
 
 /* Language globe: continuous slow rotation + orbiting multilingual glyphs */
@@ -735,42 +619,6 @@ body.overflow-lock {
    phone via a shared link, where there's no hover). Each keyframe does its motion early
    then holds still, so with a long duration the icon "winks" periodically instead
    of fidgeting non-stop; staggered delays keep them from moving in unison. */
-@keyframes social-glitch {
-  0%   { transform: translate(0, 0); filter: none; }
-  2%   { transform: translate(-1.5px, 1px); filter: drop-shadow(2px 0 #ff0050) drop-shadow(-2px 0 #00f2ea); }
-  4%   { transform: translate(1.5px, -1px); filter: drop-shadow(-2px 0 #ff0050) drop-shadow(2px 0 #00f2ea); }
-  6%   { transform: translate(-1px, 0); filter: drop-shadow(1px 1px #ff0050) drop-shadow(-1px -1px #00f2ea); }
-  8%   { transform: translate(1px, 1px); filter: drop-shadow(2px 0 #ff0050) drop-shadow(-2px 0 #00f2ea); }
-  10%  { transform: translate(0, 0); filter: drop-shadow(1px 0 #ff0050) drop-shadow(-1px 0 #00f2ea); }
-  12%, 100% { transform: translate(0, 0); filter: none; }
-}
-
-@keyframes social-insta {
-  0%   { transform: scale(1); filter: hue-rotate(0deg); }
-  18%  { transform: scale(1.2); filter: hue-rotate(160deg); }
-  36%, 100% { transform: scale(1); filter: hue-rotate(0deg); }
-}
-
-@keyframes social-fb {
-  0%   { transform: perspective(220px) rotateY(0deg); filter: none; }
-  10%  { transform: perspective(220px) rotateY(180deg); filter: drop-shadow(0 0 4px #1877f2); }
-  20%  { transform: perspective(220px) rotateY(360deg); filter: none; }
-  20.01%, 100% { transform: perspective(220px) rotateY(360deg); filter: none; }
-}
-
-@keyframes social-ghost {
-  0%   { transform: translateY(0) rotate(0deg); }
-  10%  { transform: translateY(-2.5px) rotate(-5deg); }
-  20%  { transform: translateY(0) rotate(0deg); }
-  30%  { transform: translateY(-2.5px) rotate(5deg); }
-  40%, 100% { transform: translateY(0) rotate(0deg); }
-}
-
-.social-anim-tiktok svg { animation: social-glitch 3.6s linear 1.2s infinite; }
-.social-anim-instagram svg { animation: social-insta 4.2s ease-in-out 0s infinite; }
-.social-anim-facebook svg { animation: social-fb 3.8s ease-in-out 0.6s infinite; }
-.social-anim-snapchat svg { animation: social-ghost 4s ease-in-out 1.8s infinite; }
-
 /* "Closed" status dot — a slow standby-style blink (distinct from the open pulse). */
 @keyframes status-closed-blink {
   0%, 100% { opacity: 1; }
@@ -791,11 +639,6 @@ body.overflow-lock {
   .menu-reorder-item {
     animation: none;
   }
-  .steam-wisp,
-  .bean-float,
-  .menu-pattern-pan,
-  .aroma-pan,
-  .cup-bob,
   .globe-spin,
   .globe-orbit,
   .globe-glyph-character,
@@ -841,10 +684,6 @@ body.overflow-lock {
     animation: none;
   }
 
-  .social-anim-tiktok svg,
-  .social-anim-instagram svg,
-  .social-anim-facebook svg,
-  .social-anim-snapchat svg,
   .status-closed-dot {
     animation: none;
   }

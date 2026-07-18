@@ -11,16 +11,6 @@ export const defaultGeneralSettings: GeneralSettings = {
     ar: "قهوة طازجة ووجبات دافئة وحلويات طوال اليوم.",
     ckb: "قاوەی تازە، خواردنی گەرم و شیرینی لە درێژایی ڕۆژدا."
   },
-  welcomeHeader: {
-    en: "Welcome to",
-    ar: "أهلاً بك في",
-    ckb: "بەخێربێیت بۆ"
-  },
-  welcomeTagline: {
-    en: "Freshly brewed, just for you",
-    ar: "قهوة طازجة، خصيصاً لك",
-    ckb: "قاوەی تازە، تایبەت بۆ تۆ"
-  },
   logoUrl: "/site-icon.png",
   phone: "+964 750 000 0000",
   whatsapp: "+9647500000000",
@@ -121,31 +111,6 @@ export const defaultAppearanceSettings = {
   menuThemeToggleStyle: "circle" as const,
   menuThemeIconStyle: "sunMoon" as const,
   showCartButton: true,
-  welcomeAccentColor: "#A4D8A6",
-  welcomeHeaderTextColor: "#A4D8A6",
-  welcomeHelperTextColor: "#6b7280",
-  welcomeThemeToggleStyle: "circle" as const,
-  welcomeThemeIconStyle: "sunMoon" as const,
-  welcomeLanguageStyle: "buttons" as const,
-  welcomeCardStyle: "glass" as const,
-  welcomeCardPattern: "none" as const,
-  welcomeFormBlur: 24,
-  welcomeFormTransparency: 15,
-  welcomeBackgroundStyle: "gradient" as const,
-  welcomeBackgroundColor: "#d7efd8",
-  welcomeBackgroundGradientFrom: "#d7efd8",
-  welcomeBackgroundGradientTo: "#86cc8a",
-  welcomeBackgroundImageUrl: "",
-  welcomeBackgroundImagePath: "",
-  welcomeBackgroundMediaType: "image" as const,
-  welcomeBackgroundPattern: "cafe" as const,
-  welcomeBackgroundPatternColor: "#3f8a49",
-  welcomeBackgroundOverlay: 15,
-  welcomeLogoStyle: "circle" as const,
-  welcomeShowSocialLinks: true,
-  welcomeEnterStyle: "pill" as const,
-  welcomeCardWidth: "normal" as const,
-  welcomeCardAlign: "center" as const,
   showHeaderDescription: true
 };
 

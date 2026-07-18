@@ -4,7 +4,6 @@ The product is multi-tenant.
 
 ## Canonical paths
 
-- Guest welcome: `/{clientSlug}`
 - Tenant admin: `/{clientSlug}/admin/*`
 - Platform: `/admin` (+ `/admin/login`)
 - Legacy `/admin/{feature}` → `/admin`
@@ -12,10 +11,10 @@ The product is multi-tenant.
 ## Folders that matter
 
 ```text
-src/app/[clientSlug]/   # guest + tenant admin
+src/app/[clientSlug]/   # tenant admin
 src/app/admin/           # platform supervisor
 src/app/api/             # session, users, cron
-src/components/          # admin, shared welcome, ui
+src/components/          # admin and shared UI
 src/lib/firebase/        # client, admin, firestore, rest, auth
 src/lib/supabase/        # image storage
 src/lib/tenant.ts        # slug helpers + reserved names

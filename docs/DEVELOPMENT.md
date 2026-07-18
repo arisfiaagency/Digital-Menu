@@ -11,7 +11,6 @@ npm run dev
 Useful URLs:
 
 - `/` — not found
-- `/demo` — public welcome preview (sample data when Firebase is unset or demo is not seeded)
 - `/admin` — platform supervisor
 - `/{clientSlug}/admin` — tenant staff after creating a client
 
@@ -44,4 +43,4 @@ npm run create-admin -- staff@example.com secret --client stone --role admin
 
 Client creation from `/admin` also seeds default settings (general, menu, appearance, POS) under `clients/{slug}`. Sample categories/items come from `npm run seed` (or staff CRUD).
 
-When Firebase Web config is missing, `/demo` still renders local sample data. Tenant admin routes require Firebase Auth and an approved admin profile.
+Tenant admin routes require Firebase configuration, Firebase Auth, and an approved admin profile.

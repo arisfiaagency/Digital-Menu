@@ -3,9 +3,8 @@ import type { AppearanceSettings, MenuFontPreset } from "@/types/models";
 
 // Theme colors are stored as hex (from the admin color pickers) but the design
 // system drives everything through CSS custom properties in the
-// `H S% L%` shape consumed by `hsl(var(--token))` (see tailwind config and the
-// hard-coded values in welcome-screen.tsx). This converts hex → that triple so a
-// cafe's chosen primary/secondary colors can be injected at the menu root.
+// `H S% L%` shape consumed by `hsl(var(--token))` (see tailwind config). This
+// converts hex → that triple so configured colors can be injected into a theme.
 
 /** Parse a #rgb or #rrggbb string into 0–255 channels. Returns null if invalid. */
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -23,13 +22,6 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
     g: parseInt(full.slice(2, 4), 16),
     b: parseInt(full.slice(4, 6), 16)
   };
-}
-
-export function hexToRgba(hex: string, alpha: number): string | null {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return null;
-  const opacity = Math.min(1, Math.max(0, alpha));
-  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
 }
 
 /**

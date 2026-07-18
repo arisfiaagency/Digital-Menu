@@ -12,9 +12,6 @@ export const RESERVED_CLIENT_SLUGS = new Set([
   "sitemap.xml"
 ]);
 
-/** Offline preview slug used when Firebase Web config is missing. */
-export const DEMO_CLIENT_SLUG = "demo";
-
 export function normalizeClientSlug(value: string) {
   return value
     .trim()
@@ -34,10 +31,6 @@ export function setActiveClientSlug(slug: string | null) {
 
 export function getActiveClientSlug() {
   return activeClientSlug;
-}
-
-export function clientPublicPath(slug: string) {
-  return `/${normalizeClientSlug(slug)}`;
 }
 
 export function clientAdminPath(slug: string, path = "") {

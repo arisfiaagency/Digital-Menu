@@ -24,7 +24,6 @@ npm run create-admin -- staff@example.com 'strong-password' --client your-slug
 7. Deploy the Next.js app. Confirm Vercel cron for `/api/cron/cleanup-expired-images` (see `vercel.json`) and set `CRON_SECRET` if you want Bearer protection.
 8. Smoke-test:
 
-- `/{slug}` welcome
 - `/{slug}/admin/login` and staff features
 - `/admin` platform supervisor
 - Image upload (Supabase)

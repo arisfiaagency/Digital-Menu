@@ -42,13 +42,6 @@
     "orderWhatsapp": "اطلب عبر واتساب",
     "itemNotFound": "العنصر غير موجود."
   },
-  "welcome": {
-    "greeting": "أهلاً بك في",
-    "tagline": "قهوة طازجة، خصيصاً لك",
-    "chooseLanguage": "اختر لغتك",
-    "logoHint": "الشعار",
-    "findUsSocial": "تابعونا على وسائل التواصل"
-  },
   "admin": {
     "dashboard": "لوحة التحكم",
     "categories": "الأقسام",

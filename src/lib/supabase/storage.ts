@@ -1,17 +1,10 @@
 import { SUPABASE_BUCKET, SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/client";
 
-export type UploadMediaType = "image" | "video";
-
 const allowedImageTypes: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif"
-};
-
-const allowedVideoTypes: Record<string, string> = {
-  "video/mp4": "mp4",
-  "video/webm": "webm"
 };
 
 const maxImageBytes = 10 * 1024 * 1024;
@@ -22,23 +15,8 @@ export function validateImageFile(file: File) {
   return null;
 }
 
-export function validateMediaFile(file: File, { maxBytes = maxImageBytes, maxBytesLabel = "10 MB" }: { maxBytes?: number; maxBytesLabel?: string } = {}) {
-  if (file.type === "video/quicktime") return "MOV/QuickTime videos are not supported. Please upload MP4 or WebM.";
-  if (!allowedImageTypes[file.type] && !allowedVideoTypes[file.type]) return "Use a JPG, PNG, WebP, GIF, MP4, or WebM file.";
-  if (file.size > maxBytes) return `Files must be ${maxBytesLabel} or smaller.`;
-  return null;
-}
-
 export function imageExtensionForFile(file: File) {
   return allowedImageTypes[file.type] || file.name.split(".").pop()?.toLowerCase() || "webp";
-}
-
-export function mediaExtensionForFile(file: File) {
-  return allowedImageTypes[file.type] || allowedVideoTypes[file.type] || file.name.split(".").pop()?.toLowerCase() || "webp";
-}
-
-export function mediaTypeForFile(file: File): UploadMediaType {
-  return file.type.startsWith("video/") ? "video" : "image";
 }
 
 // Longest edge we keep for menu photos. Cards render well under this; anything larger is wasted bytes
@@ -127,56 +105,7 @@ export async function uploadImage(path: string, file: File, onProgress?: (progre
 
   return {
     imagePath: `${SUPABASE_BUCKET}/${objectKey}`,
-    imageUrl: `${baseUrl}/storage/v1/object/public/${SUPABASE_BUCKET}/${objectKey}`,
-    mediaType: "image" as const
-  };
-}
-
-export async function uploadMedia(
-  path: string,
-  file: File,
-  onProgress?: (progress: number) => void,
-  options: { maxBytes?: number; maxBytesLabel?: string } = {}
-) {
-  const baseUrl = SUPABASE_URL;
-  const key = SUPABASE_KEY;
-  if (!baseUrl || !key) throw new Error("Supabase Storage is not configured.");
-
-  const error = validateMediaFile(file, options);
-  if (error) throw new Error(error);
-
-  const extension = mediaExtensionForFile(file);
-  const objectKey = `${path.replace(/^\/+|\/+$/g, "")}/${crypto.randomUUID()}.${extension}`;
-  const endpoint = `${baseUrl}/storage/v1/object/${SUPABASE_BUCKET}/${objectKey}`;
-
-  await new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", endpoint);
-    xhr.setRequestHeader("authorization", `Bearer ${key}`);
-    xhr.setRequestHeader("apikey", key);
-    xhr.setRequestHeader("x-upsert", "true");
-    xhr.setRequestHeader("cache-control", "31536000");
-    if (file.type) xhr.setRequestHeader("content-type", file.type);
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        onProgress?.(100);
-        resolve();
-      } else {
-        reject(new Error(parseError(xhr.responseText) || "File upload failed."));
-      }
-    };
-    xhr.onerror = () => reject(new Error("File upload failed."));
-    xhr.send(file);
-  });
-
-  return {
-    imagePath: `${SUPABASE_BUCKET}/${objectKey}`,
-    imageUrl: `${baseUrl}/storage/v1/object/public/${SUPABASE_BUCKET}/${objectKey}`,
-    mediaType: mediaTypeForFile(file)
+    imageUrl: `${baseUrl}/storage/v1/object/public/${SUPABASE_BUCKET}/${objectKey}`
   };
 }
 

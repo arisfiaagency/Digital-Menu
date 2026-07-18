@@ -6,13 +6,10 @@ Multi-tenant digital menu platform for cafes and restaurants. Built with Next.js
 
 | Audience | URL |
 |----------|-----|
-| Guest welcome | `/{clientSlug}` |
 | Cafe staff admin | `/{clientSlug}/admin` |
 | Platform supervisor | `/admin` |
 
-The root URL `/` returns **404** — guests must use a cafe slug (e.g. `/your-cafe`).
-
-Without Firebase Web config (or when the `demo` tenant is missing), `/demo` serves local sample data for previews and e2e.
+The root URL `/` and public cafe-slug URLs return **404**. The application exposes only authenticated platform and cafe administration routes.
 
 Legacy feature routes under `/admin/*` redirect to the platform supervisor at `/admin`.
 
@@ -21,13 +18,12 @@ Legacy feature routes under `/admin/*` redirect to the platform supervisor at `/
 ```bash
 npm install
 cp .env.example .env.local
-# fill Firebase + Supabase values (optional for /demo preview)
+# fill Firebase + Supabase values
 npm run dev
 ```
 
 Open:
 
-- `http://localhost:3000/demo` — guest welcome (sample or seeded)
 - `http://localhost:3000/admin` — platform supervisor
 - `http://localhost:3000/{slug}/admin` — tenant staff
 
@@ -62,7 +58,6 @@ npm run recompress-images
 
 ## Stack notes
 
-- **Guest welcome:** server-side Firestore REST reads (no Firebase SDK on the guest bundle).
 - **Admin path:** Firebase Web SDK scoped to `clients/{slug}/…`.
 - **Images:** Supabase Storage; nightly Vercel cron cleans expired `imageHistory`.
 - **Roles:** full `admin` vs `employee` with per-feature permissions (UI + Firestore rules).
