@@ -41,6 +41,6 @@ npm run create-admin -- platform@example.com secret
 npm run create-admin -- staff@example.com secret --client stone --role admin
 ```
 
-Client creation from `/admin` also seeds default settings (general, menu, appearance, POS) under `clients/{slug}`. Sample categories/items come from `npm run seed` (or staff CRUD).
+Client creation from `/admin` also seeds default settings (general, menu, POS) under `clients/{slug}`. Sample categories/items come from `npm run seed` (or staff CRUD).
 
 Tenant admin routes require Firebase configuration, Firebase Auth, and an approved admin profile.

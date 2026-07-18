@@ -27,7 +27,7 @@ scripts/                 # seed, create-admin, recompress-images
 All cafe data lives under `clients/{clientId}/…`:
 
 - `categories`, `menuItems`, `expenses`, `completedOrders`, `auditLogs`
-- `settings/general|menu|appearance|pos`
+- `settings/general|menu|pos`
 - `adminProfiles`, `usernames`
 
 Platform supervisors use root `adminProfiles` + custom claim `admin: true`.

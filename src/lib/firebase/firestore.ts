@@ -226,7 +226,6 @@ async function seedClientDefaults(slug: string, client: ClientAccount) {
   };
   batch.set(doc(db, "clients", slug, "settings", "general"), stripUndefined(general));
   batch.set(doc(db, "clients", slug, "settings", "menu"), { ...defaultAppData.menu, updatedAt: serverTimestamp() });
-  batch.set(doc(db, "clients", slug, "settings", "appearance"), { ...defaultAppData.appearance, updatedAt: serverTimestamp() });
   batch.set(doc(db, "clients", slug, "settings", "pos"), { ...serializePosState(defaultPosState), updatedAt: serverTimestamp() });
   await batch.commit();
 }
@@ -235,12 +234,11 @@ export async function getAdminAppData(): Promise<AppData> {
   const db = getFirebaseDb();
   if (!db) return defaultAppData;
 
-  const [categorySnap, itemSnap, generalSnap, menuSnap, appearanceSnap] = await Promise.all([
+  const [categorySnap, itemSnap, generalSnap, menuSnap] = await Promise.all([
     getDocs(query(tenantCollection(db, "categories").withConverter(categoryConverter), orderBy("displayOrder"), limit(200))),
     getDocs(query(tenantCollection(db, "menuItems").withConverter(itemConverter), orderBy("displayOrder"), limit(500))),
     getDoc(tenantDoc(db, "settings", "general")),
-    getDoc(tenantDoc(db, "settings", "menu")),
-    getDoc(tenantDoc(db, "settings", "appearance"))
+    getDoc(tenantDoc(db, "settings", "menu"))
   ]);
 
   const menuItems = itemSnap.docs.map((entry) => entry.data());
@@ -250,8 +248,7 @@ export async function getAdminAppData(): Promise<AppData> {
     categories: categorySnap.docs.map((entry) => entry.data()),
     menuItems: menuItems.map(withActiveImageHistory),
     general: generalSnap.exists() ? { ...defaultAppData.general, ...generalSnap.data() } : defaultAppData.general,
-    menu: menuSnap.exists() ? { ...defaultAppData.menu, ...menuSnap.data() } : defaultAppData.menu,
-    appearance: appearanceSnap.exists() ? { ...defaultAppData.appearance, ...appearanceSnap.data() } : defaultAppData.appearance
+    menu: menuSnap.exists() ? { ...defaultAppData.menu, ...menuSnap.data() } : defaultAppData.menu
   };
 }
 
@@ -511,7 +508,7 @@ export async function cancelExpense(expenseId: string, cancelledByUid?: string) 
   }));
 }
 
-export async function saveSettings(section: "general" | "menu" | "appearance", value: Record<string, unknown>) {
+export async function saveSettings(section: "general" | "menu", value: Record<string, unknown>) {
   const db = getFirebaseDb();
   if (!db) return;
   const payload = stripUndefined({ ...value, updatedAt: serverTimestamp() }) as Record<string, unknown>;

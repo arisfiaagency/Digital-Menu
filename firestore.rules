@@ -113,19 +113,19 @@ service cloud.firestore {
       }
 
       match /settings/{settingsId} {
-        allow get, list: if settingsId in ['general', 'menu', 'appearance', 'pos'] && isTenantAdmin(clientId);
-        allow create: if settingsId in ['general', 'menu', 'appearance', 'pos'] && (settingsId == 'pos'
+        allow get, list: if settingsId in ['general', 'menu', 'pos'] && isTenantAdmin(clientId);
+        allow create: if settingsId in ['general', 'menu', 'pos'] && (settingsId == 'pos'
           ? hasTenantFeature(clientId, 'pos')
             && (isTenantFullAdmin(clientId) || request.resource.data.get('completedOrders', []).size() == 0)
           : hasTenantFeature(clientId, 'settings'));
-        allow update: if settingsId in ['general', 'menu', 'appearance', 'pos'] && (settingsId == 'pos'
+        allow update: if settingsId in ['general', 'menu', 'pos'] && (settingsId == 'pos'
           ? hasTenantFeature(clientId, 'pos')
             && (
               isTenantFullAdmin(clientId)
               || request.resource.data.get('completedOrders', []) == resource.data.get('completedOrders', [])
             )
           : hasTenantFeature(clientId, 'settings'));
-        allow delete: if settingsId in ['general', 'menu', 'appearance', 'pos'] && (settingsId == 'pos' ? isTenantFullAdmin(clientId) : hasTenantFeature(clientId, 'settings'));
+        allow delete: if settingsId in ['general', 'menu', 'pos'] && (settingsId == 'pos' ? isTenantFullAdmin(clientId) : hasTenantFeature(clientId, 'settings'));
       }
 
       match /completedOrders/{orderId} {

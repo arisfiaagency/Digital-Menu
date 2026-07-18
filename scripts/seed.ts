@@ -100,7 +100,6 @@ async function main() {
   const batch = db.batch();
   batch.set(clientRef.collection("settings").doc("general"), general, { merge: true });
   batch.set(clientRef.collection("settings").doc("menu"), { ...defaultAppData.menu, updatedAt: now }, { merge: true });
-  batch.set(clientRef.collection("settings").doc("appearance"), { ...defaultAppData.appearance, updatedAt: now }, { merge: true });
   batch.set(
     clientRef.collection("settings").doc("pos"),
     {

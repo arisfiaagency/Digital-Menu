@@ -14,7 +14,6 @@ import {
   LogOut,
   Menu,
   MenuSquare,
-  Palette,
   ReceiptText,
   Settings,
   SlidersHorizontal,
@@ -381,14 +380,6 @@ function AdminProfileMenu({
                 href={`${settingsHref}#menu`}
                 icon={SlidersHorizontal}
                 label={text.menuSettings}
-                textDir={textDir}
-                onClick={handleNavigate}
-                nested
-              />
-              <ProfileMenuLink
-                href={`${settingsHref}#appearance`}
-                icon={Palette}
-                label={text.appearanceSettings}
                 textDir={textDir}
                 onClick={handleNavigate}
                 nested

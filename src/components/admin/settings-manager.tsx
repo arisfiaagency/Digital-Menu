@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Building2, CheckCircle2, KeyRound, Palette, Save, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Building2, CheckCircle2, KeyRound, Save, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { changeAdminPassword } from "@/lib/firebase/auth";
 import { getAdminAppData, saveSettings } from "@/lib/firebase/firestore";
@@ -16,16 +16,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { ImageUploadField } from "@/components/forms/image-upload-field";
 import { useAdminLocale } from "@/components/admin/admin-preferences";
 import { cn } from "@/lib/utils/cn";
-import type { AppearanceSettings, GeneralSettings, MenuSettings } from "@/types/models";
-import { defaultAppearanceSettings, defaultGeneralSettings, defaultMenuSettings } from "@/data/default-data";
+import type { GeneralSettings, MenuSettings } from "@/types/models";
+import { defaultGeneralSettings, defaultMenuSettings } from "@/data/default-data";
 
-type SettingsSection = "general" | "menu" | "appearance" | "account";
+type SettingsSection = "general" | "menu" | "account";
 
 export function SettingsManager() {
   const { text } = useAdminLocale();
   const [general, setGeneral] = useState<GeneralSettings>(defaultGeneralSettings);
   const [menu, setMenu] = useState<MenuSettings>(defaultMenuSettings);
-  const [appearance, setAppearance] = useState<AppearanceSettings>(defaultAppearanceSettings);
   const [activeSection, setActiveSection] = useState<SettingsSection | null>(null);
   const [savedSignature, setSavedSignature] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -39,8 +38,7 @@ export function SettingsManager() {
     getAdminAppData().then((data) => {
       setGeneral(data.general);
       setMenu(data.menu);
-      setAppearance(data.appearance);
-      setSavedSignature(settingsSignature(data.general, data.menu, data.appearance));
+      setSavedSignature(settingsSignature(data.general, data.menu));
     });
   }, []);
 
@@ -80,10 +78,9 @@ export function SettingsManager() {
     try {
       await Promise.all([
         saveSettings("general", general as unknown as Record<string, unknown>),
-        saveSettings("menu", menu as unknown as Record<string, unknown>),
-        saveSettings("appearance", appearance as unknown as Record<string, unknown>)
+        saveSettings("menu", menu as unknown as Record<string, unknown>)
       ]);
-      setSavedSignature(settingsSignature(general, menu, appearance));
+      setSavedSignature(settingsSignature(general, menu));
       setMessage(text.settingsSaved);
     } catch (err) {
       setError(err instanceof Error ? err.message : text.settingsSaveFailed);
@@ -120,11 +117,10 @@ export function SettingsManager() {
     }
   }
 
-  const currentSignature = useMemo(() => settingsSignature(general, menu, appearance), [appearance, general, menu]);
+  const currentSignature = useMemo(() => settingsSignature(general, menu), [general, menu]);
   const hasUnsavedChanges = savedSignature ? currentSignature !== savedSignature : false;
   const contactCount = [general.phone, general.whatsapp, general.email, general.googleMapsUrl].filter(Boolean).length;
   const menuEnabledCount = Object.entries(menu).filter(([key, value]) => key !== "updatedAt" && key !== "enableFilters" && Boolean(value)).length;
-  const appearanceSummary = `${appearance.defaultTheme} · ${appearance.menuLayout}`;
 
   return (
     <div className="space-y-6">
@@ -151,7 +147,7 @@ export function SettingsManager() {
       {message ? <p className="rounded-md border border-primary p-3 text-primary">{message}</p> : null}
       {error ? <p className="rounded-md border border-destructive p-3 text-destructive">{error}</p> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <SettingsSectionButton
           icon={Building2}
           label={text.generalSettings}
@@ -165,13 +161,6 @@ export function SettingsManager() {
           summary={`${menuEnabledCount} ${text.enabled}`}
           active={activeSection === "menu"}
           onClick={() => toggleSection("menu")}
-        />
-        <SettingsSectionButton
-          icon={Palette}
-          label={text.appearanceSettings}
-          summary={appearanceSummary}
-          active={activeSection === "appearance"}
-          onClick={() => toggleSection("appearance")}
         />
         <SettingsSectionButton
           icon={KeyRound}
@@ -297,48 +286,6 @@ export function SettingsManager() {
         </Card>
       ) : null}
 
-      {activeSection === "appearance" ? (
-        <Card id="appearance" className="settings-panel">
-          <CardHeader><CardTitle>{text.appearanceSettings}</CardTitle></CardHeader>
-          <CardContent className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="grid gap-4 md:grid-cols-4">
-              <Field label={text.primaryColor}><Input type="color" value={appearance.primaryColor} onChange={(e) => setAppearance({ ...appearance, primaryColor: e.target.value })} /></Field>
-              <Field label={text.secondaryColor}><Input type="color" value={appearance.secondaryColor} onChange={(e) => setAppearance({ ...appearance, secondaryColor: e.target.value })} /></Field>
-              <Field label={text.borderRadius}><Input type="number" value={appearance.borderRadius} onChange={(e) => setAppearance({ ...appearance, borderRadius: Number(e.target.value) })} /></Field>
-              <Field label={text.defaultTheme}>
-                <Select value={appearance.defaultTheme} onChange={(e) => setAppearance({ ...appearance, defaultTheme: e.target.value as AppearanceSettings["defaultTheme"] })}>
-                  <option value="light">{text.light}</option>
-                  <option value="dark">{text.dark}</option>
-                </Select>
-              </Field>
-              <Field label={text.cardStyle}>
-                <Select value={appearance.cardStyle} onChange={(e) => setAppearance({ ...appearance, cardStyle: e.target.value as AppearanceSettings["cardStyle"] })}>
-                  <option value="flat">{text.flat}</option>
-                  <option value="outlined">{text.outlined}</option>
-                  <option value="elevated">{text.elevated}</option>
-                </Select>
-              </Field>
-              <Field label={text.headerLayout}>
-                <Select value={appearance.headerLayout} onChange={(e) => setAppearance({ ...appearance, headerLayout: e.target.value as AppearanceSettings["headerLayout"] })}>
-                  <option value="compact">{text.compact}</option>
-                  <option value="expanded">{text.expanded}</option>
-                </Select>
-              </Field>
-              <Field label={text.menuLayout}>
-                <Select value={appearance.menuLayout} onChange={(e) => setAppearance({ ...appearance, menuLayout: e.target.value as AppearanceSettings["menuLayout"] })}>
-                  <option value="list">{text.list}</option>
-                  <option value="grid">{text.grid}</option>
-                </Select>
-              </Field>
-              <div className="md:col-span-4">
-                <Button onClick={saveAll} disabled={saving || !hasUnsavedChanges}>{saving ? text.saving : text.saveSettings}</Button>
-              </div>
-            </div>
-            <AppearancePreview appearance={appearance} text={text} />
-          </CardContent>
-        </Card>
-      ) : null}
-
       {activeSection === "account" ? (
         <Card id="account" className="settings-panel">
           <CardHeader><CardTitle>{text.accountSettings}</CardTitle></CardHeader>
@@ -400,99 +347,15 @@ function SettingsFormSection({ title, children }: { title: string; children: Rea
   );
 }
 
-function AppearancePreview({
-  appearance,
-  text
-}: {
-  appearance: AppearanceSettings;
-  text: Record<string, string>;
-}) {
-  const isDark = appearance.defaultTheme === "dark";
-  const radius = Math.max(0, appearance.borderRadius || 0);
-  const foreground = isDark ? "#f8fafc" : "#111827";
-  const muted = isDark ? "#94a3b8" : "#64748b";
-  const page = isDark ? "#020617" : "#f8fafc";
-  const surface = isDark ? "#111827" : "#ffffff";
-  const border = appearance.cardStyle === "flat" ? "transparent" : isDark ? "rgba(255,255,255,0.16)" : "rgba(15,23,42,0.12)";
-  const shadow = appearance.cardStyle === "elevated" ? "0 18px 45px rgba(15, 23, 42, 0.18)" : "none";
-  const previewItems = [text.menuItem, text.featured];
-
-  return (
-    <div className="rounded-lg border bg-muted/25 p-3">
-      <p className="mb-3 text-sm font-medium">{text.preview}</p>
-      <div
-        className="overflow-hidden border"
-        style={{
-          backgroundColor: page,
-          borderColor: border,
-          borderRadius: radius + 8,
-          color: foreground
-        }}
-      >
-        <div
-          className={cn("flex items-center justify-between gap-3", appearance.headerLayout === "expanded" ? "p-5" : "p-3")}
-          style={{ backgroundColor: colorWithAlpha(appearance.primaryColor, "20") }}
-        >
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{text.brand}</p>
-            <p className="truncate text-xs" style={{ color: muted }}>
-              {text.menuItems}
-            </p>
-          </div>
-          <span
-            className="rounded-full px-3 py-1 text-xs font-semibold"
-            style={{ backgroundColor: appearance.primaryColor, color: "#ffffff" }}
-          >
-            {text.available}
-          </span>
-        </div>
-        <div className={cn("grid gap-3 p-3", appearance.menuLayout === "grid" ? "grid-cols-2" : "grid-cols-1")}>
-          {previewItems.map((label, index) => (
-            <div
-              key={label}
-              className="overflow-hidden border"
-              style={{
-                backgroundColor: surface,
-                borderColor: border,
-                borderRadius: radius,
-                boxShadow: shadow
-              }}
-            >
-              <div className="h-16" style={{ backgroundColor: index === 0 ? colorWithAlpha(appearance.primaryColor, "33") : colorWithAlpha(appearance.secondaryColor, "33") }} />
-              <div className="space-y-2 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold leading-tight">{label}</p>
-                  <span
-                    className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
-                    style={{ backgroundColor: colorWithAlpha(appearance.secondaryColor, "22"), color: appearance.secondaryColor }}
-                  >
-                    {text.price}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full" style={{ backgroundColor: colorWithAlpha(appearance.primaryColor, "22") }} />
-                <div className="h-2 w-2/3 rounded-full" style={{ backgroundColor: isDark ? "#334155" : "#e2e8f0" }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function sectionFromHash(hash: string): SettingsSection | null {
   const value = hash.replace("#", "");
   if (value === "admin-password") return "account";
-  if (value === "general" || value === "menu" || value === "appearance" || value === "account") return value;
+  if (value === "general" || value === "menu" || value === "account") return value;
   return null;
 }
 
-function settingsSignature(general: GeneralSettings, menu: MenuSettings, appearance: AppearanceSettings) {
-  return JSON.stringify({ general, menu, appearance });
-}
-
-function colorWithAlpha(color: string, alpha: string) {
-  return /^#[0-9a-f]{6}$/i.test(color) ? `${color}${alpha}` : color;
+function settingsSignature(general: GeneralSettings, menu: MenuSettings) {
+  return JSON.stringify({ general, menu });
 }
 
 // Whole-hour options 0–24 (24 = midnight, used as a closing time).
