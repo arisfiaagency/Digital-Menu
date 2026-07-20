@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Building2, CheckCircle2, KeyRound, Save, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Building2, CheckCircle2, Eye, EyeOff, KeyRound, Save, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { changeAdminPassword } from "@/lib/firebase/auth";
 import { getAdminAppData, saveSettings } from "@/lib/firebase/firestore";
@@ -205,9 +205,8 @@ export function SettingsManager() {
               </div>
             </SettingsFormSection>
             <SettingsFormSection title={text.media}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <ImageUploadField label={text.logo} text={text} path="restaurants/main/logo" imageUrl={general.logoUrl} onUploaded={(result) => setGeneral({ ...general, logoUrl: result.imageUrl, logoPath: result.imagePath })} />
-                <ImageUploadField label={text.coverImage} text={text} path="restaurants/main/cover" imageUrl={general.coverImageUrl} onUploaded={(result) => setGeneral({ ...general, coverImageUrl: result.imageUrl, coverImagePath: result.imagePath })} />
+              <div className="max-w-sm">
+                <ImageUploadField label={text.logo} text={text} path="restaurants/main/logo" imageUrl={general.logoUrl} onUploaded={(result) => setGeneral({ ...general, logoUrl: result.imageUrl, logoPath: result.imagePath })} onRemoved={() => setGeneral({ ...general, logoUrl: "", logoPath: "" })} />
               </div>
             </SettingsFormSection>
             <SettingsFormSection title={text.defaults}>
@@ -291,9 +290,9 @@ export function SettingsManager() {
           <CardHeader><CardTitle>{text.accountSettings}</CardTitle></CardHeader>
           <CardContent id="admin-password">
             <form className="grid gap-4 md:grid-cols-3" onSubmit={handlePasswordChange} noValidate>
-              <Field label={text.currentPassword}><Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} /></Field>
-              <Field label={text.newPassword}><Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></Field>
-              <Field label={text.confirmNewPassword}><Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></Field>
+              <Field label={text.currentPassword}><PasswordInput value={currentPassword} onChange={setCurrentPassword} toggleLabel={text.showPassword} autoComplete="current-password" /></Field>
+              <Field label={text.newPassword}><PasswordInput value={newPassword} onChange={setNewPassword} toggleLabel={text.showPassword} autoComplete="new-password" /></Field>
+              <Field label={text.confirmNewPassword}><PasswordInput value={confirmPassword} onChange={setConfirmPassword} toggleLabel={text.showPassword} autoComplete="new-password" /></Field>
               <div className="flex flex-wrap gap-2 md:col-span-3">
                 <Button type="submit">{text.changePassword}</Button>
               </div>
@@ -344,6 +343,41 @@ function SettingsFormSection({ title, children }: { title: string; children: Rea
       <h3 className="text-sm font-semibold">{title}</h3>
       {children}
     </section>
+  );
+}
+
+// A password field with an Eye/EyeOff reveal toggle (same pattern as the login form).
+function PasswordInput({
+  value,
+  onChange,
+  toggleLabel,
+  autoComplete
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  toggleLabel: string;
+  autoComplete?: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="flex gap-2">
+      <Input
+        type={show ? "text" : "password"}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="shrink-0"
+        aria-label={toggleLabel}
+        onClick={() => setShow((current) => !current)}
+      >
+        {show ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      </Button>
+    </div>
   );
 }
 

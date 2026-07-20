@@ -159,7 +159,7 @@ export function ReportsManager() {
     setMessage("");
     setError("");
     try {
-      await deleteCompletedOrder(deleteTarget.id);
+      await deleteCompletedOrder(deleteTarget.id, deleteTarget.tableName);
       setOrders((current) => current.filter((order) => order.id !== deleteTarget.id));
       setMessage(text.orderDeleted);
       setDeleteTarget(null);

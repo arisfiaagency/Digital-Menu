@@ -20,6 +20,7 @@ import {
 } from "firebase/firestore";
 import { defaultAppData } from "@/data/default-data";
 import { getFirebaseDb } from "@/lib/firebase/client";
+import { buildChanges, logAudit } from "@/lib/firebase/audit";
 import { removeImage } from "@/lib/supabase/storage";
 import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { extendSubscriptionExpiry } from "@/lib/client-access";
@@ -55,6 +56,16 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object") return false;
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
+}
+
+// Short, human-readable labels used in the audit log so an entry reads
+// "Deleted category «Hot Drinks»" rather than a raw document id.
+function categoryLabel(category: Pick<Category, "name" | "slug" | "id">): string {
+  return category.name?.en || category.slug || category.id;
+}
+
+function itemLabel(item: Pick<MenuItem, "name" | "id">): string {
+  return item.name?.en || item.id;
 }
 
 const categoryConverter = converter<Category>();
@@ -263,7 +274,8 @@ function toAdminProfile(uid: string, data: Record<string, unknown>): AdminProfil
     isAdmin: data.isAdmin === true,
     role: data.role === "employee" ? "employee" : data.role === "admin" ? "admin" : undefined,
     permissions: (data.permissions as AdminPermissions | undefined) || undefined,
-    disabled: data.disabled === true
+    disabled: data.disabled === true,
+    isMainAdmin: data.isMainAdmin === true
   };
 }
 
@@ -340,6 +352,8 @@ export async function saveAdminProfile(profile: {
 }) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
+  const existingSnap = await getDoc(tenantDoc(db, "adminProfiles", profile.uid));
+  const before = existingSnap.exists() ? toAdminProfile(profile.uid, existingSnap.data()) : null;
   // isAdmin stays true for every staff member so the current Firestore rules
   // grant them admin-data access; the role + permissions drive the UI gating.
   await setDoc(
@@ -356,18 +370,57 @@ export async function saveAdminProfile(profile: {
     }),
     { merge: true }
   );
+  const userLabel = profile.displayName || profile.username || profile.email;
+  if (before) {
+    const changes = buildChanges(
+      {
+        role: before.role || "admin",
+        disabled: before.disabled === true,
+        username: before.username || "",
+        displayName: before.displayName || "",
+        permissions: before.permissions || {}
+      },
+      {
+        role: profile.role,
+        disabled: profile.disabled === true,
+        username: profile.username || "",
+        displayName: profile.displayName || "",
+        permissions: profile.role === "employee" ? profile.permissions : {}
+      }
+    );
+    await logAudit({ action: "update", entity: "user", entityId: profile.uid, label: userLabel, changes });
+  } else {
+    await logAudit({ action: "create", entity: "user", entityId: profile.uid, label: userLabel, summary: `role: ${profile.role}` });
+  }
 }
 
-export async function setAdminProfileDisabled(uid: string, disabled: boolean) {
+export async function setAdminProfileDisabled(uid: string, disabled: boolean, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   await updateDoc(tenantDoc(db, "adminProfiles", uid), { disabled, updatedAt: serverTimestamp() });
+  await logAudit({ action: disabled ? "deactivate" : "activate", entity: "user", entityId: uid, label });
 }
 
-export async function deleteAdminProfile(uid: string) {
+export async function deleteAdminProfile(uid: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   await deleteDoc(tenantDoc(db, "adminProfiles", uid));
+  await logAudit({ action: "delete", entity: "user", entityId: uid, label });
+}
+
+// Grant or revoke the Main Admin flag for this cafe. Only a Main Admin can do
+// this (firestore.rules gates the isMainAdmin field to Main Admins).
+export async function setMainAdmin(uid: string, isMainAdmin: boolean, label?: string) {
+  const db = getFirebaseDb();
+  if (!db) throw new Error("Firestore is not configured.");
+  await updateDoc(tenantDoc(db, "adminProfiles", uid), { isMainAdmin, updatedAt: serverTimestamp() });
+  await logAudit({
+    action: isMainAdmin ? "activate" : "deactivate",
+    entity: "user",
+    entityId: uid,
+    label,
+    summary: isMainAdmin ? "Granted Main Admin" : "Revoked Main Admin"
+  });
 }
 
 export async function saveCategory(category: Category) {
@@ -379,23 +432,73 @@ export async function saveCategory(category: Category) {
     updatedAt: serverTimestamp(),
     createdAt: category.createdAt || serverTimestamp()
   };
+  let savedId = category.id;
+  let before: Category | null = null;
   if (category.id) {
+    const existing = await getDoc(tenantDoc(db, "categories", category.id).withConverter(categoryConverter));
+    before = existing.exists() ? existing.data() : null;
     await setDoc(tenantDoc(db, "categories", category.id).withConverter(categoryConverter), payload);
   } else {
-    await addDoc(tenantCollection(db, "categories").withConverter(categoryConverter), payload);
+    const ref = await addDoc(tenantCollection(db, "categories").withConverter(categoryConverter), payload);
+    savedId = ref.id;
   }
+  await logAudit(
+    before
+      ? { action: "update", entity: "category", entityId: savedId, label: categoryLabel(category), changes: buildChanges(before, category) }
+      : { action: "create", entity: "category", entityId: savedId, label: categoryLabel(category) }
+  );
 }
 
-export async function deleteCategory(categoryId: string) {
+export async function deleteCategory(categoryId: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) return;
   await deleteDoc(tenantDoc(db, "categories", categoryId));
+  await logAudit({ action: "delete", entity: "category", entityId: categoryId, label });
 }
 
-export async function updateCategoryActive(categoryId: string, isActive: boolean) {
+// Delete a category but KEEP its items. Each item is either moved to another
+// category or left uncategorized (empty categoryId) — uncategorized items show
+// under the "Others" group on the admin list.
+export async function deleteCategoryKeepItems(category: Category, items: MenuItem[], destination: Category | null) {
+  const db = getFirebaseDb();
+  if (!db) return;
+  const destinationId = destination?.id ?? "";
+  const batch = writeBatch(db);
+  for (const item of items) {
+    batch.update(tenantDoc(db, "menuItems", item.id), { categoryId: destinationId, updatedAt: serverTimestamp() });
+  }
+  batch.delete(tenantDoc(db, "categories", category.id));
+  await batch.commit();
+  const summary = items.length
+    ? destination
+      ? `Kept ${items.length} item(s); moved to «${categoryLabel(destination)}»`
+      : `Kept ${items.length} item(s) as Others (no category)`
+    : undefined;
+  await logAudit({ action: "delete", entity: "category", entityId: category.id, label: categoryLabel(category), summary });
+}
+
+// Delete a category AND permanently delete every item inside it.
+export async function deleteCategoryWithItems(category: Category, items: MenuItem[]) {
+  const db = getFirebaseDb();
+  if (!db) return;
+  const batch = writeBatch(db);
+  for (const item of items) batch.delete(tenantDoc(db, "menuItems", item.id));
+  batch.delete(tenantDoc(db, "categories", category.id));
+  await batch.commit();
+  await logAudit({
+    action: "delete",
+    entity: "category",
+    entityId: category.id,
+    label: categoryLabel(category),
+    summary: `Deleted with ${items.length} item(s)`
+  });
+}
+
+export async function updateCategoryActive(categoryId: string, isActive: boolean, label?: string) {
   const db = getFirebaseDb();
   if (!db) return;
   await updateDoc(tenantDoc(db, "categories", categoryId), { isActive, updatedAt: serverTimestamp() });
+  await logAudit({ action: isActive ? "activate" : "deactivate", entity: "category", entityId: categoryId, label });
 }
 
 export async function reorderCategories(updates: { id: string; displayOrder: number }[]) {
@@ -406,30 +509,46 @@ export async function reorderCategories(updates: { id: string; displayOrder: num
     batch.update(tenantDoc(db, "categories", update.id), { displayOrder: update.displayOrder, updatedAt: serverTimestamp() });
   }
   await batch.commit();
+  await logAudit({ action: "reorder", entity: "category", summary: `Reordered ${updates.length} categor${updates.length === 1 ? "y" : "ies"}` });
 }
 
 export async function saveMenuItem(item: MenuItem) {
   const db = getFirebaseDb();
   if (!db) return;
   await pruneExpiredImageHistory(item, false);
+  const nextItem = withActiveImageHistory(item);
   const payload = {
-    ...withActiveImageHistory(item),
+    ...nextItem,
     updatedAt: serverTimestamp(),
     createdAt: item.createdAt || serverTimestamp()
   };
+  let savedId = item.id;
+  let before: MenuItem | null = null;
   if (item.id) {
+    const existing = await getDoc(tenantDoc(db, "menuItems", item.id).withConverter(itemConverter));
+    before = existing.exists() ? existing.data() : null;
     await setDoc(tenantDoc(db, "menuItems", item.id).withConverter(itemConverter), payload);
   } else {
-    await addDoc(tenantCollection(db, "menuItems").withConverter(itemConverter), payload);
+    const ref = await addDoc(tenantCollection(db, "menuItems").withConverter(itemConverter), payload);
+    savedId = ref.id;
   }
+  await logAudit(
+    before
+      ? { action: "update", entity: "menuItem", entityId: savedId, label: itemLabel(item), changes: buildChanges(before, nextItem) }
+      : { action: "create", entity: "menuItem", entityId: savedId, label: itemLabel(item) }
+  );
 }
 
-export async function updateMenuItemAvailability(itemId: string, isAvailable: boolean, isSoldOut?: boolean) {
+export async function updateMenuItemAvailability(itemId: string, isAvailable: boolean, isSoldOut?: boolean, label?: string) {
   const db = getFirebaseDb();
   if (!db) return;
   const patch: Record<string, unknown> = { isAvailable, updatedAt: serverTimestamp() };
   if (typeof isSoldOut === "boolean") patch.isSoldOut = isSoldOut;
   await updateDoc(tenantDoc(db, "menuItems", itemId), patch);
+  const summary = typeof isSoldOut === "boolean"
+    ? `available: ${isAvailable}, sold out: ${isSoldOut}`
+    : `available: ${isAvailable}`;
+  await logAudit({ action: "availability", entity: "menuItem", entityId: itemId, label, summary });
 }
 
 export async function reorderMenuItems(updates: { id: string; displayOrder: number }[]) {
@@ -440,6 +559,7 @@ export async function reorderMenuItems(updates: { id: string; displayOrder: numb
     batch.update(tenantDoc(db, "menuItems", update.id), { displayOrder: update.displayOrder, updatedAt: serverTimestamp() });
   }
   await batch.commit();
+  await logAudit({ action: "reorder", entity: "menuItem", summary: `Reordered ${updates.length} item(s)` });
 }
 
 async function pruneExpiredImageHistory(item: MenuItem, persist: boolean) {
@@ -463,10 +583,11 @@ function isExpired(value: string) {
   return Number.isFinite(Date.parse(value)) && Date.parse(value) <= Date.now();
 }
 
-export async function deleteMenuItem(itemId: string) {
+export async function deleteMenuItem(itemId: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) return;
   await deleteDoc(tenantDoc(db, "menuItems", itemId));
+  await logAudit({ action: "delete", entity: "menuItem", entityId: itemId, label });
 }
 
 export async function listExpenses(): Promise<Expense[]> {
@@ -484,20 +605,31 @@ export async function saveExpense(expense: Expense) {
     updatedAt: serverTimestamp(),
     createdAt: expense.createdAt || serverTimestamp()
   };
+  let savedId = expense.id;
+  let before: Expense | null = null;
   if (expense.id) {
+    const existing = await getDoc(tenantDoc(db, "expenses", expense.id).withConverter(expenseConverter));
+    before = existing.exists() ? existing.data() : null;
     await setDoc(tenantDoc(db, "expenses", expense.id).withConverter(expenseConverter), payload);
   } else {
-    await addDoc(tenantCollection(db, "expenses").withConverter(expenseConverter), payload);
+    const ref = await addDoc(tenantCollection(db, "expenses").withConverter(expenseConverter), payload);
+    savedId = ref.id;
   }
+  await logAudit(
+    before
+      ? { action: "update", entity: "expense", entityId: savedId, label: expense.title, changes: buildChanges(before, expense) }
+      : { action: "create", entity: "expense", entityId: savedId, label: expense.title, summary: `${expense.amount} ${expense.currency}` }
+  );
 }
 
-export async function deleteExpense(expenseId: string) {
+export async function deleteExpense(expenseId: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   await deleteDoc(tenantDoc(db, "expenses", expenseId));
+  await logAudit({ action: "delete", entity: "expense", entityId: expenseId, label });
 }
 
-export async function cancelExpense(expenseId: string, cancelledByUid?: string) {
+export async function cancelExpense(expenseId: string, cancelledByUid?: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   await updateDoc(tenantDoc(db, "expenses", expenseId), stripUndefined({
@@ -506,14 +638,24 @@ export async function cancelExpense(expenseId: string, cancelledByUid?: string) 
     cancelledByUid,
     updatedAt: serverTimestamp()
   }));
+  await logAudit({ action: "cancel", entity: "expense", entityId: expenseId, label });
 }
 
 export async function saveSettings(section: "general" | "menu", value: Record<string, unknown>) {
   const db = getFirebaseDb();
   if (!db) return;
+  const existing = await getDoc(tenantDoc(db, "settings", section));
+  const before = existing.exists() ? existing.data() : null;
   const payload = stripUndefined({ ...value, updatedAt: serverTimestamp() }) as Record<string, unknown>;
   await updateDoc(tenantDoc(db, "settings", section), payload).catch(async () => {
     await setDoc(tenantDoc(db, "settings", section), payload, { merge: true });
+  });
+  await logAudit({
+    action: "update",
+    entity: "settings",
+    entityId: section,
+    label: section,
+    changes: before ? buildChanges(before, value) : undefined
   });
 }
 
@@ -635,6 +777,13 @@ export async function completePosOrder(state: PosState, completedOrder: PosCompl
   );
   batch.set(tenantDoc(db, "completedOrders", completedOrder.id).withConverter(completedOrderConverter), completedOrder);
   await batch.commit();
+  await logAudit({
+    action: "complete",
+    entity: "order",
+    entityId: completedOrder.id,
+    label: completedOrder.tableName,
+    summary: `${completedOrder.total} ${completedOrder.currency}`
+  });
 }
 
 export async function cancelCompletedOrder(order: PosCompletedOrder, cancelledByUid?: string) {
@@ -651,15 +800,23 @@ export async function cancelCompletedOrder(order: PosCompletedOrder, cancelledBy
   // One-way migration: clear any leftover settings/pos.completedOrders array.
   batch.set(tenantDoc(db, "settings", "pos"), { completedOrders: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
   await batch.commit();
+  await logAudit({
+    action: "cancel",
+    entity: "order",
+    entityId: order.id,
+    label: order.tableName,
+    summary: `${order.total} ${order.currency}`
+  });
 }
 
-export async function deleteCompletedOrder(orderId: string) {
+export async function deleteCompletedOrder(orderId: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const batch = writeBatch(db);
   batch.delete(tenantDoc(db, "completedOrders", orderId));
   batch.set(tenantDoc(db, "settings", "pos"), { completedOrders: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
   await batch.commit();
+  await logAudit({ action: "delete", entity: "order", entityId: orderId, label });
 }
 
 // Full-admin edit of a recorded sale (change lines/prices/discount).
@@ -670,6 +827,13 @@ export async function updateCompletedOrder(order: PosCompletedOrder) {
   batch.set(tenantDoc(db, "completedOrders", order.id).withConverter(completedOrderConverter), order);
   batch.set(tenantDoc(db, "settings", "pos"), { completedOrders: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
   await batch.commit();
+  await logAudit({
+    action: "update",
+    entity: "order",
+    entityId: order.id,
+    label: order.tableName,
+    summary: `Edited · ${order.total} ${order.currency}`
+  });
 }
 
 function normalizePosState(value: unknown): PosState {

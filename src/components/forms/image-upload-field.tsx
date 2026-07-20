@@ -41,6 +41,7 @@ export function ImageUploadField({
   const [preview, setPreview] = useState(imageUrl || "");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const storageConfigured = hasSupabaseConfig();
   const isUploading = progress > 0 && progress < 100;
@@ -49,19 +50,16 @@ export function ImageUploadField({
     setPreview(imageUrl || "");
   }, [imageUrl]);
 
-  async function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Shared by the file input and drag-and-drop. Reverts the preview if the upload fails.
+  async function processFile(file: File) {
     setError("");
     if (!storageConfigured) {
       setError("Supabase Storage is not configured.");
-      event.target.value = "";
       return;
     }
     const validation = validateImageFile(file);
     if (validation) {
       setError(validation);
-      event.target.value = "";
       return;
     }
     setPreview(URL.createObjectURL(file));
@@ -74,10 +72,25 @@ export function ImageUploadField({
       onUploaded(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : text?.imageUploadFailed || "File upload failed.");
+      setPreview(imageUrl || "");
     } finally {
       onUploadingChange?.(false);
-      event.target.value = "";
+      setProgress(0);
     }
+  }
+
+  async function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) await processFile(file);
+  }
+
+  async function handleDrop(event: React.DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    if (isUploading) return;
+    const file = event.dataTransfer.files?.[0];
+    if (file) await processFile(file);
   }
 
   function removeCurrentImage() {
@@ -95,17 +108,24 @@ export function ImageUploadField({
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">{label}</label>
-      {/* Tap / hover the tile to upload. When something is uploaded we only keep a
-          delete button; the file picker is triggered by tapping the tile itself. */}
+      {/* Tap / hover the tile to upload, or drag-and-drop a file onto it. When something is
+          uploaded we only keep a delete button; the picker is triggered by tapping the tile. */}
       <div className="group relative">
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={isUploading}
           aria-label={preview ? text?.changeImage || "Change image" : text?.uploadImage || "Upload image"}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!isUploading) setDragActive(true);
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleDrop}
           className={cn(
             "relative flex h-36 w-full items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/30 text-center transition-colors hover:border-primary/60 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60",
-            preview && "border-solid"
+            preview && "border-solid",
+            dragActive && "border-primary bg-primary/5"
           )}
         >
           {preview ? (
@@ -114,7 +134,7 @@ export function ImageUploadField({
           ) : (
             <span className="flex flex-col items-center gap-1.5 px-4 text-muted-foreground">
               <ImagePlus className="h-6 w-6" aria-hidden />
-              <span className="text-sm font-medium">{text?.noImageYet || "No picture uploaded yet"}</span>
+              <span className="text-sm font-medium">{text?.uploadImageHint || text?.noImageYet || "Tap or drop an image to upload"}</span>
             </span>
           )}
           <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">

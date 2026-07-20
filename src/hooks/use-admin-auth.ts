@@ -43,6 +43,8 @@ export function useAdminAuth() {
     isAdmin: approved,
     role: roleOf(profile),
     canManageUsers: approved && canManageUsers(profile),
+    // The Main Admin (owner) — the only role allowed to read the Activity Log.
+    isMainAdmin: approved && profile?.isMainAdmin === true,
     can,
     isConfigured: hasFirebaseClientConfig()
   };

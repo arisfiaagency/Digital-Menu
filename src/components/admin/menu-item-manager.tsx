@@ -1,10 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, type FieldPath, type UseFormReturn } from "react-hook-form";
 import type { z } from "zod";
-import { CheckCircle2, ChevronDown, CircleOff, GripVertical, ImageOff, ListOrdered, Pencil, PlusCircle, Trash2, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, CircleOff, ImageOff, ListOrdered, Pencil, PlusCircle, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageUploadField } from "@/components/forms/image-upload-field";
+import { CategoryIcon } from "@/components/menu/category-icon";
+import { ReorderList } from "@/components/admin/reorder-list";
 import { adminErrorText, formatAdminText, useAdminLocale } from "@/components/admin/admin-preferences";
 import { deleteMenuItem, getAdminAppData, reorderMenuItems, saveMenuItem, updateMenuItemAvailability } from "@/lib/firebase/firestore";
 import { localized } from "@/lib/i18n/config";
@@ -23,9 +25,12 @@ import { cn } from "@/lib/utils/cn";
 import { focusFirstInvalidField } from "@/lib/utils/focus-invalid-field";
 import { formatMoney, normalizeSearch } from "@/lib/utils/format";
 import { menuItemSchema } from "@/lib/validation/schemas";
-import type { AppData, Currency, ImageHistoryEntry, Locale, MenuItem } from "@/types/models";
+import type { AppData, Category, Currency, ImageHistoryEntry, Locale, MenuItem } from "@/types/models";
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
+
+// Items whose category no longer exists get grouped last under "Others" so nothing is stranded.
+const ORPHAN_GROUP = "__no_category__";
 
 const emptyItem: MenuItemFormData = {
   id: "",
@@ -73,9 +78,7 @@ export function MenuItemManager() {
   const [handledLinkedCategory, setHandledLinkedCategory] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [orderedItems, setOrderedItems] = useState<MenuItem[]>([]);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
-  const rowRefs = useRef(new Map<string, HTMLLIElement>());
   const form = useForm<MenuItemFormData>({ resolver: zodResolver(menuItemSchema), defaultValues: emptyItem });
 
   async function refresh() {
@@ -206,7 +209,7 @@ export function MenuItemManager() {
     setMessage("");
     setError("");
     try {
-      await deleteMenuItem(deleteTarget.id);
+      await deleteMenuItem(deleteTarget.id, deleteTarget.name?.en || deleteTarget.id);
       setDeleteTarget(null);
       await refresh();
       setMessage(text.menuItemDeleted);
@@ -229,7 +232,7 @@ export function MenuItemManager() {
     setData((current) => upsertMenuItem(current, nextItem));
 
     try {
-      await updateMenuItemAvailability(item.id, isAvailable, clearSoldOut ? false : undefined);
+      await updateMenuItemAvailability(item.id, isAvailable, clearSoldOut ? false : undefined, item.name?.en || item.id);
       setMessage(`${name}: ${isAvailable ? text.available : text.inactive}`);
     } catch (err) {
       setData((current) => upsertMenuItem(current, item));
@@ -239,10 +242,24 @@ export function MenuItemManager() {
     }
   }
 
+  // Reorder is split into one independently reorderable section per category (in category
+  // display order), plus a trailing "Others" section for items whose category is missing.
+  const reorderGroups = useMemo<{ id: string; category: Category | null; items: MenuItem[] }[]>(() => {
+    const cats = [...(data?.categories || [])].sort((a, b) => a.displayOrder - b.displayOrder);
+    const known = new Set(cats.map((cat) => cat.id));
+    const groups: { id: string; category: Category | null; items: MenuItem[] }[] = cats.map((cat) => ({
+      id: cat.id,
+      category: cat,
+      items: orderedItems.filter((item) => item.categoryId === cat.id)
+    }));
+    const orphans = orderedItems.filter((item) => !known.has(item.categoryId));
+    if (orphans.length) groups.push({ id: ORPHAN_GROUP, category: null, items: orphans });
+    return groups.filter((group) => group.items.length > 0);
+  }, [data?.categories, orderedItems]);
+
   function startReorder() {
-    setOrderedItems(items);
+    setOrderedItems(buildGroupedItems(data?.menuItems || [], data?.categories || []));
     setReorderMode(true);
-    setDraggingId(null);
     setFormOpen(false);
     setEditingItemId(null);
     setExpandedItemId(null);
@@ -252,61 +269,29 @@ export function MenuItemManager() {
 
   function cancelReorder() {
     setReorderMode(false);
-    setDraggingId(null);
     setOrderedItems([]);
   }
 
-  function handleReorderPointerDown(event: ReactPointerEvent, id: string) {
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    setDraggingId(id);
-  }
-
-  function handleReorderPointerMove(event: ReactPointerEvent) {
-    if (!draggingId) return;
-    const pointerY = event.clientY;
-    setOrderedItems((current) => {
-      const index = current.findIndex((entry) => entry.id === draggingId);
-      if (index === -1) return current;
-      // Swap with the neighbour whose midpoint the pointer has crossed (one step per move — stable).
-      if (index > 0) {
-        const prev = rowRefs.current.get(current[index - 1].id);
-        if (prev) {
-          const rect = prev.getBoundingClientRect();
-          if (pointerY < rect.top + rect.height / 2) {
-            const next = [...current];
-            [next[index - 1], next[index]] = [next[index], next[index - 1]];
-            return next;
-          }
-        }
+  // Splice one category's reordered items back into the flat list while keeping
+  // every section contiguous and in category order.
+  function updateGroup(groupId: string, nextItems: MenuItem[]) {
+    setOrderedItems((prev) => {
+      const cats = [...(data?.categories || [])].sort((a, b) => a.displayOrder - b.displayOrder);
+      const known = new Set(cats.map((cat) => cat.id));
+      const result: MenuItem[] = [];
+      for (const cat of cats) {
+        result.push(...(cat.id === groupId ? nextItems : prev.filter((item) => item.categoryId === cat.id)));
       }
-      if (index < current.length - 1) {
-        const following = rowRefs.current.get(current[index + 1].id);
-        if (following) {
-          const rect = following.getBoundingClientRect();
-          if (pointerY > rect.top + rect.height / 2) {
-            const next = [...current];
-            [next[index + 1], next[index]] = [next[index], next[index + 1]];
-            return next;
-          }
-        }
-      }
-      return current;
+      result.push(...(groupId === ORPHAN_GROUP ? nextItems : prev.filter((item) => !known.has(item.categoryId))));
+      return result;
     });
   }
 
-  function handleReorderPointerUp() {
-    setDraggingId(null);
-  }
-
   async function saveOrder() {
-    // Reuse the same set of displayOrder "slots" the reordered items already occupied, sorted
-    // ascending, and hand them out in the new visual order. Items outside this view keep their slots.
-    // If those slots aren't all distinct (e.g. un-migrated data all at 0) they can't express an
-    // order, so fall back to fresh sequential numbers.
-    const slots = orderedItems.map((entry) => entry.displayOrder).sort((a, b) => a - b);
-    const targetOrders = new Set(slots).size === slots.length ? slots : orderedItems.map((_, index) => index);
+    // The list is already grouped by category in display order, so a single global
+    // sequence reproduces both the section order and each item's spot within it.
     const updates = orderedItems
-      .map((entry, index) => ({ id: entry.id, displayOrder: targetOrders[index] }))
+      .map((entry, index) => ({ id: entry.id, displayOrder: index }))
       .filter((entry, index) => entry.displayOrder !== orderedItems[index].displayOrder);
 
     if (!updates.length) {
@@ -365,7 +350,7 @@ export function MenuItemManager() {
             </>
           ) : (
             <>
-              <Button type="button" variant="outline" onClick={startReorder} disabled={!data || items.length < 2}>
+              <Button type="button" variant="outline" onClick={startReorder} disabled={!data || allItems.length < 2}>
                 <ListOrdered className="h-4 w-4" aria-hidden />
                 {text.reorderItems}
               </Button>
@@ -393,55 +378,51 @@ export function MenuItemManager() {
           <CardHeader>
             <CardTitle>{text.reorderItems}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <p className="text-sm text-muted-foreground">{text.reorderHint}</p>
-            <ul className="grid gap-2">
-              {orderedItems.map((item) => {
-                const category = data?.categories.find((entry) => entry.id === item.categoryId);
-                const categoryName = localized(category?.name, locale, text.noCategory);
-                return (
-                  <li
-                    key={item.id}
-                    ref={(el) => {
-                      if (el) rowRefs.current.set(item.id, el);
-                      else rowRefs.current.delete(item.id);
-                    }}
-                    className={cn(
-                      "menu-reorder-item flex items-center gap-3 rounded-lg border bg-card p-3",
-                      draggingId === item.id && "is-dragging shadow-lg ring-2 ring-primary"
+            {reorderGroups.map((group) => (
+              <div key={group.id} className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    {group.category ? (
+                      <CategoryIcon slug={group.category.slug} icon={group.category.icon} className="h-4 w-4" />
+                    ) : (
+                      <ImageOff className="h-4 w-4" aria-hidden />
                     )}
-                  >
-                    <button
-                      type="button"
-                      aria-label={text.reorderItems}
-                      className="focus-ring touch-none cursor-grab rounded-md p-1 text-muted-foreground active:cursor-grabbing"
-                      onPointerDown={(event) => handleReorderPointerDown(event, item.id)}
-                      onPointerMove={handleReorderPointerMove}
-                      onPointerUp={handleReorderPointerUp}
-                      onPointerCancel={handleReorderPointerUp}
-                    >
-                      <GripVertical className="h-5 w-5" aria-hidden />
-                    </button>
-                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border bg-muted">
-                      {item.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                          <ImageOff className="h-4 w-4" aria-hidden />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{localized(item.name, locale, item.name.en)}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {categoryName} · {formatMoney(item.basePrice, item.currency, locale)}
-                      </p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                  </span>
+                  <h3 className="font-semibold">
+                    {group.category ? localized(group.category.name, locale, group.category.name.en) : text.noCategory}
+                  </h3>
+                  <span className="rounded-full border bg-background px-2 py-0.5 text-xs text-muted-foreground">{group.items.length}</span>
+                  <span className="h-px flex-1 bg-border" aria-hidden />
+                </div>
+                <ReorderList
+                  items={group.items}
+                  onReorder={(next) => updateGroup(group.id, next)}
+                  reorderLabel={text.reorderItems}
+                  positionLabel={text.position}
+                  dir={textDir}
+                  renderRow={(item) => (
+                    <>
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border bg-muted">
+                        {item.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                            <ImageOff className="h-4 w-4" aria-hidden />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold">{localized(item.name, locale, item.name.en)}</p>
+                        <p className="truncate text-xs text-muted-foreground">{formatMoney(item.basePrice, item.currency, locale)}</p>
+                      </div>
+                    </>
+                  )}
+                />
+              </div>
+            ))}
           </CardContent>
         </Card>
       ) : (
@@ -1036,4 +1017,18 @@ function upsertMenuItem(data: AppData | null, item: MenuItem): AppData | null {
       ? data.menuItems.map((entry) => (entry.id === item.id ? item : entry))
       : [...data.menuItems, item]
   };
+}
+
+// Flat list of every item, grouped by category (in category display order) and, within
+// each category, in current displayOrder. Items with an unknown category go last.
+function buildGroupedItems(allItems: MenuItem[], categories: Category[]): MenuItem[] {
+  const sorted = [...allItems].sort((a, b) => a.displayOrder - b.displayOrder);
+  const cats = [...categories].sort((a, b) => a.displayOrder - b.displayOrder);
+  const known = new Set(cats.map((cat) => cat.id));
+  const result: MenuItem[] = [];
+  for (const cat of cats) {
+    result.push(...sorted.filter((item) => item.categoryId === cat.id));
+  }
+  result.push(...sorted.filter((item) => !known.has(item.categoryId)));
+  return result;
 }

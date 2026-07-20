@@ -212,7 +212,7 @@ export function ExpenseManager() {
     setError("");
     setSaving(true);
     try {
-      await deleteExpense(deleteTarget.id);
+      await deleteExpense(deleteTarget.id, deleteTarget.title);
       await refresh();
       setDeleteTarget(null);
       setMessage(text.expenseDeleted);

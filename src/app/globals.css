@@ -550,6 +550,17 @@ textarea {
 .menu-reorder-item { animation: menu-reorder-wobble 0.9s ease-in-out infinite; will-change: transform; }
 .menu-reorder-item:nth-child(even) { animation-delay: -0.45s; }
 .menu-reorder-item.is-dragging { animation: none; }
+/* Hold the wobble still while a position number is being typed, so the box is easy to tap. */
+.reorder-list:focus-within .menu-reorder-item { animation-play-state: paused; }
+
+/* The native date/time picker icon renders near-black by default, invisible on the dark
+   theme (Reports & Expenses pickers). Invert it in dark mode. WebKit/Blink only; Firefox
+   already tints it with the field's text color. */
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="month"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.dark input[type="week"]::-webkit-calendar-picker-indicator { filter: invert(1); }
 
 @media (prefers-reduced-motion: reduce) {
   .menu-reorder-item {

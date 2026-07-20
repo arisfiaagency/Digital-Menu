@@ -68,8 +68,6 @@ export type GeneralSettings = {
   description: OptionalLocalizedText;
   logoUrl?: string;
   logoPath?: string;
-  coverImageUrl?: string;
-  coverImagePath?: string;
   // Optional announcement shown in the "promo" above-category strip.
   promoText?: OptionalLocalizedText;
   phone?: string;
@@ -246,6 +244,56 @@ export type AdminProfile = {
   role?: AdminRole;
   permissions?: AdminPermissions;
   disabled?: boolean;
+  // The Main Admin (owner) of this cafe. Full admins run the cafe; the Main Admin
+  // is the one with oversight — currently the only role that can read the cafe's
+  // Activity Log. Only a Main Admin can grant/revoke it (enforced in firestore.rules).
+  isMainAdmin?: boolean;
+  createdAt?: Timestamp;
+};
+
+// --- Audit trail ---------------------------------------------------------
+// Append-only accountability log: who changed what, and when. Written from the
+// data layer (firestore.ts) on every mutating action; stored per cafe under
+// clients/{slug}/auditLogs and readable by that cafe's Main Admin.
+
+export type AuditAction =
+  | "create"
+  | "update"
+  | "delete"
+  | "activate"
+  | "deactivate"
+  | "availability"
+  | "reorder"
+  | "cancel"
+  | "complete";
+
+export type AuditEntity = "category" | "menuItem" | "expense" | "order" | "settings" | "user";
+
+// One changed field on an "update" — kept as short display strings so the log
+// renders directly and never carries nested `undefined` into Firestore.
+export type AuditChange = {
+  field: string;
+  before: string;
+  after: string;
+};
+
+export type AuditLog = {
+  id: string;
+  action: AuditAction | string;
+  entity: AuditEntity | string;
+  entityId?: string;
+  // Human-readable name of the thing acted on, at the time of the action.
+  label?: string;
+  // Optional freeform detail (e.g. "kept 4 items as Others").
+  summary?: string;
+  // Field-level before/after for edits.
+  changes?: AuditChange[];
+  // Who did it — resolved displayName → username → email when the action ran.
+  actorUid?: string;
+  actorName?: string;
+  actorEmail?: string;
+  // ISO timestamp captured client-side; createdAt is the Firestore server time.
+  at?: string;
   createdAt?: Timestamp;
 };
 

@@ -8,6 +8,7 @@ import {
   Building2,
   ChevronDown,
   CircleUserRound,
+  History,
   KeyRound,
   LineChart,
   ListTree,
@@ -26,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { logoutAdmin } from "@/lib/firebase/auth";
+import { setAuditActor } from "@/lib/firebase/audit";
 import { cn } from "@/lib/utils/cn";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-preferences";
@@ -79,8 +81,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const loginPath = `${adminBasePath}/login`;
   const usersHref = `${adminBasePath}/users`;
   const settingsHref = `${adminBasePath}/settings`;
+  const auditHref = `${adminBasePath}/audit`;
   const navItems = nav.map((entry) => ({ ...entry, href: `${adminBasePath}${entry.path}` }));
   const isLogin = pathname === loginPath;
+
+  // Attribute every audited write to the signed-in staff member. Set once the
+  // session resolves so the data layer can record who did what without threading
+  // the actor through each call site; cleared on sign-out.
+  useEffect(() => {
+    if (auth.user && auth.isAdmin) {
+      const name = auth.profile?.displayName || auth.profile?.username || auth.user.email || undefined;
+      setAuditActor({ uid: auth.user.uid, name, email: auth.user.email || undefined });
+    } else {
+      setAuditActor(null);
+    }
+  }, [auth.user, auth.isAdmin, auth.profile]);
 
   if (isLogin) return <>{children}</>;
 
@@ -116,8 +131,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const firstAllowedHref = allowedNav[0]?.href ?? (auth.canManageUsers ? usersHref : null);
 
   const onUsersRoute = pathname.startsWith(usersHref);
+  const onAuditRoute = pathname.startsWith(auditHref);
   const currentNav = navItems.find((entry) => pathname.startsWith(entry.href));
-  const routeAllowed = onUsersRoute ? auth.canManageUsers : currentNav ? auth.can(currentNav.feature) : true;
+  const routeAllowed = onAuditRoute
+    ? auth.isMainAdmin
+    : onUsersRoute
+      ? auth.canManageUsers
+      : currentNav
+        ? auth.can(currentNav.feature)
+        : true;
 
   if (!routeAllowed) {
     if (firstAllowedHref) {
@@ -170,8 +192,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           navItems={allowedNav}
           canManageUsers={auth.canManageUsers}
           canSettings={auth.can("settings")}
+          isMainAdmin={auth.isMainAdmin}
           usersHref={usersHref}
           settingsHref={settingsHref}
+          auditHref={auditHref}
           homeHref={adminBasePath}
           onLogout={handleLogout}
         />
@@ -210,8 +234,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           navItems={allowedNav}
           canManageUsers={auth.canManageUsers}
           canSettings={auth.can("settings")}
+          isMainAdmin={auth.isMainAdmin}
           usersHref={usersHref}
           settingsHref={settingsHref}
+          auditHref={auditHref}
           homeHref={adminBasePath}
           onNavigate={() => setMobileNavOpen(false)}
           onLogout={handleLogout}
@@ -235,8 +261,10 @@ function AdminNavigation({
   navItems,
   canManageUsers,
   canSettings,
+  isMainAdmin,
   usersHref,
   settingsHref,
+  auditHref,
   homeHref,
   onNavigate,
   onLogout
@@ -248,15 +276,20 @@ function AdminNavigation({
   navItems: { href: string; labelKey: string; icon: LucideIcon; feature: AdminFeature }[];
   canManageUsers: boolean;
   canSettings: boolean;
+  isMainAdmin: boolean;
   usersHref: string;
   settingsHref: string;
+  auditHref: string;
   homeHref: string;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
-  const items = canManageUsers
-    ? [...navItems, { href: usersHref, labelKey: "users", icon: UsersRound }]
-    : navItems;
+  const items = [
+    ...navItems,
+    ...(canManageUsers ? [{ href: usersHref, labelKey: "users", icon: UsersRound }] : []),
+    // The Activity Log is the Main Admin's oversight view — only they see the nav item.
+    ...(isMainAdmin ? [{ href: auditHref, labelKey: "auditLog", icon: History }] : [])
+  ];
 
   return (
     <div className="flex h-full flex-col">

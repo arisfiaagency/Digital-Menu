@@ -74,6 +74,18 @@ service cloud.firestore {
         );
     }
 
+    // The cafe's Main Admin (owner) — the only tenant role that reads the Activity
+    // Log. Platform full admins keep oversight over every cafe.
+    function isTenantMainAdmin(clientId) {
+      return isPlatformFullAdmin()
+        || (
+          hasTenantProfile(clientId)
+          && tenantData(clientId).isAdmin == true
+          && tenantData(clientId).disabled != true
+          && tenantData(clientId).get('isMainAdmin', false) == true
+        );
+    }
+
     function hasTenantFeature(clientId, feature) {
       return isTenantFullAdmin(clientId)
         || (
@@ -144,7 +156,14 @@ service cloud.firestore {
 
       match /adminProfiles/{uid} {
         allow get: if isTenantAdmin(clientId) || (signedIn() && request.auth.uid == uid);
-        allow list, create, update, delete: if isTenantFullAdmin(clientId);
+        allow list: if isTenantFullAdmin(clientId);
+        // Full admins manage users, but only a Main Admin may set/change the
+        // isMainAdmin flag (prevents a full admin from crowning themselves).
+        allow create: if isTenantFullAdmin(clientId)
+          && (request.resource.data.get('isMainAdmin', false) == false || isTenantMainAdmin(clientId));
+        allow update: if isTenantFullAdmin(clientId)
+          && (request.resource.data.get('isMainAdmin', false) == resource.data.get('isMainAdmin', false) || isTenantMainAdmin(clientId));
+        allow delete: if isTenantFullAdmin(clientId);
       }
 
       match /usernames/{username} {
@@ -153,7 +172,10 @@ service cloud.firestore {
       }
 
       match /auditLogs/{logId} {
-        allow read, create: if isTenantAdmin(clientId);
+        // Every approved staff member's actions get logged (create), but only the
+        // cafe's Main Admin can read the accountability trail. Append-only.
+        allow read: if isTenantMainAdmin(clientId);
+        allow create: if isTenantAdmin(clientId);
         allow update, delete: if false;
       }
     }

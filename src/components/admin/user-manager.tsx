@@ -20,7 +20,8 @@ import {
   listAdminProfiles,
   releaseUsername,
   saveAdminProfile,
-  setAdminProfileDisabled
+  setAdminProfileDisabled,
+  setMainAdmin
 } from "@/lib/firebase/firestore";
 import { createStaffAuthUser, deleteStaffAccount } from "@/lib/firebase/user-admin";
 import { ADMIN_FEATURES, emptyPermissions, roleOf } from "@/lib/admin/permissions";
@@ -194,7 +195,22 @@ export function UserManager() {
     setError("");
     setUsers((current) => current.map((entry) => (entry.uid === profile.uid ? { ...entry, disabled } : entry)));
     try {
-      await setAdminProfileDisabled(profile.uid, disabled);
+      await setAdminProfileDisabled(profile.uid, disabled, profile.displayName || profile.username || profile.email);
+      setMessage(text.userUpdated);
+    } catch (err) {
+      await refresh();
+      setError(err instanceof Error ? err.message : text.settingsSaveFailed);
+    }
+  }
+
+  // Grant/revoke the cafe's Main Admin (owner) flag — only a current Main Admin
+  // sees this control, and it can't be toggled on yourself (avoids self-lockout).
+  async function toggleMainAdmin(profile: AdminProfile, isMainAdmin: boolean) {
+    setMessage("");
+    setError("");
+    setUsers((current) => current.map((entry) => (entry.uid === profile.uid ? { ...entry, isMainAdmin } : entry)));
+    try {
+      await setMainAdmin(profile.uid, isMainAdmin, profile.displayName || profile.username || profile.email);
       setMessage(text.userUpdated);
     } catch (err) {
       await refresh();
@@ -223,7 +239,7 @@ export function UserManager() {
       // Always revoke access and release the username — even if the Auth delete
       // was unavailable. Deleting already-removed docs is a harmless no-op.
       if (removeTarget.username) await releaseUsername(removeTarget.username).catch(() => {});
-      await deleteAdminProfile(removeTarget.uid);
+      await deleteAdminProfile(removeTarget.uid, removeTarget.displayName || removeTarget.username || removeTarget.email);
       setRemoveTarget(null);
       await refresh();
       setMessage(emailFreed ? text.userRemoved : text.accountDeletePartial);
@@ -380,8 +396,10 @@ export function UserManager() {
               text={text}
               textDir={textDir}
               isSelf={profile.uid === auth.user?.uid}
+              viewerIsMainAdmin={auth.isMainAdmin}
               onUpdate={updateUser}
               onToggleDisabled={toggleDisabled}
+              onToggleMainAdmin={toggleMainAdmin}
               onSaveUsername={saveUsername}
               onRemove={() => setRemoveTarget(profile)}
             />
@@ -464,8 +482,10 @@ function UserRow({
   text,
   textDir,
   isSelf,
+  viewerIsMainAdmin,
   onUpdate,
   onToggleDisabled,
+  onToggleMainAdmin,
   onSaveUsername,
   onRemove
 }: {
@@ -473,8 +493,10 @@ function UserRow({
   text: Record<string, string>;
   textDir: "ltr" | "rtl";
   isSelf: boolean;
+  viewerIsMainAdmin: boolean;
   onUpdate: (profile: AdminProfile, changes: { role?: AdminRole; permissions?: AdminPermissions }) => void;
   onToggleDisabled: (profile: AdminProfile, disabled: boolean) => void;
+  onToggleMainAdmin: (profile: AdminProfile, isMainAdmin: boolean) => void;
   onSaveUsername: (profile: AdminProfile, username: string) => void;
   onRemove: () => void;
 }) {
@@ -499,6 +521,7 @@ function UserRow({
               {role === "admin" ? text.roleAdmin : text.roleEmployee}
             </Badge>
             {profile.username ? <Badge>@{profile.username}</Badge> : <Badge className="bg-muted text-muted-foreground">{text.noUsername}</Badge>}
+            {profile.isMainAdmin ? <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">{text.mainAdmin}</Badge> : null}
             {isSelf ? <Badge className="border-primary/30 bg-primary/10 text-primary">{text.youLabel}</Badge> : null}
             {profile.disabled ? <Badge className="border-destructive/30 bg-destructive/10 text-destructive">{text.accountDisabled}</Badge> : null}
           </span>
@@ -575,6 +598,21 @@ function UserRow({
           ) : (
             <p dir={textDir} className="text-sm text-muted-foreground">{text.fullAccess}</p>
           )}
+
+          {viewerIsMainAdmin ? (
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <span className="min-w-0" dir={textDir}>
+                <span className="block text-sm font-medium">{text.mainAdmin}</span>
+                <span className="block text-xs text-muted-foreground">{text.mainAdminHint}</span>
+              </span>
+              <Switch
+                checked={profile.isMainAdmin === true}
+                onCheckedChange={(checked) => onToggleMainAdmin(profile, checked)}
+                label={text.mainAdmin}
+                disabled={isSelf}
+              />
+            </label>
+          ) : null}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-sm">

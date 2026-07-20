@@ -1,11 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, type UseFormReturn } from "react-hook-form";
 import type { z } from "zod";
 import Link from "next/link";
-import { CheckCircle2, ChevronDown, CircleOff, GripVertical, ListOrdered, Pencil, PlusCircle, Trash2, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, CircleOff, ListOrdered, Pencil, PlusCircle, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,8 +17,9 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminErrorText, formatAdminText, useAdminLocale } from "@/components/admin/admin-preferences";
 import { CATEGORY_ICONS, CategoryIcon, DEFAULT_CATEGORY_ICON } from "@/components/menu/category-icon";
+import { ReorderList } from "@/components/admin/reorder-list";
 import { useTenant } from "@/components/tenant-provider";
-import { getAdminAppData, deleteCategory, deleteMenuItem, reorderCategories, saveCategory, saveMenuItem, updateCategoryActive } from "@/lib/firebase/firestore";
+import { getAdminAppData, deleteCategory, deleteCategoryKeepItems, deleteCategoryWithItems, reorderCategories, saveCategory, updateCategoryActive } from "@/lib/firebase/firestore";
 import { localized } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils/cn";
 import { focusFirstInvalidField } from "@/lib/utils/focus-invalid-field";
@@ -39,7 +40,7 @@ const emptyCategory: CategoryFormData = {
 };
 
 export function CategoryManager() {
-  const { locale, text } = useAdminLocale();
+  const { locale, text, dir } = useAdminLocale();
   const { adminBasePath } = useTenant();
   const [data, setData] = useState<AppData | null>(null);
   const [query, setQuery] = useState("");
@@ -52,13 +53,12 @@ export function CategoryManager() {
   const [error, setError] = useState("");
   const [statusSavingIds, setStatusSavingIds] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  // Destination for "keep items": a category id, or "" = keep uncategorized (Others).
   const [moveTarget, setMoveTarget] = useState("");
-  const [deleteMode, setDeleteMode] = useState<"move" | "delete">("move");
+  const [deleteMode, setDeleteMode] = useState<"keep" | "delete">("keep");
   const [reorderMode, setReorderMode] = useState(false);
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
-  const rowRefs = useRef(new Map<string, HTMLLIElement>());
   const form = useForm<CategoryFormData>({ resolver: zodResolver(categorySchema), defaultValues: emptyCategory });
 
   async function refresh() {
@@ -102,22 +102,22 @@ export function CategoryManager() {
   async function confirmDelete() {
     if (!deleteTarget || !data) return;
     const items = data.menuItems.filter((item) => item.categoryId === deleteTarget.id);
-    if (items.length && deleteMode === "move" && !moveTarget) return;
     setSaving(true);
     setMessage("");
     setError("");
     try {
-      if (items.length) {
-        if (deleteMode === "move") {
-          await Promise.all(items.map((item) => saveMenuItem({ ...item, categoryId: moveTarget })));
-        } else {
-          await Promise.all(items.map((item) => deleteMenuItem(item.id)));
-        }
+      if (!items.length) {
+        await deleteCategory(deleteTarget.id, deleteTarget.name.en || deleteTarget.slug || deleteTarget.id);
+      } else if (deleteMode === "delete") {
+        await deleteCategoryWithItems(deleteTarget, items);
+      } else {
+        // Keep items: move them to the chosen category, or leave them uncategorized (Others).
+        const destination = moveTarget ? data.categories.find((entry) => entry.id === moveTarget) || null : null;
+        await deleteCategoryKeepItems(deleteTarget, items, destination);
       }
-      await deleteCategory(deleteTarget.id);
       setDeleteTarget(null);
       setMoveTarget("");
-      setDeleteMode("move");
+      setDeleteMode("keep");
       await refresh();
       setMessage(text.categoryDeleted);
     } catch (err) {
@@ -173,7 +173,7 @@ export function CategoryManager() {
     setData((current) => replaceCategory(current, nextCategory));
 
     try {
-      await updateCategoryActive(category.id, isActive);
+      await updateCategoryActive(category.id, isActive, category.name.en || category.slug || category.id);
       setMessage(`${name}: ${isActive ? text.active : text.inactive}`);
     } catch (err) {
       setData((current) => replaceCategory(current, category));
@@ -184,9 +184,9 @@ export function CategoryManager() {
   }
 
   function startReorder() {
-    setOrderedCategories(categories);
+    // Reorder covers ALL categories (ignores search/status filters) so the numbering is meaningful.
+    setOrderedCategories([...(data?.categories || [])].sort((a, b) => a.displayOrder - b.displayOrder));
     setReorderMode(true);
-    setDraggingId(null);
     setFormOpen(false);
     setEditingCategoryId(null);
     setExpandedCategoryId(null);
@@ -196,58 +196,13 @@ export function CategoryManager() {
 
   function cancelReorder() {
     setReorderMode(false);
-    setDraggingId(null);
     setOrderedCategories([]);
   }
 
-  function handleReorderPointerDown(event: ReactPointerEvent, id: string) {
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    setDraggingId(id);
-  }
-
-  function handleReorderPointerMove(event: ReactPointerEvent) {
-    if (!draggingId) return;
-    const pointerY = event.clientY;
-    setOrderedCategories((current) => {
-      const index = current.findIndex((entry) => entry.id === draggingId);
-      if (index === -1) return current;
-      if (index > 0) {
-        const prev = rowRefs.current.get(current[index - 1].id);
-        if (prev) {
-          const rect = prev.getBoundingClientRect();
-          if (pointerY < rect.top + rect.height / 2) {
-            const next = [...current];
-            [next[index - 1], next[index]] = [next[index], next[index - 1]];
-            return next;
-          }
-        }
-      }
-      if (index < current.length - 1) {
-        const following = rowRefs.current.get(current[index + 1].id);
-        if (following) {
-          const rect = following.getBoundingClientRect();
-          if (pointerY > rect.top + rect.height / 2) {
-            const next = [...current];
-            [next[index + 1], next[index]] = [next[index], next[index + 1]];
-            return next;
-          }
-        }
-      }
-      return current;
-    });
-  }
-
-  function handleReorderPointerUp() {
-    setDraggingId(null);
-  }
-
   async function saveOrder() {
-    // Reuse the categories' existing displayOrder slots, sorted ascending, handed out in the new
-    // visual order; fall back to fresh sequential numbers if the slots aren't all distinct.
-    const slots = orderedCategories.map((entry) => entry.displayOrder).sort((a, b) => a - b);
-    const targetOrders = new Set(slots).size === slots.length ? slots : orderedCategories.map((_, index) => index);
+    // Write a global sequential displayOrder in the new visual order; only changed rows are sent.
     const updates = orderedCategories
-      .map((entry, index) => ({ id: entry.id, displayOrder: targetOrders[index] }))
+      .map((entry, index) => ({ id: entry.id, displayOrder: index }))
       .filter((entry, index) => entry.displayOrder !== orderedCategories[index].displayOrder);
 
     if (!updates.length) {
@@ -306,7 +261,7 @@ export function CategoryManager() {
             </>
           ) : (
             <>
-              <Button type="button" variant="outline" onClick={startReorder} disabled={!data || categories.length < 2}>
+              <Button type="button" variant="outline" onClick={startReorder} disabled={!data || (data?.categories.length || 0) < 2}>
                 <ListOrdered className="h-4 w-4" aria-hidden />
                 {text.reorderItems}
               </Button>
@@ -336,30 +291,14 @@ export function CategoryManager() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">{text.reorderHint}</p>
-            <ul className="grid gap-2">
-              {orderedCategories.map((category) => (
-                <li
-                  key={category.id}
-                  ref={(el) => {
-                    if (el) rowRefs.current.set(category.id, el);
-                    else rowRefs.current.delete(category.id);
-                  }}
-                  className={cn(
-                    "menu-reorder-item flex items-center gap-3 rounded-lg border bg-card p-3",
-                    draggingId === category.id && "is-dragging shadow-lg ring-2 ring-primary"
-                  )}
-                >
-                  <button
-                    type="button"
-                    aria-label={text.reorderItems}
-                    className="focus-ring touch-none cursor-grab rounded-md p-1 text-muted-foreground active:cursor-grabbing"
-                    onPointerDown={(event) => handleReorderPointerDown(event, category.id)}
-                    onPointerMove={handleReorderPointerMove}
-                    onPointerUp={handleReorderPointerUp}
-                    onPointerCancel={handleReorderPointerUp}
-                  >
-                    <GripVertical className="h-5 w-5" aria-hidden />
-                  </button>
+            <ReorderList
+              items={orderedCategories}
+              onReorder={setOrderedCategories}
+              reorderLabel={text.reorderItems}
+              positionLabel={text.position}
+              dir={dir}
+              renderRow={(category) => (
+                <>
                   <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <CategoryIcon slug={category.slug} icon={category.icon} className="h-5 w-5" />
                   </span>
@@ -369,9 +308,9 @@ export function CategoryManager() {
                       {data?.menuItems.filter((item) => item.categoryId === category.id).length || 0} {text.menuItems}
                     </p>
                   </div>
-                </li>
-              ))}
-            </ul>
+                </>
+              )}
+            />
           </CardContent>
         </Card>
       ) : (
@@ -488,7 +427,7 @@ export function CategoryManager() {
                           <Button type="button" variant="outline" size="icon" aria-label={text.edit} title={text.edit} onClick={() => edit(category)}>
                             <Pencil className="h-4 w-4" aria-hidden />
                           </Button>
-                          <Button type="button" variant="destructive" size="icon" aria-label={text.delete} title={text.delete} onClick={() => { setMoveTarget(""); setDeleteMode("move"); setDeleteTarget(category); }}>
+                          <Button type="button" variant="destructive" size="icon" aria-label={text.delete} title={text.delete} onClick={() => { setMoveTarget(""); setDeleteMode("keep"); setDeleteTarget(category); }}>
                             <Trash2 className="h-4 w-4" aria-hidden />
                           </Button>
                         </div>
@@ -518,7 +457,7 @@ export function CategoryManager() {
           onMouseDown={() => {
             if (!saving) {
               setDeleteTarget(null);
-              setDeleteMode("move");
+              setDeleteMode("keep");
             }
           }}
         >
@@ -537,13 +476,13 @@ export function CategoryManager() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setDeleteMode("move")}
+                      onClick={() => setDeleteMode("keep")}
                       className={cn(
                         "focus-ring rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                        deleteMode === "move" ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted"
+                        deleteMode === "keep" ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted"
                       )}
                     >
-                      {text.moveItems}
+                      {text.keepItems}
                     </button>
                     <button
                       type="button"
@@ -556,15 +495,18 @@ export function CategoryManager() {
                       {text.deleteItemsToo}
                     </button>
                   </div>
-                  {deleteMode === "move" ? (
-                    <Select value={moveTarget} onChange={(event) => setMoveTarget(event.target.value)}>
-                      <option value="">{text.chooseDestinationCategory}</option>
-                      {(data?.categories || [])
-                        .filter((category) => category.id !== deleteTarget.id)
-                        .map((category) => (
-                          <option key={category.id} value={category.id}>{localized(category.name, locale, category.name.en)}</option>
-                        ))}
-                    </Select>
+                  {deleteMode === "keep" ? (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">{formatAdminText(text.keepItemsHint, { count: targetItemCount })}</p>
+                      <Select value={moveTarget} onChange={(event) => setMoveTarget(event.target.value)}>
+                        <option value="">{text.othersOption}</option>
+                        {(data?.categories || [])
+                          .filter((category) => category.id !== deleteTarget.id)
+                          .map((category) => (
+                            <option key={category.id} value={category.id}>{localized(category.name, locale, category.name.en)}</option>
+                          ))}
+                      </Select>
+                    </div>
                   ) : (
                     <p className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
                       {formatAdminText(text.deleteItemsWarning, { count: targetItemCount })}
@@ -573,8 +515,8 @@ export function CategoryManager() {
                 </div>
               ) : null}
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteMode("move"); }}>{text.cancel}</Button>
-                <Button variant="destructive" onClick={confirmDelete} disabled={saving || (targetItemCount > 0 && deleteMode === "move" && !moveTarget)}>{text.delete}</Button>
+                <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteMode("keep"); }}>{text.cancel}</Button>
+                <Button variant="destructive" onClick={confirmDelete} disabled={saving}>{text.delete}</Button>
               </div>
             </CardContent>
           </Card>
