@@ -399,7 +399,7 @@ function AdminProfileMenu({
           className="pop-in absolute bottom-full left-0 z-20 mb-2 max-h-[calc(100vh-7rem)] w-full overflow-y-auto rounded-2xl border bg-card p-1.5 shadow-xl"
         >
           <a
-            href={settingsHref.replace(/\/settings$/, "/menu")}
+            href={settingsHref.replace(/\/admin\/settings$/, "")}
             target="_blank"
             rel="noopener noreferrer"
             role="menuitem"

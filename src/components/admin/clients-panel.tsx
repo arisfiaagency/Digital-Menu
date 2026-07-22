@@ -283,7 +283,7 @@ export function ClientsPanel({
                 <p className="font-medium text-foreground">Admin link that will be created</p>
                 <ul className="mt-2 space-y-1 text-muted-foreground">
                   <li>Cafe admin → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}/admin</span></li>
-                  <li>Public menu → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}/menu</span></li>
+                  <li>Public site → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}</span> (welcome → menu)</li>
                 </ul>
               </div>
 
@@ -603,7 +603,7 @@ function ClientCard({
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm">
-              <a href={`/${client.slug}/menu`} target="_blank" rel="noopener noreferrer">
+              <a href={`/${client.slug}`} target="_blank" rel="noopener noreferrer">
                 <UtensilsCrossed className="h-4 w-4" aria-hidden />
                 Menu
               </a>

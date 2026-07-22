@@ -105,15 +105,17 @@ export function MenuTopControls({ ctrl, hideTheme = false }: { ctrl: MenuControl
 
 // Fixed-dark designs (neon, chalkboard) force the `dark` class so the shared cart
 // sheet + item modal (which use bg-card / bg-background) match the dark canvas.
-export function useForcedDark() {
+// `enabled` lets callers invoke it unconditionally (keeps hook order stable).
+export function useForcedDark(enabled = true) {
   useEffect(() => {
+    if (!enabled) return;
     const root = document.documentElement;
     const had = root.classList.contains("dark");
     root.classList.add("dark");
     return () => {
       if (!had) root.classList.remove("dark");
     };
-  }, []);
+  }, [enabled]);
 }
 
 // The floating cart pill + item detail modal + cart sheet. Dropped in once per
