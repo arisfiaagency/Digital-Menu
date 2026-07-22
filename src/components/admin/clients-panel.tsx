@@ -62,7 +62,15 @@ const DESIGN_OPTIONS: { id: MenuDesign; name: string; blurb: string }[] = [
   { id: "neon", name: "Neon Night", blurb: "Dark, high-contrast, glowing accent, big prices" },
   { id: "gallery", name: "Photo Gallery", blurb: "Full-bleed square photo tiles with text overlay" },
   { id: "chalkboard", name: "Chalkboard", blurb: "Slate board, chalk lettering, hand-drawn rules" },
-  { id: "tabs", name: "App Tabs", blurb: "One category at a time via tabs — great for big menus" }
+  { id: "tabs", name: "App Tabs", blurb: "One category at a time via tabs — great for big menus" },
+  { id: "retro", name: "Retro Diner", blurb: "Cream + red, checkerboard trim, bold condensed caps" },
+  { id: "pastel", name: "Playful Pastel", blurb: "Soft gradients, rounded bubble cards, cheerful" },
+  { id: "kraft", name: "Kraft Bakery", blurb: "Warm kraft paper, stamp badges, earthy serif" },
+  { id: "bento", name: "Bento Mosaic", blurb: "Masonry tiles — featured items grow bigger" },
+  { id: "elegant", name: "Fine Dining", blurb: "Ivory, airy, small-caps, tasting-menu calm" },
+  { id: "magazine", name: "Magazine", blurb: "Masthead + multi-column flowing layout" },
+  { id: "brutalist", name: "Brutalist", blurb: "Mono, thick borders, hard shadows, huge type" },
+  { id: "zen", name: "Japanese Zen", blurb: "Muted, hairlines, vertical accent, spacious" }
 ];
 const DEFAULT_ACCENT = "#2F7D4F";
 const plans: ClientSubscriptionPlan[] = ["free", "basic", "pro", "custom"];

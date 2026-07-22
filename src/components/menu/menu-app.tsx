@@ -8,6 +8,14 @@ import { NeonMenu } from "@/components/menu/neon-menu";
 import { GalleryMenu } from "@/components/menu/gallery-menu";
 import { ChalkboardMenu } from "@/components/menu/chalkboard-menu";
 import { TabsMenu } from "@/components/menu/tabs-menu";
+import { RetroMenu } from "@/components/menu/retro-menu";
+import { PastelMenu } from "@/components/menu/pastel-menu";
+import { KraftMenu } from "@/components/menu/kraft-menu";
+import { BentoMenu } from "@/components/menu/bento-menu";
+import { ElegantMenu } from "@/components/menu/elegant-menu";
+import { MagazineMenu } from "@/components/menu/magazine-menu";
+import { BrutalistMenu } from "@/components/menu/brutalist-menu";
+import { ZenMenu } from "@/components/menu/zen-menu";
 import { defaultAppData } from "@/data/default-data";
 import type { AppData, MenuDesign } from "@/types/models";
 
@@ -40,6 +48,22 @@ export function MenuApp({
       return <ChalkboardMenu data={data} accent={accent} />;
     case "tabs":
       return <TabsMenu data={data} accent={accent} />;
+    case "retro":
+      return <RetroMenu data={data} accent={accent} />;
+    case "pastel":
+      return <PastelMenu data={data} accent={accent} />;
+    case "kraft":
+      return <KraftMenu data={data} accent={accent} />;
+    case "bento":
+      return <BentoMenu data={data} accent={accent} />;
+    case "elegant":
+      return <ElegantMenu data={data} accent={accent} />;
+    case "magazine":
+      return <MagazineMenu data={data} accent={accent} />;
+    case "brutalist":
+      return <BrutalistMenu data={data} accent={accent} />;
+    case "zen":
+      return <ZenMenu data={data} accent={accent} />;
     case "classic":
     default:
       return <ClassicMenu data={data} accent={accent} />;

@@ -19,11 +19,17 @@ import type { GeneralSettings, MenuDesign, MenuSettings } from "@/types/models";
 const VIEW_MENU_LABEL = { en: "View Menu", ar: "عرض القائمة", ckb: "بینینی مێنیۆ" } as const;
 
 const SERIF = "Georgia, 'Times New Roman', 'Noto Naskh Arabic', serif";
+const ELEGANT_SERIF = "'Cormorant Garamond', Georgia, 'Times New Roman', 'Noto Naskh Arabic', serif";
+const MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace";
 const CHALK = "'Segoe Print', 'Bradley Hand', 'Comic Sans MS', 'Noto Naskh Arabic', cursive";
 const BOARD_BG =
   "radial-gradient(80% 60% at 50% 0%, rgba(255,255,255,0.05), transparent 60%)," +
   "radial-gradient(60% 50% at 100% 100%, rgba(255,255,255,0.04), transparent 60%)," +
   "#1c2622";
+const KRAFT_BG =
+  "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.35), transparent 55%)," +
+  "repeating-linear-gradient(45deg, rgba(120,90,50,0.03) 0 6px, transparent 6px 12px)," +
+  "#d9c4a3";
 
 // Per-design welcome theme. Each cafe's front door echoes its locked menu design.
 type WelcomeTheme = {
@@ -120,6 +126,75 @@ const WELCOME_THEMES: Record<MenuDesign, WelcomeTheme> = {
     ctaClassName: cn(CTA_BASE, "rounded-2xl bg-primary px-7 py-3.5 text-primary-foreground shadow-md hover:brightness-105"),
     badgeStyle: "compact",
     socialStyle: "soft"
+  },
+  retro: {
+    rootClassName: "bg-[#fff7e6] text-stone-900 dark:bg-stone-950 dark:text-stone-100",
+    nameClassName: "text-5xl font-black uppercase italic tracking-tight text-primary sm:text-7xl",
+    logoClassName: "ring-2 ring-primary/60",
+    ctaClassName: cn(CTA_BASE, "rounded-full bg-primary px-8 py-3.5 font-black uppercase text-primary-foreground shadow-md hover:-translate-y-0.5"),
+    badgeStyle: "banner",
+    socialStyle: "square"
+  },
+  pastel: {
+    rootClassName: "bg-gradient-to-b from-primary/10 via-background to-primary/5 text-foreground",
+    nameClassName: "text-4xl font-black tracking-tight sm:text-6xl",
+    logoClassName: "ring-1 ring-primary/20 shadow-lg",
+    ctaClassName: cn(CTA_BASE, "rounded-full bg-primary px-8 py-3.5 text-primary-foreground shadow-md hover:scale-105"),
+    badgeStyle: "pill",
+    socialStyle: "soft"
+  },
+  kraft: {
+    rootClassName: "text-[#3a2c1c] dark:text-stone-100",
+    rootStyle: { background: KRAFT_BG, fontFamily: SERIF },
+    nameClassName: "text-4xl font-bold tracking-tight sm:text-6xl",
+    logoClassName: "ring-2 ring-[#3a2c1c]/40",
+    ctaClassName: cn(CTA_BASE, "rounded-md border-2 border-dashed border-[#3a2c1c]/50 px-7 py-3 hover:bg-primary hover:text-primary-foreground"),
+    badgeStyle: "outline",
+    socialStyle: "outline"
+  },
+  bento: {
+    rootClassName: "bg-gradient-to-b from-muted/60 to-background text-foreground",
+    nameClassName: "text-4xl font-black tracking-tight sm:text-6xl",
+    logoClassName: "ring-1 ring-border shadow-xl",
+    ctaClassName: cn(CTA_BASE, "rounded-2xl bg-primary px-7 py-3.5 text-primary-foreground shadow-lg hover:brightness-105"),
+    badgeStyle: "compact",
+    socialStyle: "soft"
+  },
+  elegant: {
+    rootClassName: "bg-[#fbfaf7] text-stone-800 dark:bg-stone-950 dark:text-stone-200",
+    rootStyle: { fontFamily: ELEGANT_SERIF },
+    kicker: true,
+    nameClassName: "text-5xl font-light tracking-wide sm:text-7xl",
+    logoClassName: "ring-1 ring-stone-300 dark:ring-stone-700",
+    ctaClassName: cn(CTA_BASE, "rounded-none border border-primary/50 px-8 py-3 uppercase tracking-[0.2em] text-primary hover:bg-primary hover:text-primary-foreground"),
+    badgeStyle: "pill",
+    socialStyle: "icons"
+  },
+  magazine: {
+    rootClassName: "bg-background text-foreground",
+    rootStyle: { fontFamily: SERIF },
+    nameClassName: "text-5xl font-black uppercase tracking-tight sm:text-7xl",
+    logoClassName: "ring-1 ring-foreground/30",
+    ctaClassName: cn(CTA_BASE, "rounded-none border-2 border-foreground px-8 py-3 font-bold uppercase hover:bg-foreground hover:text-background"),
+    badgeStyle: "compact",
+    socialStyle: "icons"
+  },
+  brutalist: {
+    rootClassName: "bg-background text-foreground",
+    rootStyle: { fontFamily: MONO },
+    nameClassName: "text-5xl font-black uppercase tracking-tighter sm:text-7xl",
+    logoClassName: "border-2 border-foreground",
+    ctaClassName: cn(CTA_BASE, "rounded-none border-2 border-foreground bg-primary px-8 py-3 font-black uppercase text-primary-foreground"),
+    badgeStyle: "banner",
+    socialStyle: "square"
+  },
+  zen: {
+    rootClassName: "bg-[#f6f4ee] text-stone-700 dark:bg-stone-950 dark:text-stone-300",
+    nameClassName: "text-4xl font-light tracking-[0.05em] sm:text-6xl",
+    logoClassName: "ring-1 ring-primary/40",
+    ctaClassName: cn(CTA_BASE, "rounded-full border border-primary/40 px-8 py-3 tracking-wide text-primary hover:bg-primary hover:text-primary-foreground"),
+    badgeStyle: "compact",
+    socialStyle: "icons"
   }
 };
 

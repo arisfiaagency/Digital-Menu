@@ -311,7 +311,15 @@ export type MenuDesign =
   | "neon"
   | "gallery"
   | "chalkboard"
-  | "tabs";
+  | "tabs"
+  | "retro"
+  | "pastel"
+  | "kraft"
+  | "bento"
+  | "elegant"
+  | "magazine"
+  | "brutalist"
+  | "zen";
 
 export type ClientSubscriptionPlan = "free" | "basic" | "pro" | "custom";
 export type ClientSubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "none";
