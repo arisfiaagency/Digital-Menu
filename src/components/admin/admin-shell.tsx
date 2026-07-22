@@ -398,6 +398,17 @@ function AdminProfileMenu({
           role="menu"
           className="pop-in absolute bottom-full left-0 z-20 mb-2 max-h-[calc(100vh-7rem)] w-full overflow-y-auto rounded-2xl border bg-card p-1.5 shadow-xl"
         >
+          <a
+            href={settingsHref.replace(/\/settings$/, "/menu")}
+            target="_blank"
+            rel="noopener noreferrer"
+            role="menuitem"
+            onClick={handleNavigate}
+            className="focus-ring mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            <MenuSquare className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span dir={textDir}>{text.viewPublicMenu}</span>
+          </a>
           {canSettings ? (
             <div className="rounded-xl bg-muted/40 p-1">
               <ProfileMenuLink href={settingsHref} icon={Settings} label={text.settings} textDir={textDir} onClick={handleNavigate} />

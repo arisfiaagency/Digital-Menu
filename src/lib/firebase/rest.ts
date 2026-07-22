@@ -1,6 +1,8 @@
 import { unstable_cache } from "next/cache";
+import { defaultAppData } from "@/data/default-data";
+import { isClientServiceActive } from "@/lib/client-access";
 import { normalizeClientSlug } from "@/lib/tenant";
-import type { ClientAccount } from "@/types/models";
+import type { AppData, Category, ClientAccount, GeneralSettings, MenuItem, MenuSettings } from "@/types/models";
 
 // Tenant admin layouts read the client account on the server so blocked or
 // disabled cafes return not found before the authenticated admin UI renders.
@@ -11,6 +13,7 @@ const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 // How long a cached snapshot is served before it's refreshed.
 const REVALIDATE_SECONDS = 20;
 const CLIENT_ACCOUNT_TAG = "client-account-data";
+export const PUBLIC_DATA_TAG = "public-app-data";
 
 const DOCUMENTS_BASE = PROJECT_ID
   ? `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`
@@ -78,4 +81,121 @@ async function fetchClientAccount(clientSlug: string): Promise<ClientAccount | n
 export const getClientAccountRest = unstable_cache(fetchClientAccount, ["client-account"], {
   revalidate: REVALIDATE_SECONDS,
   tags: [CLIENT_ACCOUNT_TAG]
+});
+
+// --- Public customer menu -------------------------------------------------
+// Read on the SERVER via the Firestore REST API (plain fetch) instead of the
+// client Firebase SDK, keeping the Firebase bundle off the customer's phone.
+// Unauthenticated reads are governed by the same security rules (public reads
+// for active cafes' isActive categories / isAvailable items + general/menu
+// settings — see firestore.rules).
+
+// Runs a `field == true` + orderBy query (matches the public menu security rules)
+// and returns decoded plain documents with their id.
+async function runBoolQuery(
+  parentPath: string,
+  collectionId: string,
+  field: string,
+  orderByField: string,
+  max: number
+): Promise<Record<string, unknown>[]> {
+  const body = {
+    structuredQuery: {
+      from: [{ collectionId }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: field },
+          op: "EQUAL",
+          value: { booleanValue: true }
+        }
+      },
+      orderBy: [{ field: { fieldPath: orderByField } }],
+      limit: max
+    }
+  };
+  const res = await fetch(`${DOCUMENTS_BASE}/${parentPath}:runQuery?key=${API_KEY}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`runQuery ${collectionId} failed: ${res.status}`);
+  const rows = (await res.json()) as Array<{ document?: RestDocument }>;
+  return rows
+    .filter((row): row is { document: RestDocument } => Boolean(row.document))
+    .map((row) => ({ id: docIdFromName(row.document.name), ...decodeFields(row.document.fields) }));
+}
+
+async function batchGetSettings(clientSlug: string): Promise<Record<string, Record<string, unknown>>> {
+  const names = ["general", "menu"].map(
+    (id) => `projects/${PROJECT_ID}/databases/(default)/documents/clients/${clientSlug}/settings/${id}`
+  );
+  const res = await fetch(`${DOCUMENTS_BASE}:batchGet?key=${API_KEY}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ documents: names })
+  });
+  if (!res.ok) throw new Error(`batchGet settings failed: ${res.status}`);
+  const rows = (await res.json()) as Array<{ found?: RestDocument }>;
+  const map: Record<string, Record<string, unknown>> = {};
+  for (const row of rows) {
+    if (row.found) map[docIdFromName(row.found.name)] = decodeFields(row.found.fields);
+  }
+  return map;
+}
+
+async function fetchPublicAppData(clientSlug: string): Promise<AppData> {
+  if (!DOCUMENTS_BASE || !API_KEY) return defaultAppData;
+  const slug = normalizeClientSlug(clientSlug);
+  if (!slug) return defaultAppData;
+  try {
+    const client = (await getRestDocument(`clients/${slug}`)) as ClientAccount | null;
+    if (!isClientServiceActive(client)) return defaultAppData;
+    const parentPath = `clients/${slug}`;
+    const [categories, menuItemsRaw, settings] = await Promise.all([
+      runBoolQuery(parentPath, "categories", "isActive", "displayOrder", 100),
+      runBoolQuery(parentPath, "menuItems", "isAvailable", "displayOrder", 200),
+      batchGetSettings(slug)
+    ]);
+
+    const menuItems = menuItemsRaw.map((item) => {
+      const next = { ...item };
+      delete next.imageHistory;
+      return next as unknown as MenuItem;
+    });
+
+    return {
+      categories: categories as unknown as Category[],
+      menuItems,
+      general: { ...defaultAppData.general, ...(settings.general as Partial<GeneralSettings>) },
+      menu: { ...defaultAppData.menu, ...(settings.menu as Partial<MenuSettings>) }
+    };
+  } catch {
+    // Never break the page — fall back to the offline defaults; the next
+    // revalidation retries.
+    return defaultAppData;
+  }
+}
+
+async function fetchPublicClient(clientSlug: string): Promise<ClientAccount | null> {
+  if (!DOCUMENTS_BASE || !API_KEY) return null;
+  const slug = normalizeClientSlug(clientSlug);
+  if (!slug) return null;
+  try {
+    const client = (await getRestDocument(`clients/${slug}`)) as ClientAccount | null;
+    return isClientServiceActive(client) ? client : null;
+  } catch {
+    return null;
+  }
+}
+
+// Shared across every visitor so a burst triggers at most one set of Firestore
+// calls per revalidation window.
+export const getPublicAppDataRest = unstable_cache(fetchPublicAppData, ["public-app-data"], {
+  revalidate: REVALIDATE_SECONDS,
+  tags: [PUBLIC_DATA_TAG]
+});
+
+export const getPublicClientRest = unstable_cache(fetchPublicClient, ["public-client"], {
+  revalidate: REVALIDATE_SECONDS,
+  tags: [PUBLIC_DATA_TAG]
 });

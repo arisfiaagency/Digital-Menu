@@ -22,7 +22,8 @@ import type {
   ClientSubscription,
   ClientTrial,
   Currency,
-  Locale
+  Locale,
+  MenuDesign
 } from "@/types/models";
 
 type SupervisorTab = "clients" | "payments";
@@ -62,6 +63,8 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
     status: ClientStatus;
     defaultCurrency: Currency;
     defaultLanguage: Locale;
+    menuDesign: MenuDesign;
+    menuAccent: string;
     trialDays: number;
     planPrice: number;
   }) {
@@ -86,6 +89,8 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         status: input.status,
         defaultCurrency: input.defaultCurrency,
         defaultLanguage: input.defaultLanguage,
+        menuDesign: input.menuDesign,
+        menuAccent: input.menuAccent,
         blocked: false,
         subscription,
         trial,

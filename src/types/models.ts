@@ -299,6 +299,12 @@ export type AuditLog = {
 
 export type ClientStatus = "active" | "disabled";
 
+// The customer-facing menu design ("skin"). Chosen by the platform admin when a
+// cafe is created and locked afterwards — stored on the client account doc, which
+// tenants cannot write (see firestore.rules). Each value maps to a distinct menu
+// layout in src/components/menu/*.
+export type MenuDesign = "luxury" | "modern" | "classic" | "minimal";
+
 export type ClientSubscriptionPlan = "free" | "basic" | "pro" | "custom";
 export type ClientSubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "none";
 
@@ -351,6 +357,10 @@ export type ClientAccount = {
   ownerEmail?: string;
   defaultCurrency?: Currency;
   defaultLanguage?: Locale;
+  /** Locked customer-menu design, chosen at creation by the platform admin. */
+  menuDesign?: MenuDesign;
+  /** Accent color (hex) tinting the locked design. Set at creation. */
+  menuAccent?: string;
   /** Supervisor kill-switch (e.g. unpaid). Overrides trial/subscription access. */
   blocked?: boolean;
   blockedReason?: string;

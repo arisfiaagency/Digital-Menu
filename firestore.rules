@@ -55,6 +55,19 @@ service cloud.firestore {
       return get(tenantProfileRef(clientId)).data;
     }
 
+    // A cafe is "active" (its menu is publicly visible) when its client account
+    // exists, is active, and is not blocked. Used to gate anonymous public menu
+    // reads of categories / menu items / general+menu settings.
+    function clientRef(clientId) {
+      return /databases/$(database)/documents/clients/$(clientId);
+    }
+
+    function clientActive(clientId) {
+      return exists(clientRef(clientId))
+        && get(clientRef(clientId)).data.status == 'active'
+        && get(clientRef(clientId)).data.get('blocked', false) != true;
+    }
+
     function isTenantAdmin(clientId) {
       return isPlatformFullAdmin()
         || (
@@ -115,17 +128,21 @@ service cloud.firestore {
       allow create, update, delete: if isPlatformFullAdmin();
 
       match /categories/{categoryId} {
-        allow get, list: if isTenantAdmin(clientId);
+        // Public menu: anyone may read active categories of an active cafe.
+        allow get, list: if (clientActive(clientId) && resource.data.isActive == true) || isTenantAdmin(clientId);
         allow create, update, delete: if hasTenantFeature(clientId, 'categories');
       }
 
       match /menuItems/{menuItemId} {
-        allow get, list: if isTenantAdmin(clientId);
+        // Public menu: anyone may read available items of an active cafe.
+        allow get, list: if (clientActive(clientId) && resource.data.isAvailable == true) || isTenantAdmin(clientId);
         allow create, update, delete: if hasTenantFeature(clientId, 'menuItems');
       }
 
       match /settings/{settingsId} {
-        allow get, list: if settingsId in ['general', 'menu', 'pos'] && isTenantAdmin(clientId);
+        // Public menu reads the general + menu settings (never pos).
+        allow get, list: if (settingsId in ['general', 'menu'] && clientActive(clientId))
+          || (settingsId in ['general', 'menu', 'pos'] && isTenantAdmin(clientId));
         allow create: if settingsId in ['general', 'menu', 'pos'] && (settingsId == 'pos'
           ? hasTenantFeature(clientId, 'pos')
             && (isTenantFullAdmin(clientId) || request.resource.data.get('completedOrders', []).size() == 0)

@@ -13,7 +13,8 @@ import {
   Save,
   Search,
   Trash2,
-  Unlock
+  Unlock,
+  UtensilsCrossed
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,11 +44,23 @@ import type {
   ClientSubscriptionStatus,
   ClientTrial,
   Currency,
-  Locale
+  Locale,
+  MenuDesign
 } from "@/types/models";
 
 const currencies: Currency[] = ["IQD", "USD", "EUR", "TRY"];
 const languages: Locale[] = ["ckb", "en", "ar"];
+
+// The four customer-menu designs a cafe can be created with. Chosen once, then
+// locked — there is no tenant-side control to change it later (the design lives
+// on the client account doc, which only the platform admin can write).
+const DESIGN_OPTIONS: { id: MenuDesign; name: string; blurb: string }[] = [
+  { id: "classic", name: "Classic", blurb: "Printed-menu look, warm serif, dotted price leaders" },
+  { id: "modern", name: "Modern", blurb: "Photo card grid, bold sans, sticky category bar" },
+  { id: "luxury", name: "Luxury", blurb: "Editorial hero, serif display, floating cart" },
+  { id: "minimal", name: "Minimal", blurb: "Stark, whitespace, monochrome + accent" }
+];
+const DEFAULT_ACCENT = "#2F7D4F";
 const plans: ClientSubscriptionPlan[] = ["free", "basic", "pro", "custom"];
 const subStatuses: ClientSubscriptionStatus[] = ["trialing", "active", "past_due", "canceled", "none"];
 
@@ -102,6 +115,8 @@ export function ClientsPanel({
     status: ClientStatus;
     defaultCurrency: Currency;
     defaultLanguage: Locale;
+    menuDesign: MenuDesign;
+    menuAccent: string;
     trialDays: number;
     planPrice: number;
   }) => Promise<void>;
@@ -129,6 +144,8 @@ export function ClientsPanel({
   const [status, setStatus] = useState<ClientStatus>("active");
   const [defaultCurrency, setDefaultCurrency] = useState<Currency>("IQD");
   const [defaultLanguage, setDefaultLanguage] = useState<Locale>("ckb");
+  const [menuDesign, setMenuDesign] = useState<MenuDesign>("classic");
+  const [menuAccent, setMenuAccent] = useState(DEFAULT_ACCENT);
   const [trialDays, setTrialDays] = useState(14);
   const [planPrice, setPlanPrice] = useState(0);
 
@@ -198,6 +215,8 @@ export function ClientsPanel({
       status,
       defaultCurrency,
       defaultLanguage,
+      menuDesign,
+      menuAccent,
       trialDays,
       planPrice
     });
@@ -207,6 +226,8 @@ export function ClientsPanel({
     setStatus("active");
     setDefaultCurrency("IQD");
     setDefaultLanguage("ckb");
+    setMenuDesign("classic");
+    setMenuAccent(DEFAULT_ACCENT);
     setTrialDays(14);
     setPlanPrice(0);
     setShowCreate(false);
@@ -258,7 +279,53 @@ export function ClientsPanel({
                 <p className="font-medium text-foreground">Admin link that will be created</p>
                 <ul className="mt-2 space-y-1 text-muted-foreground">
                   <li>Cafe admin → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}/admin</span></li>
+                  <li>Public menu → <span className="font-medium text-foreground">/{resolvedSlug || "cafe"}/menu</span></li>
                 </ul>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium">Menu design</p>
+                <p className="text-xs text-muted-foreground">
+                  Chosen now and locked — the cafe can edit its items but not switch design later.
+                </p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {DESIGN_OPTIONS.map((option) => {
+                    const active = menuDesign === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setMenuDesign(option.id)}
+                        aria-pressed={active}
+                        className={cn(
+                          "rounded-xl border p-3 text-start transition-colors",
+                          active ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/60"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-block h-4 w-4 rounded-full ring-1 ring-black/10"
+                            style={{ backgroundColor: menuAccent }}
+                            aria-hidden
+                          />
+                          <span className="text-sm font-semibold">{option.name}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">{option.blurb}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <label htmlFor="client-accent" className="text-sm font-medium">Accent color</label>
+                  <input
+                    id="client-accent"
+                    type="color"
+                    value={menuAccent}
+                    onChange={(e) => setMenuAccent(e.target.value)}
+                    className="h-9 w-14 cursor-pointer rounded-md border bg-background p-1"
+                  />
+                  <span className="text-xs text-muted-foreground">Tints the chosen design ({menuAccent}).</span>
+                </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label="Owner email" htmlFor="client-owner">
@@ -530,6 +597,12 @@ function ClientCard({
                 <ExternalLink className="h-4 w-4" aria-hidden />
                 Admin
               </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href={`/${client.slug}/menu`} target="_blank" rel="noopener noreferrer">
+                <UtensilsCrossed className="h-4 w-4" aria-hidden />
+                Menu
+              </a>
             </Button>
             <Button
               type="button"

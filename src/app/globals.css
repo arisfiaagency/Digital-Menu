@@ -234,6 +234,63 @@ textarea {
   will-change: opacity, transform;
 }
 
+/* Luxury menu design: fade + rise as blocks scroll into view (JS toggles .is-in). */
+.lux-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: opacity, transform;
+}
+.lux-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Cart: the sheet slides down from the top; the count badge pops on change;
+   the floating pill eases up when the first item is added. */
+@keyframes cart-sheet-in {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes cart-badge-pop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+@keyframes cart-fab-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* A quick tilt + scale nudge on the cart icon when an item is added. */
+@keyframes cart-bump {
+  0% { transform: scale(1) rotate(0); }
+  25% { transform: scale(1.25) rotate(-12deg); }
+  55% { transform: scale(0.92) rotate(9deg); }
+  80% { transform: scale(1.06) rotate(-4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.cart-sheet {
+  animation: cart-sheet-in 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.cart-badge-pop {
+  animation: cart-badge-pop 0.3s ease-out;
+}
+
+.cart-fab-in {
+  animation: cart-fab-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cart-bump {
+  animation: cart-bump 0.45s ease;
+  transform-origin: center;
+}
+
 /* Menu category icon animations */
 @keyframes cat-bob {
   0%, 100% { transform: translateY(0); }
@@ -612,8 +669,18 @@ textarea {
   }
 
   .dialog-backdrop,
-  .dialog-panel {
+  .dialog-panel,
+  .cart-sheet,
+  .cart-badge-pop,
+  .cart-fab-in,
+  .cart-bump {
     animation: none;
+  }
+
+  .lux-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 

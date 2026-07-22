@@ -131,6 +131,10 @@ export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: stri
     ownerEmail: client.ownerEmail?.trim() || prev?.ownerEmail || undefined,
     defaultCurrency: client.defaultCurrency || prev?.defaultCurrency || "IQD",
     defaultLanguage: client.defaultLanguage || prev?.defaultLanguage || "ckb",
+    // Menu design + accent are set once at creation and locked (no tenant edit
+    // path writes the client doc). Existing docs keep their value on later saves.
+    menuDesign: client.menuDesign ?? prev?.menuDesign ?? "classic",
+    menuAccent: client.menuAccent ?? prev?.menuAccent ?? "#2F7D4F",
     blocked: client.blocked ?? prev?.blocked ?? false,
     blockedReason: client.blockedReason ?? prev?.blockedReason,
     blockedAt: client.blockedAt ?? prev?.blockedAt,
