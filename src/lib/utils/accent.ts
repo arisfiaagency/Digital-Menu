@@ -1,21 +1,19 @@
 import type { CSSProperties } from "react";
 
-// Each menu design ships a fixed look, but the platform admin sets one accent
-// color per cafe at creation. We map that hex color onto the theme's `--primary`
-// / `--secondary` CSS custom properties (raw "H S% L%" triplets, matching
-// globals.css) so a design's `text-primary` / `bg-primary` classes pick it up.
-// This is the small slice of the old color.ts we still need — just accent
-// tinting, not a full per-cafe theme engine.
+// Each menu design ships a layout, but the platform admin sets one accent color
+// per cafe. We turn that accent into a full, cohesive theme — background, card,
+// muted, border and text tints, plus the primary color — for both light and dark,
+// so changing the accent recolors the whole page (not just the text/buttons).
+// Emitted as a scoped stylesheet (see menuAccentCss) because inline styles can't
+// carry separate light/dark values.
 
-function clamp01(value: number) {
-  return Math.min(1, Math.max(0, value));
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function parseHex(hex: string): { r: number; g: number; b: number } | null {
   const cleaned = hex.trim().replace(/^#/, "");
-  const full = cleaned.length === 3
-    ? cleaned.split("").map((c) => c + c).join("")
-    : cleaned;
+  const full = cleaned.length === 3 ? cleaned.split("").map((c) => c + c).join("") : cleaned;
   if (!/^[0-9a-fA-F]{6}$/.test(full)) return null;
   return {
     r: parseInt(full.slice(0, 2), 16),
@@ -24,9 +22,9 @@ function parseHex(hex: string): { r: number; g: number; b: number } | null {
   };
 }
 
-// Returns a raw HSL triplet string like "138 46% 34%" (no hsl()/commas) so it
-// can be dropped straight into `--primary`.
-function hexToHslTriplet(hex: string): string | null {
+type Hsl = { h: number; s: number; l: number };
+
+function hexToHsl(hex: string): Hsl | null {
   const rgb = parseHex(hex);
   if (!rgb) return null;
   const r = rgb.r / 255;
@@ -45,37 +43,89 @@ function hexToHslTriplet(hex: string): string | null {
   }
   const l = (max + min) / 2;
   const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
-  return `${h} ${Math.round(clamp01(s) * 100)}% ${Math.round(clamp01(l) * 100)}%`;
+  return { h, s: clamp(s, 0, 1) * 100, l: clamp(l, 0, 1) * 100 };
 }
 
-// Relative luminance of the accent → pick black or white text on top of it.
-function readableForeground(hex: string): string {
-  const rgb = parseHex(hex);
-  if (!rgb) return "0 0% 100%";
-  const toLinear = (c: number) => {
-    const v = c / 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  };
-  const luminance = 0.2126 * toLinear(rgb.r) + 0.7152 * toLinear(rgb.g) + 0.0722 * toLinear(rgb.b);
-  return luminance > 0.45 ? "222 47% 11%" : "0 0% 100%";
+// Black or white text on top of a given lightness.
+function readableFg(l: number): string {
+  return l > 60 ? "222 47% 11%" : "0 0% 100%";
+}
+
+// Raw "H S% L%" triplet.
+function triplet(h: number, s: number, l: number): string {
+  return `${Math.round(h)} ${Math.round(s)}% ${Math.round(l)}%`;
 }
 
 /**
- * Inline style that overrides the theme's primary/secondary tokens with the
- * cafe's accent. Apply it to the design's root element; every `primary`-based
- * Tailwind class below it then uses the accent. Returns undefined when the
- * accent is missing/invalid so the site's default theme is used.
+ * Inline style that overrides just the primary/secondary tokens with the accent.
+ * Kept for the admin preview swatch; the public menu uses menuAccentCss instead.
  */
 export function accentStyle(accent?: string | null): CSSProperties | undefined {
-  if (!accent) return undefined;
-  const triplet = hexToHslTriplet(accent);
-  if (!triplet) return undefined;
-  const foreground = readableForeground(accent);
+  const hsl = accent ? hexToHsl(accent) : null;
+  if (!hsl) return undefined;
+  const t = triplet(hsl.h, hsl.s, hsl.l);
+  const fg = readableFg(hsl.l);
   return {
-    "--primary": triplet,
-    "--primary-foreground": foreground,
-    "--secondary": triplet,
-    "--secondary-foreground": foreground,
-    "--ring": triplet
+    "--primary": t,
+    "--primary-foreground": fg,
+    "--secondary": t,
+    "--secondary-foreground": fg,
+    "--ring": t
   } as CSSProperties;
+}
+
+/**
+ * A scoped stylesheet that recolors the entire theme from the accent, for light
+ * and dark. Inject once (e.g. `<style dangerouslySetInnerHTML={{__html: menuAccentCss(accent)}} />`)
+ * inside the menu/welcome; every element under `scope` (default `.menu-theme-root`)
+ * that uses bg-background / bg-card / text-foreground / border etc. picks it up.
+ */
+export function menuAccentCss(accent?: string | null, scope = ".menu-theme-root"): string {
+  const hsl = accent ? hexToHsl(accent) : null;
+  if (!hsl) return "";
+  const { h, s, l } = hsl;
+
+  const light = {
+    background: triplet(h, clamp(s * 0.5, 12, 42), 97),
+    foreground: triplet(h, 25, 12),
+    card: triplet(h, 24, 99),
+    cardForeground: triplet(h, 25, 12),
+    muted: triplet(h, clamp(s * 0.4, 10, 30), 93),
+    mutedForeground: triplet(h, 12, 38),
+    accent: triplet(h, clamp(s * 0.5, 14, 40), 90),
+    accentForeground: triplet(h, 30, 20),
+    border: triplet(h, clamp(s * 0.4, 10, 30), 87),
+    primary: triplet(h, s, l),
+    primaryForeground: readableFg(l),
+    ring: triplet(h, s, l)
+  };
+
+  const lDark = clamp(l, 45, 68);
+  const dark = {
+    background: triplet(h, clamp(s * 0.6, 16, 48), 8),
+    foreground: triplet(h, 14, 92),
+    card: triplet(h, clamp(s * 0.5, 14, 42), 12),
+    cardForeground: triplet(h, 14, 92),
+    muted: triplet(h, clamp(s * 0.4, 10, 30), 18),
+    mutedForeground: triplet(h, 12, 64),
+    accent: triplet(h, clamp(s * 0.4, 10, 30), 20),
+    accentForeground: triplet(h, 14, 88),
+    border: triplet(h, clamp(s * 0.4, 10, 30), 24),
+    primary: triplet(h, s, lDark),
+    primaryForeground: readableFg(lDark),
+    ring: triplet(h, s, lDark)
+  };
+
+  const block = (o: typeof light) =>
+    `--background:${o.background};--foreground:${o.foreground};` +
+    `--card:${o.card};--card-foreground:${o.cardForeground};` +
+    `--popover:${o.card};--popover-foreground:${o.cardForeground};` +
+    `--muted:${o.muted};--muted-foreground:${o.mutedForeground};` +
+    `--accent:${o.accent};--accent-foreground:${o.accentForeground};` +
+    `--border:${o.border};--input:${o.border};` +
+    `--primary:${o.primary};--primary-foreground:${o.primaryForeground};` +
+    `--secondary:${o.primary};--secondary-foreground:${o.primaryForeground};` +
+    `--ring:${o.ring};`;
+
+  return `${scope}{${block(light)}}.dark ${scope}{${block(dark)}}`;
 }

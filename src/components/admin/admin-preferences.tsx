@@ -1397,3 +1397,14 @@ export function AdminPreferences({ compact = false, showTheme = true }: { compac
 export function AdminThemeToggle({ className }: { className?: string }) {
   return <ThemeToggle storageKey={adminThemeStorageKey} changeEvent={adminThemeChangeEvent} className={className} />;
 }
+
+// Standalone admin language selector for placing on the page (e.g. in the header
+// next to the theme toggle) instead of inside the profile dropdown.
+export function AdminLanguageToggle() {
+  const { locale, setLocale } = useAdminLocale();
+  return (
+    <div dir="ltr">
+      <LanguageGlobe locale={locale} onChange={setLocale} menuAlign="right" />
+    </div>
+  );
+}

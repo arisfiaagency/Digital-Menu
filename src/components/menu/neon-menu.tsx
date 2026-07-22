@@ -48,9 +48,9 @@ export function NeonMenu({ data, accent }: MenuDesignProps) {
   }
 
   return (
-    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-[#08080f] text-zinc-100" style={accentStyle(accent)}>
+    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-background text-foreground" style={accentStyle(accent)}>
       {/* Neon glows */}
-      <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden style={{ background: "#08080f" }} />
+      <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden style={{ background: "hsl(var(--background))" }} />
       <div
         className="pointer-events-none fixed inset-0 -z-10 opacity-80"
         aria-hidden
@@ -61,7 +61,7 @@ export function NeonMenu({ data, accent }: MenuDesignProps) {
       />
 
       {/* Top bar */}
-      <div className="sticky top-0 z-30 border-b border-white/10 bg-[#08080f]/80 backdrop-blur">
+      <div className="sticky top-0 z-30 border-b border-white/10 bg-background/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <span className="truncate text-sm font-bold uppercase tracking-[0.25em] text-primary" style={{ textShadow: "0 0 16px hsl(var(--primary) / 0.8)" }}>
             {ctrl.restaurantName}
@@ -101,7 +101,7 @@ export function NeonMenu({ data, accent }: MenuDesignProps) {
 
       {/* Category nav */}
       {browse.sections.length ? (
-        <nav className="sticky top-[57px] z-20 border-y border-white/10 bg-[#08080f]/85 backdrop-blur">
+        <nav className="sticky top-[57px] z-20 border-y border-white/10 bg-background/85 backdrop-blur">
           <div className="mx-auto flex w-full max-w-4xl gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {browse.sections.map((section) => {
               const active = activeCategoryId === section.category.id;

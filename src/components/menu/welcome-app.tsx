@@ -13,7 +13,7 @@ import { BrandCredit } from "@/components/brand-credit";
 import { useLocale } from "@/hooks/use-locale";
 import { localized, locales } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils/cn";
-import { accentStyle } from "@/lib/utils/accent";
+import { accentStyle, menuAccentCss } from "@/lib/utils/accent";
 import type { GeneralSettings, MenuDesign, MenuSettings } from "@/types/models";
 
 const VIEW_MENU_LABEL = { en: "View Menu", ar: "عرض القائمة", ckb: "بینینی مێنیۆ" } as const;
@@ -22,14 +22,6 @@ const SERIF = "Georgia, 'Times New Roman', 'Noto Naskh Arabic', serif";
 const ELEGANT_SERIF = "'Cormorant Garamond', Georgia, 'Times New Roman', 'Noto Naskh Arabic', serif";
 const MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace";
 const CHALK = "'Segoe Print', 'Bradley Hand', 'Comic Sans MS', 'Noto Naskh Arabic', cursive";
-const BOARD_BG =
-  "radial-gradient(80% 60% at 50% 0%, rgba(255,255,255,0.05), transparent 60%)," +
-  "radial-gradient(60% 50% at 100% 100%, rgba(255,255,255,0.04), transparent 60%)," +
-  "#1c2622";
-const KRAFT_BG =
-  "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.35), transparent 55%)," +
-  "repeating-linear-gradient(45deg, rgba(120,90,50,0.03) 0 6px, transparent 6px 12px)," +
-  "#d9c4a3";
 
 // Per-design welcome theme. Each cafe's front door echoes its locked menu design.
 type WelcomeTheme = {
@@ -70,8 +62,8 @@ const WELCOME_THEMES: Record<MenuDesign, WelcomeTheme> = {
     socialStyle: "soft"
   },
   classic: {
-    rootClassName: "text-stone-900 dark:text-stone-100",
-    rootStyle: { fontFamily: SERIF, background: "#faf6ef" },
+    rootClassName: "bg-background text-foreground",
+    rootStyle: { fontFamily: SERIF },
     headingFont: SERIF,
     kicker: true,
     nameClassName: "text-4xl font-bold tracking-tight sm:text-6xl",
@@ -92,7 +84,7 @@ const WELCOME_THEMES: Record<MenuDesign, WelcomeTheme> = {
     forcedDark: true,
     glow: true,
     glowText: true,
-    rootClassName: "bg-[#08080f] text-zinc-100",
+    rootClassName: "bg-background text-foreground",
     nameClassName: "text-5xl font-black uppercase tracking-tight sm:text-7xl",
     logoClassName: "ring-2 ring-primary/50 shadow-[0_0_34px_hsl(var(--primary)/0.6)]",
     ctaClassName: cn(CTA_BASE, "rounded-full border border-primary/60 bg-primary/10 px-8 py-3.5 text-primary shadow-[0_0_22px_hsl(var(--primary)/0.5)] hover:bg-primary hover:text-primary-foreground"),
@@ -109,8 +101,8 @@ const WELCOME_THEMES: Record<MenuDesign, WelcomeTheme> = {
   },
   chalkboard: {
     forcedDark: true,
-    rootClassName: "text-[#f3efe6]",
-    rootStyle: { background: BOARD_BG, fontFamily: CHALK },
+    rootClassName: "bg-background text-foreground",
+    rootStyle: { fontFamily: CHALK },
     headingFont: CHALK,
     kicker: true,
     nameClassName: "text-5xl font-bold tracking-wide sm:text-7xl",
@@ -128,7 +120,7 @@ const WELCOME_THEMES: Record<MenuDesign, WelcomeTheme> = {
     socialStyle: "soft"
   },
   retro: {
-    rootClassName: "bg-[#fff7e6] text-stone-900 dark:bg-stone-950 dark:text-stone-100",
+    rootClassName: "bg-background text-foreground",
     nameClassName: "text-5xl font-black uppercase italic tracking-tight text-primary sm:text-7xl",
     logoClassName: "ring-2 ring-primary/60",
     ctaClassName: cn(CTA_BASE, "rounded-full bg-primary px-8 py-3.5 font-black uppercase text-primary-foreground shadow-md hover:-translate-y-0.5"),
@@ -144,11 +136,11 @@ const WELCOME_THEMES: Record<MenuDesign, WelcomeTheme> = {
     socialStyle: "soft"
   },
   kraft: {
-    rootClassName: "text-[#3a2c1c] dark:text-stone-100",
-    rootStyle: { background: KRAFT_BG, fontFamily: SERIF },
+    rootClassName: "bg-background text-foreground",
+    rootStyle: { fontFamily: SERIF },
     nameClassName: "text-4xl font-bold tracking-tight sm:text-6xl",
-    logoClassName: "ring-2 ring-[#3a2c1c]/40",
-    ctaClassName: cn(CTA_BASE, "rounded-md border-2 border-dashed border-[#3a2c1c]/50 px-7 py-3 hover:bg-primary hover:text-primary-foreground"),
+    logoClassName: "ring-2 ring-foreground/30",
+    ctaClassName: cn(CTA_BASE, "rounded-md border-2 border-dashed border-foreground/50 px-7 py-3 hover:bg-primary hover:text-primary-foreground"),
     badgeStyle: "outline",
     socialStyle: "outline"
   },
@@ -161,7 +153,7 @@ const WELCOME_THEMES: Record<MenuDesign, WelcomeTheme> = {
     socialStyle: "soft"
   },
   elegant: {
-    rootClassName: "bg-[#fbfaf7] text-stone-800 dark:bg-stone-950 dark:text-stone-200",
+    rootClassName: "bg-background text-foreground",
     rootStyle: { fontFamily: ELEGANT_SERIF },
     kicker: true,
     nameClassName: "text-5xl font-light tracking-wide sm:text-7xl",
@@ -189,7 +181,7 @@ const WELCOME_THEMES: Record<MenuDesign, WelcomeTheme> = {
     socialStyle: "square"
   },
   zen: {
-    rootClassName: "bg-[#f6f4ee] text-stone-700 dark:bg-stone-950 dark:text-stone-300",
+    rootClassName: "bg-background text-foreground",
     nameClassName: "text-4xl font-light tracking-[0.05em] sm:text-6xl",
     logoClassName: "ring-1 ring-primary/40",
     ctaClassName: cn(CTA_BASE, "rounded-full border border-primary/40 px-8 py-3 tracking-wide text-primary hover:bg-primary hover:text-primary-foreground"),
@@ -212,7 +204,12 @@ export function WelcomeApp({
   slug: string;
 }) {
   const theme = WELCOME_THEMES[design] ?? WELCOME_THEMES.classic;
-  return <WelcomeScreen theme={theme} general={general} menu={menu} accent={accent} slug={slug} />;
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: menuAccentCss(accent) }} />
+      <WelcomeScreen theme={theme} general={general} menu={menu} accent={accent} slug={slug} />
+    </>
+  );
 }
 
 function WelcomeScreen({

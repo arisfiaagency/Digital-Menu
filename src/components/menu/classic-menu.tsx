@@ -30,7 +30,7 @@ export function ClassicMenu({ data, accent }: MenuDesignProps) {
   return (
     <main
       dir={textDir}
-      className="menu-theme-root relative min-h-dvh bg-[#faf6ef] text-stone-900 dark:bg-stone-950 dark:text-stone-100"
+      className="menu-theme-root relative min-h-dvh bg-background text-foreground"
       style={{ ...accentStyle(accent), fontFamily: CLASSIC_SERIF }}
     >
       {/* Slim top bar */}

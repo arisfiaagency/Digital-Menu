@@ -17,6 +17,7 @@ import { MagazineMenu } from "@/components/menu/magazine-menu";
 import { BrutalistMenu } from "@/components/menu/brutalist-menu";
 import { ZenMenu } from "@/components/menu/zen-menu";
 import { defaultAppData } from "@/data/default-data";
+import { menuAccentCss } from "@/lib/utils/accent";
 import type { AppData, MenuDesign } from "@/types/models";
 
 // Entry point for the customer-facing menu. The design is chosen by the platform
@@ -33,6 +34,16 @@ export function MenuApp({
   accent?: string;
 }) {
   const data = initialData ?? defaultAppData;
+  return (
+    <>
+      {/* Recolor the whole design from the cafe's accent (light + dark). */}
+      <style dangerouslySetInnerHTML={{ __html: menuAccentCss(accent) }} />
+      {renderDesign(design, data, accent)}
+    </>
+  );
+}
+
+function renderDesign(design: MenuDesign, data: AppData, accent?: string) {
   switch (design) {
     case "luxury":
       return <LuxuryMenu data={data} accent={accent} />;

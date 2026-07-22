@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, LogOut, ShieldCheck } from "lucide-react";
-import { AdminPreferences, AdminThemeToggle, useAdminLocale } from "@/components/admin/admin-preferences";
+import { AdminPreferences, AdminLanguageToggle, AdminThemeToggle, useAdminLocale } from "@/components/admin/admin-preferences";
 import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from "@/components/admin/clients-panel";
 import { PaymentReports } from "@/components/admin/payment-reports";
 import { Button } from "@/components/ui/button";
@@ -178,6 +178,21 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
     }
   }
 
+  async function changeDesign(client: ClientAccount, next: { menuDesign: MenuDesign; menuAccent: string }) {
+    setUpdatingSlug(client.slug);
+    setMessage("");
+    setError("");
+    try {
+      await patchClient(client.slug, { menuDesign: next.menuDesign, menuAccent: next.menuAccent });
+      setMessage(`Updated menu design for /${client.slug}.`);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update menu design.");
+    } finally {
+      setUpdatingSlug(null);
+    }
+  }
+
   async function recordPayment(client: ClientAccount, amount: number, months = 1) {
     if (!amount || amount <= 0) return;
     const currency = client.billing?.currency || client.subscription?.currency || client.defaultCurrency || "IQD";
@@ -251,6 +266,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
             <p className="text-muted-foreground">Clients and billing.</p>
           </div>
           <div className="flex items-center gap-2">
+            <AdminLanguageToggle />
             <AdminThemeToggle />
             <SupervisorProfileMenu
               profileName={auth.profile?.displayName || auth.profile?.username || "Supervisor"}
@@ -298,6 +314,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
             onDelete={(client) => void removeClient(client)}
             onSaveBilling={(client, next) => void saveBilling(client, next)}
             onRecordPayment={(client, amount, months) => void recordPayment(client, amount, months)}
+            onSaveDesign={(client, next) => void changeDesign(client, next)}
           />
         ) : null}
       </div>
@@ -371,14 +388,8 @@ function SupervisorProfileMenu({
                 <span className="block truncate text-xs text-muted-foreground">{secondaryProfileText}</span>
               </span>
             </div>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="min-w-0">
-                <span dir={textDir} className="block truncate text-xs font-semibold uppercase text-muted-foreground">
-                  {text.language}
-                </span>
-                <span dir={textDir} className="block truncate text-xs text-muted-foreground">{roleLabel}</span>
-              </span>
-              <AdminPreferences compact showTheme={false} />
+            <div className="mt-2">
+              <span dir={textDir} className="block truncate text-xs text-muted-foreground">{roleLabel}</span>
             </div>
           </div>
           <button

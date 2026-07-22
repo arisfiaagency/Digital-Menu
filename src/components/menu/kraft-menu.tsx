@@ -14,10 +14,6 @@ import { accentStyle } from "@/lib/utils/accent";
 import type { Locale, MenuItem } from "@/types/models";
 
 const SERIF = "Georgia, 'Times New Roman', 'Noto Naskh Arabic', serif";
-const KRAFT_BG =
-  "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.35), transparent 55%)," +
-  "repeating-linear-gradient(45deg, rgba(120,90,50,0.03) 0 6px, transparent 6px 12px)," +
-  "#d9c4a3";
 
 // The "Kraft Bakery" design: warm kraft-paper canvas, earthy serif, stamp-style
 // category badges and dashed rules. For bakeries, roasters, farm-to-table.
@@ -29,9 +25,9 @@ export function KraftMenu({ data, accent }: MenuDesignProps) {
     : browse.sections;
 
   return (
-    <main dir={textDir} className="menu-theme-root relative min-h-dvh text-[#3a2c1c] dark:text-stone-100"
-      style={{ ...accentStyle(accent), background: KRAFT_BG, fontFamily: SERIF }}>
-      <div className="border-b border-dashed border-[#3a2c1c]/30">
+    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-background text-foreground"
+      style={{ ...accentStyle(accent), fontFamily: SERIF }}>
+      <div className="border-b border-dashed border-foreground/30">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-3">
           <span className="truncate text-sm font-semibold uppercase tracking-[0.25em]">{ctrl.restaurantName}</span>
           <MenuTopControls ctrl={ctrl} />
@@ -39,21 +35,21 @@ export function KraftMenu({ data, accent }: MenuDesignProps) {
       </div>
 
       <header className="mx-auto w-full max-w-3xl px-5 pb-6 pt-9 text-center">
-        <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#3a2c1c]/50">
+        <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-foreground/50">
           <Coffee className="h-6 w-6" aria-hidden />
         </span>
         <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">{ctrl.restaurantName}</h1>
-        {ctrl.description ? <p className="mx-auto mt-3 max-w-xl text-sm italic text-[#3a2c1c]/80 dark:text-stone-300">{ctrl.description}</p> : null}
+        {ctrl.description ? <p className="mx-auto mt-3 max-w-xl text-sm italic text-foreground/80 dark:text-stone-300">{ctrl.description}</p> : null}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           <OpenStatusBadge locale={locale} textDir={textDir} openHour={general.openHour} closeHour={general.closeHour} style="outline" />
           <SocialLinks social={general.socialLinks} style="outline" />
         </div>
         {ctrl.searchEnabled ? (
           <label className="relative mx-auto mt-6 block w-full max-w-sm">
-            <Search className="pointer-events-none absolute start-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#3a2c1c]/70" aria-hidden />
+            <Search className="pointer-events-none absolute start-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/70" aria-hidden />
             <Input dir={textDir} value={browse.query} onChange={(e) => browse.setQuery(e.target.value)}
               placeholder={translate(locale, "menu.search")}
-              className="h-11 rounded-none border-x-0 border-t-0 border-b-2 border-dashed border-[#3a2c1c]/40 bg-transparent ps-11 text-center focus-visible:ring-0" />
+              className="h-11 rounded-none border-x-0 border-t-0 border-b-2 border-dashed border-foreground/40 bg-transparent ps-11 text-center focus-visible:ring-0" />
           </label>
         ) : null}
       </header>
@@ -62,7 +58,7 @@ export function KraftMenu({ data, accent }: MenuDesignProps) {
         <div className="space-y-11">
           {allSections.map((section) => (
             <section key={section.category?.id ?? "others"}>
-              <div className="mx-auto mb-5 w-fit -rotate-1 rounded-md border-2 border-dashed border-[#3a2c1c]/50 px-5 py-1.5">
+              <div className="mx-auto mb-5 w-fit -rotate-1 rounded-md border-2 border-dashed border-foreground/50 px-5 py-1.5">
                 <h2 className="text-xl font-bold uppercase tracking-[0.18em]">
                   {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
                 </h2>
@@ -79,8 +75,8 @@ export function KraftMenu({ data, accent }: MenuDesignProps) {
           ))}
           {!browse.hasResults ? (
             <div className="flex flex-col items-center gap-3 py-20 text-center">
-              <UtensilsCrossed className="h-10 w-10 text-[#3a2c1c]/40" aria-hidden />
-              <p dir={textDir} className="text-[#3a2c1c]/70">{translate(locale, "menu.empty")}</p>
+              <UtensilsCrossed className="h-10 w-10 text-foreground/40" aria-hidden />
+              <p dir={textDir} className="text-foreground/70">{translate(locale, "menu.empty")}</p>
             </div>
           ) : null}
         </div>
@@ -107,10 +103,10 @@ function KraftRow({
       <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
         <div className="flex items-baseline gap-2">
           <span className="text-lg font-semibold">{name}</span>
-          <span className="mb-1 h-px flex-1 self-end border-b border-dotted border-[#3a2c1c]/40" aria-hidden />
+          <span className="mb-1 h-px flex-1 self-end border-b border-dotted border-foreground/40" aria-hidden />
           {showPrices ? <span className="shrink-0 text-lg font-bold">{formatMoney(price, item.currency, locale)}</span> : null}
         </div>
-        {description ? <p className="mt-0.5 line-clamp-2 text-sm italic text-[#3a2c1c]/75 dark:text-stone-300">{description}</p> : null}
+        {description ? <p className="mt-0.5 line-clamp-2 text-sm italic text-foreground/75 dark:text-stone-300">{description}</p> : null}
         {item.isSoldOut ? <span className="text-[11px] font-semibold uppercase tracking-widest text-destructive">{translate(locale, "menu.soldOut")}</span> : null}
       </button>
       {showCart && !item.isSoldOut ? (
@@ -119,7 +115,7 @@ function KraftRow({
             <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
           ) : (
             <button type="button" aria-label={`${translate(locale, "cart.add")} ${name}`} onClick={onAdd}
-              className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#3a2c1c]/50 transition-colors hover:bg-primary hover:text-primary-foreground">
+              className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-foreground/50 transition-colors hover:bg-primary hover:text-primary-foreground">
               <Plus className="h-4 w-4" aria-hidden />
             </button>
           )}

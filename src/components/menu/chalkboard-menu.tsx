@@ -18,12 +18,6 @@ import type { Locale, MenuItem } from "@/types/models";
 // cursive default when no system script font is present).
 const CHALK_FONT = "'Segoe Print', 'Bradley Hand', 'Comic Sans MS', 'Noto Naskh Arabic', cursive";
 
-// Subtle chalk-dust texture over a dark slate board.
-const BOARD_BG =
-  "radial-gradient(80% 60% at 50% 0%, rgba(255,255,255,0.05), transparent 60%)," +
-  "radial-gradient(60% 50% at 100% 100%, rgba(255,255,255,0.04), transparent 60%)," +
-  "#1c2622";
-
 // The "Chalkboard" design: a dark slate board with white chalk lettering, colored
 // chalk headings, and hand-drawn dashed rules. Text-forward like a real café board.
 export function ChalkboardMenu({ data, accent }: MenuDesignProps) {
@@ -38,8 +32,8 @@ export function ChalkboardMenu({ data, accent }: MenuDesignProps) {
   return (
     <main
       dir={textDir}
-      className="menu-theme-root relative min-h-dvh text-[#f3efe6]"
-      style={{ ...accentStyle(accent), background: BOARD_BG, fontFamily: CHALK_FONT }}
+      className="menu-theme-root relative min-h-dvh bg-background text-foreground"
+      style={{ ...accentStyle(accent), fontFamily: CHALK_FONT }}
     >
       {/* Top bar */}
       <div className="border-b border-dashed border-white/25">

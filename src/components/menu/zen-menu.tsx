@@ -24,7 +24,7 @@ export function ZenMenu({ data, accent }: MenuDesignProps) {
     : browse.sections;
 
   return (
-    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-[#f6f4ee] text-stone-700 dark:bg-stone-950 dark:text-stone-300" style={accentStyle(accent)}>
+    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-background text-foreground" style={accentStyle(accent)}>
       <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-6 py-5">
         <span className="truncate text-xs tracking-[0.3em] text-stone-500">{ctrl.restaurantName}</span>
         <MenuTopControls ctrl={ctrl} />

@@ -26,7 +26,7 @@ export function ElegantMenu({ data, accent }: MenuDesignProps) {
     : browse.sections;
 
   return (
-    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-[#fbfaf7] text-stone-800 dark:bg-stone-950 dark:text-stone-200"
+    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-background text-foreground"
       style={{ ...accentStyle(accent), fontFamily: SERIF }}>
       <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-6 py-4">
         <span className="truncate text-xs uppercase tracking-[0.35em] text-stone-500">{ctrl.restaurantName}</span>

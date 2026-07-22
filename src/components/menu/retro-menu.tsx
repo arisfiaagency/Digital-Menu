@@ -25,7 +25,7 @@ export function RetroMenu({ data, accent }: MenuDesignProps) {
     : browse.sections;
 
   return (
-    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-[#fff7e6] text-stone-900 dark:bg-stone-950 dark:text-stone-100" style={accentStyle(accent)}>
+    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-background text-foreground" style={accentStyle(accent)}>
       <div className="h-3 w-full" style={{ background: CHECKER }} aria-hidden />
 
       {/* Top bar */}

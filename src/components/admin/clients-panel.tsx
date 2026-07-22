@@ -113,7 +113,8 @@ export function ClientsPanel({
   onBlock,
   onDelete,
   onSaveBilling,
-  onRecordPayment
+  onRecordPayment,
+  onSaveDesign
 }: {
   clients: ClientAccount[];
   loading: boolean;
@@ -144,6 +145,7 @@ export function ClientsPanel({
     }
   ) => void;
   onRecordPayment: (client: ClientAccount, amount: number, months: number) => void;
+  onSaveDesign: (client: ClientAccount, next: { menuDesign: MenuDesign; menuAccent: string }) => void;
 }) {
   const [showCreate, setShowCreate] = useState(false);
   const [query, setQuery] = useState("");
@@ -443,6 +445,7 @@ export function ClientsPanel({
                   onDelete={() => onDelete(client)}
                   onSaveBilling={(next) => onSaveBilling(client, next)}
                   onRecordPayment={(amount, months) => onRecordPayment(client, amount, months)}
+                  onSaveDesign={(next) => onSaveDesign(client, next)}
                 />
               ))}
             </div>
@@ -488,7 +491,8 @@ function ClientCard({
   onBlock,
   onDelete,
   onSaveBilling,
-  onRecordPayment
+  onRecordPayment,
+  onSaveDesign
 }: {
   client: ClientAccount;
   expanded: boolean;
@@ -504,6 +508,7 @@ function ClientCard({
     blockedReason?: string;
   }) => void;
   onRecordPayment: (amount: number, months: number) => void;
+  onSaveDesign: (next: { menuDesign: MenuDesign; menuAccent: string }) => void;
 }) {
   const currency = client.billing?.currency || client.subscription?.currency || client.defaultCurrency || "IQD";
   const tone = statusTone(client);
@@ -527,6 +532,8 @@ function ClientCard({
   const [reason, setReason] = useState(client.blockedReason || "");
   const [paymentAmount, setPaymentAmount] = useState(monthlyPrice || 0);
   const [paymentMonths, setPaymentMonths] = useState(1);
+  const [designId, setDesignId] = useState<MenuDesign>(client.menuDesign ?? "classic");
+  const [designAccent, setDesignAccent] = useState(client.menuAccent ?? DEFAULT_ACCENT);
 
   useEffect(() => {
     setPlan(client.subscription?.plan || "basic");
@@ -542,6 +549,8 @@ function ClientCard({
     setReason(client.blockedReason || "");
     setPaymentAmount(client.subscription?.price ?? 0);
     setPaymentMonths(1);
+    setDesignId(client.menuDesign ?? "classic");
+    setDesignAccent(client.menuAccent ?? DEFAULT_ACCENT);
   }, [client]);
 
   const previewExpiry = useMemo(
@@ -684,6 +693,61 @@ function ClientCard({
 
       {expanded ? (
         <div className="space-y-4 border-t bg-muted/20 p-4 sm:p-5">
+          <div className="rounded-2xl border bg-background p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="font-medium">Menu design</p>
+                <p className="text-sm text-muted-foreground">Change the customer menu design &amp; accent — applies to /{client.slug}.</p>
+              </div>
+              <a href={`/${client.slug}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">
+                Preview ↗
+              </a>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {DESIGN_OPTIONS.map((option) => {
+                const active = designId === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setDesignId(option.id)}
+                    aria-pressed={active}
+                    className={cn(
+                      "rounded-xl border p-2.5 text-start transition-colors",
+                      active ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/60"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-3.5 w-3.5 rounded-full ring-1 ring-black/10" style={{ backgroundColor: designAccent }} aria-hidden />
+                      <span className="text-sm font-semibold">{option.name}</span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{option.blurb}</p>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <label className="text-sm font-medium">Accent</label>
+              <input
+                type="color"
+                value={designAccent}
+                onChange={(e) => setDesignAccent(e.target.value)}
+                className="h-9 w-14 cursor-pointer rounded-md border bg-background p-1"
+                aria-label="Accent color"
+              />
+              <span className="text-xs text-muted-foreground">{designAccent}</span>
+              <Button
+                type="button"
+                size="sm"
+                disabled={updating || (designId === (client.menuDesign ?? "classic") && designAccent === (client.menuAccent ?? DEFAULT_ACCENT))}
+                onClick={() => onSaveDesign({ menuDesign: designId, menuAccent: designAccent })}
+              >
+                <Save className="h-4 w-4" aria-hidden />
+                {updating ? "Saving…" : "Save design"}
+              </Button>
+            </div>
+          </div>
+
           <div className="rounded-2xl border bg-background p-4">
             <div className="mb-3">
               <p className="font-medium">Renew access</p>
