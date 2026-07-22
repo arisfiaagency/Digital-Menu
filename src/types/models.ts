@@ -303,7 +303,15 @@ export type ClientStatus = "active" | "disabled";
 // cafe is created and locked afterwards — stored on the client account doc, which
 // tenants cannot write (see firestore.rules). Each value maps to a distinct menu
 // layout in src/components/menu/*.
-export type MenuDesign = "luxury" | "modern" | "classic" | "minimal";
+export type MenuDesign =
+  | "luxury"
+  | "modern"
+  | "classic"
+  | "minimal"
+  | "neon"
+  | "gallery"
+  | "chalkboard"
+  | "tabs";
 
 export type ClientSubscriptionPlan = "free" | "basic" | "pro" | "custom";
 export type ClientSubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "none";

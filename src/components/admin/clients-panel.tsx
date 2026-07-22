@@ -58,7 +58,11 @@ const DESIGN_OPTIONS: { id: MenuDesign; name: string; blurb: string }[] = [
   { id: "classic", name: "Classic", blurb: "Printed-menu look, warm serif, dotted price leaders" },
   { id: "modern", name: "Modern", blurb: "Photo card grid, bold sans, sticky category bar" },
   { id: "luxury", name: "Luxury", blurb: "Editorial hero, serif display, floating cart" },
-  { id: "minimal", name: "Minimal", blurb: "Stark, whitespace, monochrome + accent" }
+  { id: "minimal", name: "Minimal", blurb: "Stark, whitespace, monochrome + accent" },
+  { id: "neon", name: "Neon Night", blurb: "Dark, high-contrast, glowing accent, big prices" },
+  { id: "gallery", name: "Photo Gallery", blurb: "Full-bleed square photo tiles with text overlay" },
+  { id: "chalkboard", name: "Chalkboard", blurb: "Slate board, chalk lettering, hand-drawn rules" },
+  { id: "tabs", name: "App Tabs", blurb: "One category at a time via tabs — great for big menus" }
 ];
 const DEFAULT_ACCENT = "#2F7D4F";
 const plans: ClientSubscriptionPlan[] = ["free", "basic", "pro", "custom"];

@@ -89,16 +89,31 @@ export function useMenuController(data: AppData): MenuController {
 }
 
 // The cart / theme / language buttons every design shows in its top bar.
-export function MenuTopControls({ ctrl }: { ctrl: MenuController }) {
+// `hideTheme` is set by fixed-dark designs (neon, chalkboard) where a light/dark
+// toggle doesn't make sense.
+export function MenuTopControls({ ctrl, hideTheme = false }: { ctrl: MenuController; hideTheme?: boolean }) {
   return (
     <div className="flex items-center gap-2">
       {ctrl.showCart ? (
         <CartIconButton count={ctrl.cart.totalQuantity} locale={ctrl.locale} onClick={() => ctrl.setCartOpen(true)} />
       ) : null}
-      {ctrl.darkModeEnabled ? <ThemeToggle presentation="circle" iconStyle="sunMoon" /> : null}
+      {!hideTheme && ctrl.darkModeEnabled ? <ThemeToggle presentation="circle" iconStyle="sunMoon" /> : null}
       <LanguageGlobe locale={ctrl.locale} onChange={ctrl.setLocale} availableLocales={ctrl.enabledLocales} />
     </div>
   );
+}
+
+// Fixed-dark designs (neon, chalkboard) force the `dark` class so the shared cart
+// sheet + item modal (which use bg-card / bg-background) match the dark canvas.
+export function useForcedDark() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const had = root.classList.contains("dark");
+    root.classList.add("dark");
+    return () => {
+      if (!had) root.classList.remove("dark");
+    };
+  }, []);
 }
 
 // The floating cart pill + item detail modal + cart sheet. Dropped in once per
