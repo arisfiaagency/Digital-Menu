@@ -21,7 +21,7 @@ import {
 import { defaultAppData } from "@/data/default-data";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { buildChanges, logAudit } from "@/lib/firebase/audit";
-import { removeImage } from "@/lib/supabase/storage";
+import { removeImage } from "@/lib/storage";
 import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { extendSubscriptionExpiry } from "@/lib/client-access";
 import { slugify } from "@/lib/utils/format";
@@ -145,8 +145,27 @@ export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: stri
     updatedAt: serverTimestamp()
   } as ClientAccount;
   await setDoc(clientRef, payload, { merge: true });
-  if (!existing.exists()) await seedClientDefaults(slug, payload);
+  if (!existing.exists()) {
+    await seedClientDefaults(slug, payload);
+    // Best-effort: create clients/{slug}/ in Cloudflare R2 when credentials exist.
+    await ensureClientImageFolderRemote(slug);
+  }
   return payload;
+}
+
+async function ensureClientImageFolderRemote(slug: string) {
+  try {
+    const { getFirebaseAuth } = await import("@/lib/firebase/client");
+    const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+    if (!token) return;
+    await fetch("/api/storage/ensure-folder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ slug })
+    });
+  } catch {
+    // Folder creation must not block cafe creation; uploads still work without the marker.
+  }
 }
 
 /** Partial update for supervisor billing / block controls. */

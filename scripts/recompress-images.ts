@@ -1,33 +1,27 @@
 /**
- * One-time migration: shrink existing menu-item photos already stored in Supabase.
+ * Shrink existing menu-item photos already stored in Cloudflare R2 (or any public imageUrl).
  *
- * For every menu item whose image lives in the Supabase `menu-images` bucket, this downloads the
- * current file, downscales it to <=1600px and re-encodes it as WebP (same settings the upload form
- * now uses), uploads the smaller copy, points the Firestore doc at it, and deletes the old object.
- * Animated GIFs are skipped (a static re-encode would kill the animation). Files that wouldn't get
- * smaller are left as-is.
+ * Downloads each item image, downscales to <=1600px / WebP, uploads the smaller copy to R2,
+ * updates Firestore, and deletes the old R2 object when the path is `r2/…`.
  *
- * Safe by default: it only PRINTS what it would do. Add `--apply` to actually write.
+ * Safe by default: only PRINTS what it would do. Add `--apply` to write.
  *
- *   npm run recompress-images            # dry run (preview)
- *   npm run recompress-images -- --apply # perform the migration
+ *   npm run recompress-images
+ *   npm run recompress-images -- --apply
  *
- * Needs these in .env.local (same ones the app/seed use):
- *   FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY
- *   NEXT_PUBLIC_SUPABASE_URL, (optional NEXT_PUBLIC_SUPABASE_BUCKET)
- *   SUPABASE_SERVICE_ROLE_KEY  (falls back to NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+ * Needs Firebase Admin + Cloudflare R2 env vars in .env.local.
  */
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { cert, initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, type DocumentReference } from "firebase-admin/firestore";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 
 const MAX_DIMENSION = 1600;
 const WEBP_QUALITY = 82;
 const APPLY = process.argv.includes("--apply");
 
-/** Populate process.env from .env.local for any key not already set (no dotenv dependency). */
 function loadEnvLocal() {
   let content: string;
   try {
@@ -53,6 +47,20 @@ function formatKb(bytes: number) {
   return `${(bytes / 1024).toFixed(0)} KB`;
 }
 
+function getR2Client() {
+  const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID;
+  const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error("Missing Cloudflare R2 credentials.");
+  }
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey }
+  });
+}
+
 async function main() {
   loadEnvLocal();
 
@@ -60,20 +68,16 @@ async function main() {
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n");
   if (!projectId || !clientEmail || !privateKey) {
-    throw new Error("Missing Firebase Admin env vars (FIREBASE_ADMIN_PROJECT_ID / _CLIENT_EMAIL / _PRIVATE_KEY).");
+    throw new Error("Missing Firebase Admin env vars.");
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || "menu-images";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase env vars (NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY).");
-  }
+  const bucket = process.env.CLOUDFLARE_R2_BUCKET || "digital-menu";
+  const publicBase = (process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL || "").replace(/\/+$/, "");
+  if (!publicBase) throw new Error("Missing NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL.");
 
   initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
   const db = getFirestore();
-
-  const publicPrefix = `${supabaseUrl}/storage/v1/object/public/${bucket}/`;
+  const r2 = getR2Client();
 
   console.log(APPLY ? "APPLY MODE — writing changes.\n" : "DRY RUN — nothing will be written. Re-run with --apply to migrate.\n");
 
@@ -82,7 +86,7 @@ async function main() {
   let failed = 0;
   let savedBytes = 0;
 
-  type ItemDoc = { ref: DocumentReference; id: string; data: () => Record<string, unknown>; labelPrefix: string };
+  type ItemDoc = { ref: DocumentReference; id: string; data: () => Record<string, unknown>; labelPrefix: string; clientSlug?: string };
 
   const itemDocs: ItemDoc[] = [];
   const clients = await db.collection("clients").get();
@@ -93,20 +97,13 @@ async function main() {
         ref: doc.ref,
         id: doc.id,
         data: () => doc.data(),
-        labelPrefix: `${client.id}/`
+        labelPrefix: `${client.id}/`,
+        clientSlug: client.id
       });
     }
   }
-  // Legacy root collection from the pre-tenant layout.
-  const legacyRoot = await db.collection("menuItems").get();
-  for (const doc of legacyRoot.docs) {
-    itemDocs.push({
-      ref: doc.ref,
-      id: doc.id,
-      data: () => doc.data(),
-      labelPrefix: ""
-    });
-  }
+
+  const { removeR2Object } = await import("../src/lib/storage/cloudflare-r2");
 
   for (const doc of itemDocs) {
     const item = doc.data() as { name?: { en?: string }; imageUrl?: string; imagePath?: string };
@@ -114,7 +111,7 @@ async function main() {
     const imageUrl = item.imageUrl || "";
     const imagePath = item.imagePath || "";
 
-    if (!imageUrl || !imagePath || !imageUrl.startsWith(publicPrefix)) {
+    if (!imageUrl) {
       skipped++;
       continue;
     }
@@ -125,9 +122,6 @@ async function main() {
       const isGif = /\.gif($|\?)/i.test(imagePath) || /\.gif($|\?)/i.test(imageUrl) || contentType.includes("gif");
       const originalBuffer = Buffer.from(await response.arrayBuffer());
 
-      // GIFs are read with every frame ({ animate: true }) and written as animated WebP so the
-      // animation is preserved — animated WebP plays in a plain <img> and is far smaller than a GIF.
-      // (Skip .rotate() for animated: EXIF orientation doesn't apply to GIFs.)
       const pipeline = isGif ? sharp(originalBuffer, { animated: true }) : sharp(originalBuffer).rotate();
       const webpBuffer = await pipeline
         .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
@@ -140,10 +134,10 @@ async function main() {
         continue;
       }
 
-      const folder = imagePath.replace(`${bucket}/`, "").split("/").slice(0, -1).join("/") || `menu-items/${doc.id}`;
-      const objectKey = `${folder}/${randomUUID()}.webp`;
-      const newImagePath = `${bucket}/${objectKey}`;
-      const newImageUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${objectKey}`;
+      const slug = doc.clientSlug || "unknown";
+      const objectKey = `clients/${slug}/menu-items/${doc.id}/${randomUUID()}.webp`;
+      const newImagePath = `r2/${objectKey}`;
+      const newImageUrl = `${publicBase}/${objectKey}`;
 
       const saving = originalBuffer.length - webpBuffer.length;
       console.log(
@@ -152,28 +146,25 @@ async function main() {
       );
 
       if (APPLY) {
-        const uploadResponse = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${objectKey}`, {
-          method: "POST",
-          headers: {
-            authorization: `Bearer ${supabaseKey}`,
-            apikey: supabaseKey,
-            "content-type": "image/webp",
-            "cache-control": "31536000",
-            "x-upsert": "true"
-          },
-          body: new Uint8Array(webpBuffer)
+        await r2.send(
+          new PutObjectCommand({
+            Bucket: bucket,
+            Key: objectKey,
+            Body: webpBuffer,
+            ContentType: "image/webp",
+            CacheControl: "public, max-age=31536000, immutable"
+          })
+        );
+        await doc.ref.update({
+          imageUrl: newImageUrl,
+          imagePath: newImagePath,
+          updatedAt: FieldValue.serverTimestamp()
         });
-        if (!uploadResponse.ok) throw new Error(`upload ${uploadResponse.status}: ${await uploadResponse.text()}`);
-
-        await doc.ref.update({ imageUrl: newImageUrl, imagePath: newImagePath, updatedAt: FieldValue.serverTimestamp() });
-
-        // Delete the old object last, best-effort — the doc already points at the new one.
-        const deleteResponse = await fetch(`${supabaseUrl}/storage/v1/object/${imagePath}`, {
-          method: "DELETE",
-          headers: { authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey }
-        });
-        if (!deleteResponse.ok) {
-          console.log(`    (kept old file — delete returned ${deleteResponse.status})`);
+        if (imagePath.startsWith("r2/")) {
+          const del = await removeR2Object(imagePath);
+          if (!del.ok && !del.skipped) {
+            console.log(`    (kept old file — delete failed: ${del.error || "unknown"})`);
+          }
         }
       }
 

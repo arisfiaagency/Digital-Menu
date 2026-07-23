@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue, type QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { removeStoredImage } from "@/lib/supabase/server-storage";
+import { removeStoredImage } from "@/lib/storage/server";
 import type { ImageHistoryEntry } from "@/types/models";
 
 export const runtime = "nodejs";

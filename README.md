@@ -1,6 +1,6 @@
 # Multilingual Cafe Digital Menu
 
-Multi-tenant digital menu platform for cafes and restaurants. Built with Next.js App Router, TypeScript, Tailwind CSS, Firebase Auth + Firestore, and Supabase Storage.
+Multi-tenant digital menu platform for cafes and restaurants. Built with Next.js App Router, TypeScript, Tailwind CSS, Firebase Auth + Firestore, and Cloudflare R2 for images.
 
 ## Product model
 
@@ -18,7 +18,7 @@ Legacy feature routes under `/admin/*` redirect to the platform supervisor at `/
 ```bash
 npm install
 cp .env.example .env.local
-# fill Firebase + Supabase values
+# fill Firebase + Cloudflare R2 values
 npm run dev
 ```
 
@@ -59,7 +59,8 @@ npm run recompress-images
 ## Stack notes
 
 - **Admin path:** Firebase Web SDK scoped to `clients/{slug}/…`.
-- **Images:** Supabase Storage; nightly Vercel cron cleans expired `imageHistory`.
+- **Images:** Cloudflare R2 (`docs/IMAGE_STORAGE.md`); nightly Vercel cron cleans expired `imageHistory`.
 - **Roles:** full `admin` vs `employee` with per-feature permissions (UI + Firestore rules).
 
 See `docs/` for Firebase setup, development, and deployment.
+

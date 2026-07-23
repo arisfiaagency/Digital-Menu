@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { CollectionReference, Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { deleteClientImageFolder } from "@/lib/storage/cloudflare-r2";
 import { isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 
 const CLIENT_SUBCOLLECTIONS = [
@@ -79,6 +80,11 @@ export async function DELETE(request: NextRequest) {
       }
       await clientRef.delete();
     }
+
+    // Best-effort wipe of that cafe's R2 image folder (no-op if R2 is not configured).
+    await deleteClientImageFolder(slug).catch((err) => {
+      console.error("Failed to delete client image folder", err);
+    });
 
     return NextResponse.json({ ok: true, slug });
   } catch (err) {

@@ -131,6 +131,19 @@ async function main() {
 
   await batch.commit();
 
+  // If Cloudflare R2 credentials are present, create clients/{slug}/.keep.
+  try {
+    const { ensureClientImageFolder, hasCloudflareR2ServerConfig } = await import("../src/lib/storage/cloudflare-r2");
+    if (hasCloudflareR2ServerConfig()) {
+      const folder = await ensureClientImageFolder(slug);
+      console.log(`  R2 folder: ${folder.folder || `clients/${slug}`}`);
+    } else {
+      console.log("  R2 folder: skipped (Cloudflare R2 not configured)");
+    }
+  } catch (err) {
+    console.warn("  R2 folder: failed", err instanceof Error ? err.message : err);
+  }
+
   // Drop legacy root collections note is intentional — data now lives under clients/{slug}.
   console.log(`Seeded clients/${slug}`);
   console.log(`  Admin:   ${siteOrigin}/${slug}/admin`);

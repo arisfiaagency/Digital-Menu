@@ -206,7 +206,15 @@ export function SettingsManager() {
             </SettingsFormSection>
             <SettingsFormSection title={text.media}>
               <div className="max-w-sm">
-                <ImageUploadField label={text.logo} text={text} path="restaurants/main/logo" imageUrl={general.logoUrl} onUploaded={(result) => setGeneral({ ...general, logoUrl: result.imageUrl, logoPath: result.imagePath })} onRemoved={() => setGeneral({ ...general, logoUrl: "", logoPath: "" })} />
+                <ImageUploadField
+                  label={text.logo}
+                  text={text}
+                  path="branding"
+                  fileName="logo"
+                  imageUrl={general.logoUrl}
+                  onUploaded={(result) => setGeneral({ ...general, logoUrl: result.imageUrl, logoPath: result.imagePath })}
+                  onRemoved={() => setGeneral({ ...general, logoUrl: "", logoPath: "" })}
+                />
               </div>
             </SettingsFormSection>
             <SettingsFormSection title={text.defaults}>

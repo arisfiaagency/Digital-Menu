@@ -34,3 +34,10 @@ pnpm-debug.log*
 .idea/
 .vscode/
 .vercel
+.cursor/
+
+# Local work / session notes (not for git)
+docs/WORK_LOG.md
+docs/SESSION_*.md
+docs/README.md
+docs/IMAGE_STORAGE.md

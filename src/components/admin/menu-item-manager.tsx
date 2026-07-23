@@ -783,7 +783,14 @@ function MenuItemEditorForm({
           <ImageUploadField
             label={text.itemImage}
             text={text}
-            path={`menu-items/${form.watch("id") || categoryId || "new"}`}
+            path="menu-items"
+            fileName={
+              form.watch("name.en") ||
+              form.watch("name.ckb") ||
+              form.watch("name.ar") ||
+              form.watch("id") ||
+              "menu-item"
+            }
             imageUrl={form.watch("imageUrl") || ""}
             imageHistory={form.watch("imageHistory") || []}
             helpText={text.menuItemImageHint}

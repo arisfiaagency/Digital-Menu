@@ -31,6 +31,6 @@ This writes `/adminProfiles/{uid}` with `isAdmin: true` and sets the `{ admin: t
 
 ## Images
 
-Menu images are stored in **Supabase Storage**, not Firebase Storage. Configure `NEXT_PUBLIC_SUPABASE_*` (and `SUPABASE_SERVICE_ROLE_KEY` for cron/recompress). Legacy `storage.rules` may still ship with the repo for older assets.
+Menu images are stored in **Cloudflare R2**, not Firebase Storage. See `docs/IMAGE_STORAGE.md`. Configure `CLOUDFLARE_R2_*` and `NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL`. Legacy `storage.rules` may still ship with the repo for older Firebase Storage assets.
 
 Firebase App Check should be enabled for production after the hosting domain is known.
