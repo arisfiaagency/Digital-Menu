@@ -15,6 +15,7 @@ import { BrandCredit } from "@/components/brand-credit";
 import { MenuItemDetailModal } from "@/components/menu/menu-item-detail-modal";
 import { useMenuBrowse } from "@/components/menu/use-menu-browse";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
+import { DesignBackdrop } from "@/components/menu/design-backdrop";
 import { localized, translate, locales } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney, serviceFeeAmount } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
@@ -98,17 +99,8 @@ export function LuxuryMenu({ data, accent }: MenuDesignProps) {
   const displayStyle = { fontFamily: LUX_DISPLAY } as const;
 
   return (
-    <main dir="ltr" className="menu-theme-root no-select relative min-h-dvh bg-background text-foreground" style={accentStyle(accent)}>
-      {/* Refined layered background derived from the accent. */}
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-background" aria-hidden />
-      <div
-        className="pointer-events-none fixed inset-0 -z-10 opacity-70"
-        aria-hidden
-        style={{
-          backgroundImage:
-            "radial-gradient(60% 45% at 50% 0%, hsl(var(--primary) / 0.12), transparent 70%), radial-gradient(45% 40% at 100% 100%, hsl(var(--secondary) / 0.10), transparent 70%)"
-        }}
-      />
+    <main dir="ltr" className="menu-theme-root no-select relative isolate min-h-dvh bg-background text-foreground" style={accentStyle(accent)}>
+      <DesignBackdrop design="luxury" />
 
       {/* Minimal top controls */}
       <div className="relative z-20">

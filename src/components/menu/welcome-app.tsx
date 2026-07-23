@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/menu/theme-toggle";
 import { OpenStatusBadge, type OpenStatusStyle } from "@/components/menu/open-status-badge";
 import { SocialLinks, type SocialLinkStyle } from "@/components/menu/social-links";
 import { useForcedDark } from "@/components/menu/menu-shell";
+import { DesignBackdrop } from "@/components/menu/design-backdrop";
 import { BrandCredit } from "@/components/brand-credit";
 import { useLocale } from "@/hooks/use-locale";
 import { localized, locales } from "@/lib/i18n/config";
@@ -207,19 +208,21 @@ export function WelcomeApp({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: menuAccentCss(accent) }} />
-      <WelcomeScreen theme={theme} general={general} menu={menu} accent={accent} slug={slug} />
+      <WelcomeScreen theme={theme} design={design} general={general} menu={menu} accent={accent} slug={slug} />
     </>
   );
 }
 
 function WelcomeScreen({
   theme,
+  design,
   general,
   menu,
   accent,
   slug
 }: {
   theme: WelcomeTheme;
+  design: MenuDesign;
   general: GeneralSettings;
   menu: MenuSettings;
   accent?: string;
@@ -234,7 +237,7 @@ function WelcomeScreen({
   const nameStyle = theme.glowText ? { ...headingStyle, textShadow: "0 0 28px hsl(var(--primary) / 0.75)" } : headingStyle;
 
   return (
-    <WelcomeRoot theme={theme} accent={accent}>
+    <WelcomeRoot theme={theme} accent={accent} design={design}>
       {/* Top controls */}
       <div dir={textDir} className="relative z-20 mx-auto flex w-full max-w-4xl items-center justify-end gap-2 px-5 py-4">
         {!theme.forcedDark && darkModeEnabled ? <ThemeToggle presentation="circle" iconStyle="sunMoon" /> : null}
@@ -286,23 +289,26 @@ function WelcomeScreen({
   );
 }
 
-function WelcomeRoot({ theme, accent, children }: { theme: WelcomeTheme; accent?: string; children: React.ReactNode }) {
+function WelcomeRoot({
+  theme,
+  accent,
+  design,
+  children
+}: {
+  theme: WelcomeTheme;
+  accent?: string;
+  design: MenuDesign;
+  children: React.ReactNode;
+}) {
   useForcedDark(Boolean(theme.forcedDark));
   return (
     <main
-      className={cn("menu-theme-root relative flex min-h-dvh flex-col overflow-hidden", theme.rootClassName)}
+      className={cn("menu-theme-root relative isolate flex min-h-dvh flex-col overflow-hidden", theme.rootClassName)}
       style={{ ...accentStyle(accent), ...theme.rootStyle }}
     >
-      {theme.glow ? (
-        <div
-          className="pointer-events-none absolute inset-0 z-0 opacity-80"
-          aria-hidden
-          style={{
-            backgroundImage:
-              "radial-gradient(55% 40% at 50% 0%, hsl(var(--primary) / 0.22), transparent 70%), radial-gradient(45% 40% at 100% 100%, hsl(var(--primary) / 0.12), transparent 70%)"
-          }}
-        />
-      ) : null}
+      {/* The same signature backdrop as this design's menu page, so the front */}
+      {/* door and the menu read as one continuous place. */}
+      <DesignBackdrop design={design} />
       {children}
     </main>
   );

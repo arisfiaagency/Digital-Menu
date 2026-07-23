@@ -11,6 +11,7 @@ import { QuantityStepper } from "@/components/menu/cart";
 import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
+import { DesignBackdrop } from "@/components/menu/design-backdrop";
 import { localized, translate } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
@@ -39,7 +40,8 @@ export function TabsMenu({ data, accent }: MenuDesignProps) {
   const shownItems = searching ? browse.visibleItems : activeTab?.items ?? [];
 
   return (
-    <main dir={textDir} className="menu-theme-root relative flex min-h-dvh flex-col bg-background text-foreground" style={accentStyle(accent)}>
+    <main dir={textDir} className="menu-theme-root relative isolate flex min-h-dvh flex-col bg-background text-foreground" style={accentStyle(accent)}>
+      <DesignBackdrop design="tabs" />
       {/* Top bar */}
       <div className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">

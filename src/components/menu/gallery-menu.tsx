@@ -9,6 +9,7 @@ import { QuantityStepper } from "@/components/menu/cart";
 import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
+import { DesignBackdrop } from "@/components/menu/design-backdrop";
 import { localized, translate } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney } from "@/lib/utils/format";
 import { accentStyle } from "@/lib/utils/accent";
@@ -26,7 +27,8 @@ export function GalleryMenu({ data, accent }: MenuDesignProps) {
     : browse.sections;
 
   return (
-    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-background text-foreground" style={accentStyle(accent)}>
+    <main dir={textDir} className="menu-theme-root relative isolate min-h-dvh bg-background text-foreground" style={accentStyle(accent)}>
+      <DesignBackdrop design="gallery" />
       {/* Sticky top bar */}
       <div className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">

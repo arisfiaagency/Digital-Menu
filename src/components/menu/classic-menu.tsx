@@ -8,6 +8,7 @@ import { SocialLinks } from "@/components/menu/social-links";
 import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
+import { DesignBackdrop } from "@/components/menu/design-backdrop";
 import { localized, translate } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney, formatNumber } from "@/lib/utils/format";
 import { accentStyle } from "@/lib/utils/accent";
@@ -30,9 +31,10 @@ export function ClassicMenu({ data, accent }: MenuDesignProps) {
   return (
     <main
       dir={textDir}
-      className="menu-theme-root relative min-h-dvh bg-background text-foreground"
+      className="menu-theme-root relative isolate min-h-dvh bg-background text-foreground"
       style={{ ...accentStyle(accent), fontFamily: CLASSIC_SERIF }}
     >
+      <DesignBackdrop design="classic" />
       {/* Slim top bar */}
       <div className="border-b border-stone-300/70 dark:border-stone-700/60">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-3">

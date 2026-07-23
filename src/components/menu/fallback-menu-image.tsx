@@ -2,66 +2,60 @@
 
 import { useEffect, useState } from "react";
 
-const SITE_FALLBACK = "/site-icon.png";
+// Shown whenever an item has no photo, or its photo fails to load. A warm cafe
+// tabletop illustration (public/default-menu-item.svg) so every card stays
+// filled and consistent instead of showing an empty box or a repeated logo.
+const DEFAULT_ITEM_IMAGE = "/default-menu-item.svg";
 
 export function FallbackMenuImage({
   src,
   alt,
-  fallbackSrc,
+  // Accepted for backwards-compatibility with existing call sites, but the item
+  // fallback is now always the default menu illustration (never the cafe logo).
+  fallbackSrc: _fallbackSrc,
   priority = false,
   lcp = false
 }: {
   src?: string;
   alt: string;
-  /** Client branding logo from Menu Design — used when the item has no photo. */
   fallbackSrc?: string;
   priority?: boolean;
   lcp?: boolean;
 }) {
-  const placeholder = fallbackSrc || SITE_FALLBACK;
-  const [imageSrc, setImageSrc] = useState(src || placeholder);
+  const hasRealImage = Boolean(src);
+  const [imageSrc, setImageSrc] = useState(src || DEFAULT_ITEM_IMAGE);
+  // Skeleton stays up until the real image decodes. The local SVG placeholder
+  // needs no skeleton, so start "loaded" when there's no real photo.
+  const [loaded, setLoaded] = useState(!hasRealImage);
 
   useEffect(() => {
-    setImageSrc(src || placeholder);
-  }, [src, placeholder]);
+    setImageSrc(src || DEFAULT_ITEM_IMAGE);
+    setLoaded(!src);
+  }, [src]);
 
-  const isPlaceholder = imageSrc === placeholder || imageSrc === SITE_FALLBACK;
-
-  // Above-the-fold cards load right away (eager) so they don't wait for scroll. But only the single
-  // largest/first image gets high fetch priority — marking many images "high" starves the critical
-  // resources and each other, which makes the whole page feel slower.
+  // Above-the-fold cards load right away (eager); everything else waits for
+  // scroll. Only the single largest/first image gets high fetch priority.
   const loading = priority ? "eager" : "lazy";
   const fetchPriority = lcp ? "high" : "auto";
 
-  if (isPlaceholder) {
-    return (
-      <div className="flex h-full w-full items-center justify-center p-8 sm:p-10">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageSrc}
-          alt={alt}
-          loading={loading}
-          fetchPriority={fetchPriority}
-          decoding="async"
-          className="aspect-square h-full max-h-full max-w-full rounded-full object-cover shadow-sm ring-1 ring-border/60 transition-transform duration-500 group-hover:scale-105"
-          onError={() => {
-            if (imageSrc !== SITE_FALLBACK) setImageSrc(SITE_FALLBACK);
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={imageSrc}
-      alt={alt}
-      loading={loading}
-      fetchPriority={fetchPriority}
-      decoding="async"
-      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-      onError={() => setImageSrc(placeholder)}
-    />
+    <span className="relative block h-full w-full overflow-hidden bg-muted">
+      {/* Skeleton shimmer while the real photo loads. */}
+      {!loaded ? <span className="absolute inset-0 animate-pulse bg-muted" aria-hidden /> : null}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageSrc}
+        alt={alt}
+        loading={loading}
+        fetchPriority={fetchPriority}
+        decoding="async"
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        onLoad={() => setLoaded(true)}
+        onError={() => {
+          setLoaded(true);
+          if (imageSrc !== DEFAULT_ITEM_IMAGE) setImageSrc(DEFAULT_ITEM_IMAGE);
+        }}
+      />
+    </span>
   );
 }

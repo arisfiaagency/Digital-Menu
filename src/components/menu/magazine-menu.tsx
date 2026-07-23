@@ -8,6 +8,7 @@ import { QuantityStepper } from "@/components/menu/cart";
 import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
+import { DesignBackdrop } from "@/components/menu/design-backdrop";
 import { localized, translate } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney } from "@/lib/utils/format";
 import { accentStyle } from "@/lib/utils/accent";
@@ -26,7 +27,8 @@ export function MagazineMenu({ data, accent }: MenuDesignProps) {
     : browse.sections;
 
   return (
-    <main dir={textDir} className="menu-theme-root relative min-h-dvh bg-background text-foreground" style={{ ...accentStyle(accent), fontFamily: SERIF }}>
+    <main dir={textDir} className="menu-theme-root relative isolate min-h-dvh bg-background text-foreground" style={{ ...accentStyle(accent), fontFamily: SERIF }}>
+      <DesignBackdrop design="magazine" />
       {/* Masthead */}
       <header className="border-b-4 border-double border-foreground/80">
         <div className="mx-auto w-full max-w-4xl px-5 py-4">
