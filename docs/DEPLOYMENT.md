@@ -26,7 +26,7 @@ npm run create-admin -- staff@example.com 'strong-password' --client your-slug
 
 - `/{slug}/admin/login` and staff features
 - `/admin` platform supervisor
-- Image upload (Supabase)
+- Image upload (Cloudflare R2)
 
 Backups:
 

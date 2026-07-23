@@ -5,8 +5,8 @@ import { ImagePlus, RotateCcw, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { adminErrorText } from "@/components/admin/admin-preferences";
 import { cn } from "@/lib/utils/cn";
-import { hasSupabaseConfig } from "@/lib/supabase/client";
-import { compressImage, uploadImage, validateImageFile } from "@/lib/supabase/storage";
+import { hasStorageConfig } from "@/lib/storage";
+import { compressImage, uploadImage, validateImageFile } from "@/lib/storage";
 import type { ImageHistoryEntry } from "@/types/models";
 
 type UploadResult = { imageUrl: string; imagePath: string };
@@ -15,6 +15,7 @@ export function ImageUploadField({
   label,
   text,
   path,
+  fileName,
   imageUrl,
   imageHistory = [],
   helpText,
@@ -28,6 +29,8 @@ export function ImageUploadField({
   label: string;
   text?: Record<string, string>;
   path: string;
+  /** Used as the R2 object name, e.g. "Espresso" → espresso.webp */
+  fileName?: string;
   imageUrl?: string;
   imageHistory?: ImageHistoryEntry[];
   helpText?: string;
@@ -43,7 +46,7 @@ export function ImageUploadField({
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const storageConfigured = hasSupabaseConfig();
+  const storageConfigured = hasStorageConfig();
   const isUploading = progress > 0 && progress < 100;
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export function ImageUploadField({
   async function processFile(file: File) {
     setError("");
     if (!storageConfigured) {
-      setError("Supabase Storage is not configured.");
+      setError("Image storage is not configured.");
       return;
     }
     const validation = validateImageFile(file);
@@ -67,7 +70,7 @@ export function ImageUploadField({
     onUploadingChange?.(true);
     try {
       const uploadFile = await compressImage(file);
-      const result = await uploadImage(path, uploadFile, setProgress);
+      const result = await uploadImage(path, uploadFile, setProgress, fileName);
       setPreview(result.imageUrl);
       onUploaded(result);
     } catch (err) {

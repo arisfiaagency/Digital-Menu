@@ -16,7 +16,7 @@ src/app/admin/           # platform supervisor
 src/app/api/             # session, users, cron
 src/components/          # admin and shared UI
 src/lib/firebase/        # client, admin, firestore, rest, auth
-src/lib/supabase/        # image storage
+src/lib/storage/         # Cloudflare R2 image storage
 src/lib/tenant.ts        # slug helpers + reserved names
 messages/                # en, ar, ckb
 scripts/                 # seed, create-admin, recompress-images
@@ -40,7 +40,7 @@ Platform supervisors use root `adminProfiles` + custom claim `admin: true`.
 
 ## Storage
 
-Primary uploads: Supabase bucket (`menu-images` by default). Image history expiry is cleaned by `/api/cron/cleanup-expired-images` across all `clients/*/menuItems` (and any legacy root `menuItems`).
+Primary uploads: Cloudflare R2 bucket (`digital-menu` by default), one folder per cafe (`clients/{slug}/`). Image history expiry is cleaned by `/api/cron/cleanup-expired-images` across all `clients/*/menuItems` (and any legacy root `menuItems`).
 
 ## Local bootstrap
 

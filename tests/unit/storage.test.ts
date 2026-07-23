@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { imageExtensionForFile, validateImageFile } from "@/lib/supabase/storage";
+import { imageExtensionForFile, slugifyImageFileBase, validateImageFile } from "@/lib/storage";
 
-describe("Supabase image storage helpers", () => {
+describe("image storage helpers", () => {
   it("accepts animated GIF uploads", () => {
     const file = new File(["gif"], "animated-menu-item.gif", { type: "image/gif" });
 
@@ -13,5 +13,11 @@ describe("Supabase image storage helpers", () => {
     const file = new File(["video"], "clip.mp4", { type: "video/mp4" });
 
     expect(validateImageFile(file)).toBe("Use a JPG, PNG, WebP, or GIF image.");
+  });
+
+  it("slugifies menu item names for R2 filenames", () => {
+    expect(slugifyImageFileBase("Espresso")).toBe("espresso");
+    expect(slugifyImageFileBase("Iced Latte!")).toBe("iced-latte");
+    expect(slugifyImageFileBase("  ")).toBe("image");
   });
 });
