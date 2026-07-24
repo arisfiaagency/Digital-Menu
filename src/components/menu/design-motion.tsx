@@ -24,26 +24,32 @@ function Stage({ tint = "text-primary", children }: { tint?: string; children: R
 
 /* ── Mascot artwork ─────────────────────────────────────────────────────────── */
 
-function Dragon() {
+function Koi() {
   return (
-    <svg width="230" height="96" viewBox="0 0 230 96" fill="none" aria-hidden>
+    <svg width="132" height="70" viewBox="0 0 132 70" fill="none" aria-hidden>
+      {/* flowing tail */}
+      <path d="M42 35 C25 20 12 16 5 23 C14 29 19 32 27 35 C19 38 14 41 5 47 C12 54 25 50 42 35 Z" fill="currentColor" opacity="0.85" />
       {/* body */}
-      <path d="M14 60 C50 26 84 86 120 52 C150 28 176 66 200 50" stroke="currentColor" strokeWidth="10" strokeLinecap="round" />
-      {/* mane spikes */}
-      <g fill="currentColor">
-        <path d="M56 44 l6 -13 6 10 z" />
-        <path d="M92 58 l6 -13 6 10 z" />
-        <path d="M120 44 l6 -13 6 10 z" />
-        <path d="M150 40 l6 -12 6 9 z" />
-        <path d="M176 52 l6 -12 6 9 z" />
+      <path d="M40 35 C54 14 92 12 114 25 C123 30 123 40 114 45 C92 58 54 56 40 35 Z" fill="currentColor" />
+      {/* dorsal fin */}
+      <path d="M64 17 C73 5 86 6 92 16 C82 17 72 18 64 17 Z" fill="currentColor" opacity="0.85" />
+      {/* pectoral fin */}
+      <path d="M82 43 C86 54 77 60 68 56 C74 51 78 47 82 43 Z" fill="currentColor" opacity="0.85" />
+      {/* koi markings + eye (punched out in the background colour) */}
+      <ellipse cx="74" cy="28" rx="8" ry="5.5" fill="hsl(var(--background))" opacity="0.5" />
+      <ellipse cx="97" cy="36" rx="5.5" ry="4" fill="hsl(var(--background))" opacity="0.45" />
+      <circle cx="109" cy="31" r="2.4" fill="hsl(var(--background))" />
+    </svg>
+  );
+}
+
+function BurstStar() {
+  // A chunky 6-spoke asterisk-star for the Brutalist mascot.
+  return (
+    <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden>
+      <g stroke="currentColor" strokeWidth="6">
+        <path d="M21 4 V38 M6 12.5 L36 29.5 M6 29.5 L36 12.5" />
       </g>
-      {/* tail fin */}
-      <path d="M14 60 l-12 -9 4 9 -4 9 z" fill="currentColor" />
-      {/* head */}
-      <path d="M198 42 q16 -2 22 8 q4 8 -4 12 q-12 6 -20 -4 q-6 -9 2 -16 z" fill="currentColor" />
-      <path d="M204 34 l-5 -12 M214 34 l3 -13" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-      <circle cx="212" cy="46" r="2.2" fill="hsl(var(--background))" />
-      <path d="M214 58 C206 66 196 66 186 70 M210 60 C204 70 194 72 184 78" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
     </svg>
   );
 }
@@ -107,9 +113,9 @@ const SCATTER = [6, 22, 38, 52, 66, 78, 90, 14, 46, 72];
 function ZenMotion() {
   return (
     <Stage tint="text-primary">
-      {/* The dragon, soaring across every loop. */}
-      <div style={{ top: 0, left: 0, opacity: 0.5, animation: "menu-dragon 15s linear infinite" }}>
-        <Dragon />
+      {/* A koi gliding across every loop. */}
+      <div style={{ top: 0, left: 0, opacity: 0.55, animation: "menu-swim 16s linear infinite" }}>
+        <Koi />
       </div>
       {/* Drifting sakura petals. */}
       {SCATTER.slice(0, 7).map((left, i) => (
@@ -354,17 +360,12 @@ function ModernMotion() {
 function BrutalistMotion() {
   return (
     <Stage tint="text-foreground">
-      <div
-        style={{
-          top: 0,
-          left: 0,
-          width: 26,
-          height: 26,
-          background: "currentColor",
-          opacity: 0.5,
-          animation: "menu-glide 11s steps(24, end) infinite"
-        }}
-      />
+      {/* A chunky asterisk-star gliding across with a jerky, mechanical spin. */}
+      <div style={{ top: 0, left: 0, opacity: 0.5, animation: "menu-glide 13s linear infinite" }}>
+        <div style={{ animation: "menu-spin 3.4s steps(8, end) infinite" }}>
+          <BurstStar />
+        </div>
+      </div>
     </Stage>
   );
 }

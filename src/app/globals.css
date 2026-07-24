@@ -697,8 +697,8 @@ textarea {
   will-change: transform, opacity;
 }
 
-/* Serpentine flight across the page — the Zen dragon soaring around. */
-@keyframes menu-dragon {
+/* Undulating glide across the page — the Zen koi swimming past. */
+@keyframes menu-swim {
   0%   { transform: translate(-45vw, 24vh) rotate(6deg); }
   25%  { transform: translate(20vw, 9vh) rotate(-5deg); }
   50%  { transform: translate(55vw, 30vh) rotate(6deg); }
