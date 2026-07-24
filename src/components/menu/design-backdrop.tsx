@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
+import { DesignMotion } from "@/components/menu/design-motion";
 import type { MenuDesign } from "@/types/models";
 
 // A per-design "signature" background. Each menu design and its matching welcome
@@ -88,7 +89,17 @@ function Tiles({
   );
 }
 
+// Public entry: the static signature backdrop + the animated mascot layer.
 export function DesignBackdrop({ design }: { design: MenuDesign }) {
+  return (
+    <>
+      <StaticBackdrop design={design} />
+      <DesignMotion design={design} />
+    </>
+  );
+}
+
+function StaticBackdrop({ design }: { design: MenuDesign }) {
   switch (design) {
     case "luxury":
       return (

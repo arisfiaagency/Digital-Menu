@@ -684,6 +684,74 @@ textarea {
   }
 }
 
+/* ── Animated design mascots (Zen dragon, paper plane, petals, streaks…) ────── */
+/* A fixed, behind-content layer per menu design; see design-motion.tsx. */
+.menu-motion {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.menu-motion > * {
+  position: absolute;
+  will-change: transform, opacity;
+}
+
+/* Serpentine flight across the page — the Zen dragon soaring around. */
+@keyframes menu-dragon {
+  0%   { transform: translate(-45vw, 24vh) rotate(6deg); }
+  25%  { transform: translate(20vw, 9vh) rotate(-5deg); }
+  50%  { transform: translate(55vw, 30vh) rotate(6deg); }
+  75%  { transform: translate(92vw, 12vh) rotate(-4deg); }
+  100% { transform: translate(145vw, 26vh) rotate(6deg); }
+}
+
+/* Straight-ish glide across (paper plane, marching block, orb carrier). */
+@keyframes menu-glide {
+  0%   { transform: translate(-32vw, 16vh) rotate(var(--tilt, 0deg)); }
+  50%  { transform: translate(50vw, 9vh) rotate(var(--tilt, 0deg)); }
+  100% { transform: translate(136vw, 20vh) rotate(var(--tilt, 0deg)); }
+}
+
+/* Continuous spin — nest inside a glider (e.g. the retro boomerang). */
+@keyframes menu-spin { to { transform: rotate(360deg); } }
+
+/* Diagonal light streak sweep (neon, luxury comet). */
+@keyframes menu-streak {
+  0%   { transform: translate(-45vw, -25vh) rotate(26deg); opacity: 0; }
+  8%   { opacity: .9; }
+  42%  { opacity: .9; }
+  100% { transform: translate(135vw, 65vh) rotate(26deg); opacity: 0; }
+}
+
+/* Fall + drift + tumble (sakura petals, feather, chalk dust). */
+@keyframes menu-fall {
+  0%   { transform: translateY(-12vh) translateX(0) rotate(0deg); opacity: 0; }
+  10%  { opacity: var(--fade, .7); }
+  90%  { opacity: var(--fade, .7); }
+  100% { transform: translateY(112vh) translateX(var(--drift, 6vw)) rotate(360deg); opacity: 0; }
+}
+
+/* Rise + drift (pastel bubbles / hearts, bento steam). */
+@keyframes menu-rise {
+  0%   { transform: translateY(112vh) translateX(0) scale(.7); opacity: 0; }
+  12%  { opacity: var(--fade, .6); }
+  88%  { opacity: var(--fade, .6); }
+  100% { transform: translateY(-14vh) translateX(var(--drift, -4vw)) scale(1); opacity: 0; }
+}
+
+/* Neon flicker for a passing light. */
+@keyframes menu-flicker {
+  0%, 46%, 54%, 100% { opacity: .9; }
+  50% { opacity: .35; }
+  62% { opacity: .5; }
+  66% { opacity: .95; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-motion { display: none !important; }
+}
+
 @media print {
   @page {
     size: 80mm auto;
