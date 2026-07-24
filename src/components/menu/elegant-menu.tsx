@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
+import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -67,7 +67,7 @@ export function ElegantMenu({ data, accent }: MenuDesignProps) {
               <ul className="space-y-7">
                 {section.items.map((item) => (
                   <ElegantRow key={item.id} item={item} locale={locale} textDir={textDir}
-                    showPrices={ctrl.showPrices} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
+                    showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)} onAdd={() => cart.add(item)}
                     onIncrement={() => cart.increment(item.id)} onDecrement={() => cart.decrement(item.id)} />
                 ))}
@@ -90,9 +90,9 @@ export function ElegantMenu({ data, accent }: MenuDesignProps) {
 }
 
 function ElegantRow({
-  item, locale, textDir, showPrices, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
+  item, locale, textDir, showPrices, showImages, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
 }: {
-  item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showCart: boolean;
+  item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showImages: boolean; showCart: boolean;
   quantity: number; onOpen: () => void; onAdd: () => void; onIncrement: () => void; onDecrement: () => void;
 }) {
   const name = localized(item.name, locale);
@@ -101,6 +101,7 @@ function ElegantRow({
 
   return (
     <li className="flex items-start justify-between gap-4 text-center">
+      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-16 w-16 rounded-full ring-1 ring-primary/25" />
       <button type="button" onClick={onOpen} className="mx-auto min-w-0 flex-1 text-center">
         <h3 className="text-xl font-normal tracking-wide">{name}</h3>
         {description ? <p className="mx-auto mt-1 max-w-md text-sm font-light italic text-stone-500">{description}</p> : null}

@@ -5,7 +5,9 @@ import { CartFab, CartIconButton, CartSheet } from "@/components/menu/cart";
 import { LanguageGlobe } from "@/components/menu/language-globe";
 import { ThemeToggle } from "@/components/menu/theme-toggle";
 import { MenuItemDetailModal } from "@/components/menu/menu-item-detail-modal";
+import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
 import { useMenuBrowse, type MenuBrowse } from "@/components/menu/use-menu-browse";
+import { cn } from "@/lib/utils/cn";
 import { useCart, type Cart } from "@/hooks/use-cart";
 import { useLocale } from "@/hooks/use-locale";
 import { localized, locales } from "@/lib/i18n/config";
@@ -116,6 +118,41 @@ export function useForcedDark(enabled = true) {
       if (!had) root.classList.remove("dark");
     };
   }, [enabled]);
+}
+
+// A small item thumbnail for the text/list designs (classic, minimal, neon, …)
+// so a photo — or the default illustration when an item has none — shows on the
+// scrolling menu, not only in the detail modal. `show` follows the cafe's
+// "show images" setting; `className` sets the per-design size + shape. Tapping it
+// opens the same detail modal as the row.
+export function MenuRowThumb({
+  item,
+  name,
+  show,
+  onOpen,
+  className
+}: {
+  item: MenuItem;
+  name: string;
+  show: boolean;
+  onOpen: () => void;
+  className?: string;
+}) {
+  if (!show) return null;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={name}
+      className={cn(
+        "group relative block shrink-0 overflow-hidden bg-muted",
+        item.isSoldOut && "opacity-60 grayscale",
+        className
+      )}
+    >
+      <FallbackMenuImage src={item.imageUrl} alt={name} />
+    </button>
+  );
 }
 
 // The floating cart pill + item detail modal + cart sheet. Dropped in once per

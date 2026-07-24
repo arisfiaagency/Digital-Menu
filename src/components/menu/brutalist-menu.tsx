@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
+import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -64,7 +64,7 @@ export function BrutalistMenu({ data, accent }: MenuDesignProps) {
               <ul className="space-y-3">
                 {section.items.map((item) => (
                   <BrutalRow key={item.id} item={item} locale={locale} textDir={textDir}
-                    showPrices={ctrl.showPrices} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
+                    showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)} onAdd={() => cart.add(item)}
                     onIncrement={() => cart.increment(item.id)} onDecrement={() => cart.decrement(item.id)} />
                 ))}
@@ -87,9 +87,9 @@ export function BrutalistMenu({ data, accent }: MenuDesignProps) {
 }
 
 function BrutalRow({
-  item, locale, textDir, showPrices, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
+  item, locale, textDir, showPrices, showImages, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
 }: {
-  item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showCart: boolean;
+  item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showImages: boolean; showCart: boolean;
   quantity: number; onOpen: () => void; onAdd: () => void; onIncrement: () => void; onDecrement: () => void;
 }) {
   const name = localized(item.name, locale);
@@ -98,6 +98,7 @@ function BrutalRow({
 
   return (
     <li className="flex items-center gap-3 border-2 border-foreground bg-card p-3" style={{ boxShadow: "4px 4px 0 hsl(var(--foreground))" }}>
+      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-14 w-14 rounded-none border-2 border-foreground" />
       <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
         <h3 dir={textDir} className="truncate text-base font-black uppercase">{name}</h3>
         {description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{description}</p> : null}

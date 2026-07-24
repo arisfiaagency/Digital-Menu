@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays, useForcedDark } from "@/components/menu/menu-shell";
+import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb, useForcedDark } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -89,6 +89,7 @@ export function ChalkboardMenu({ data, accent }: MenuDesignProps) {
                     locale={locale}
                     textDir={textDir}
                     showPrices={ctrl.showPrices}
+                    showImages={ctrl.showImages}
                     showCart={ctrl.showCart}
                     quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)}
@@ -124,6 +125,7 @@ function ChalkRow({
   locale,
   textDir,
   showPrices,
+  showImages,
   showCart,
   quantity,
   onOpen,
@@ -135,6 +137,7 @@ function ChalkRow({
   locale: Locale;
   textDir: "ltr" | "rtl";
   showPrices: boolean;
+  showImages: boolean;
   showCart: boolean;
   quantity: number;
   onOpen: () => void;
@@ -149,6 +152,7 @@ function ChalkRow({
 
   return (
     <li className="flex items-start gap-3">
+      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-14 w-14 rounded-md ring-2 ring-white/25" />
       <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
         <div className="flex items-baseline gap-2">
           <span className="text-xl">{name}</span>

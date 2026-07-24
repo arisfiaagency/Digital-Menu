@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
+import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -60,7 +60,7 @@ export function ZenMenu({ data, accent }: MenuDesignProps) {
               <ul className="space-y-8">
                 {section.items.map((item) => (
                   <ZenRow key={item.id} item={item} locale={locale} textDir={textDir}
-                    showPrices={ctrl.showPrices} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
+                    showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)} onAdd={() => cart.add(item)}
                     onIncrement={() => cart.increment(item.id)} onDecrement={() => cart.decrement(item.id)} />
                 ))}
@@ -83,9 +83,9 @@ export function ZenMenu({ data, accent }: MenuDesignProps) {
 }
 
 function ZenRow({
-  item, locale, textDir, showPrices, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
+  item, locale, textDir, showPrices, showImages, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
 }: {
-  item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showCart: boolean;
+  item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showImages: boolean; showCart: boolean;
   quantity: number; onOpen: () => void; onAdd: () => void; onIncrement: () => void; onDecrement: () => void;
 }) {
   const name = localized(item.name, locale);
@@ -94,6 +94,7 @@ function ZenRow({
 
   return (
     <li className="flex items-start justify-between gap-4">
+      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-14 w-14 rounded-full ring-1 ring-primary/25" />
       <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
         <div className="flex items-baseline justify-between gap-3">
           <h3 className="text-lg font-normal tracking-wide">{name}</h3>

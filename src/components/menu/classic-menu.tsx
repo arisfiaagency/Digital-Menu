@@ -5,7 +5,7 @@ import { Minus, Plus, Search, UtensilsCrossed } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
-import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
+import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -91,6 +91,7 @@ export function ClassicMenu({ data, accent }: MenuDesignProps) {
                     locale={locale}
                     textDir={textDir}
                     showPrices={ctrl.showPrices}
+                    showImages={ctrl.showImages}
                     showCart={ctrl.showCart}
                     quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)}
@@ -126,6 +127,7 @@ function ClassicRow({
   locale,
   textDir,
   showPrices,
+  showImages,
   showCart,
   quantity,
   onOpen,
@@ -137,6 +139,7 @@ function ClassicRow({
   locale: Locale;
   textDir: "ltr" | "rtl";
   showPrices: boolean;
+  showImages: boolean;
   showCart: boolean;
   quantity: number;
   onOpen: () => void;
@@ -150,7 +153,8 @@ function ClassicRow({
   const hasDiscount = Boolean(item.discountPrice);
 
   return (
-    <li className="flex items-start gap-2">
+    <li className="flex items-start gap-3">
+      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-14 w-14 rounded-md ring-1 ring-stone-300 dark:ring-stone-700" />
       <div className="min-w-0 flex-1">
         <button type="button" onClick={onOpen} className="w-full text-start">
           <div className="flex items-baseline gap-2">

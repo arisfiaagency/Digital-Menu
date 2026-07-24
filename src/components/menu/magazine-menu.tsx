@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
+import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -63,7 +63,7 @@ export function MagazineMenu({ data, accent }: MenuDesignProps) {
               <div className="gap-x-10 sm:columns-2">
                 {section.items.map((item) => (
                   <MagazineRow key={item.id} item={item} locale={locale} textDir={textDir}
-                    showPrices={ctrl.showPrices} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
+                    showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)} onAdd={() => cart.add(item)}
                     onIncrement={() => cart.increment(item.id)} onDecrement={() => cart.decrement(item.id)} />
                 ))}
@@ -86,9 +86,9 @@ export function MagazineMenu({ data, accent }: MenuDesignProps) {
 }
 
 function MagazineRow({
-  item, locale, textDir, showPrices, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
+  item, locale, textDir, showPrices, showImages, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
 }: {
-  item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showCart: boolean;
+  item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showImages: boolean; showCart: boolean;
   quantity: number; onOpen: () => void; onAdd: () => void; onIncrement: () => void; onDecrement: () => void;
 }) {
   const name = localized(item.name, locale);
@@ -98,6 +98,7 @@ function MagazineRow({
   return (
     <div className="mb-5 break-inside-avoid">
       <div className="flex items-start justify-between gap-3">
+        <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-16 w-16 rounded-none ring-1 ring-foreground/15" />
         <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
           <div className="flex items-baseline gap-2">
             <h3 className="text-lg font-bold">{name}</h3>

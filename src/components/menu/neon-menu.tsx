@@ -6,7 +6,7 @@ import { Minus, Plus, Search, UtensilsCrossed } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
-import { useMenuController, MenuTopControls, MenuOverlays, useForcedDark } from "@/components/menu/menu-shell";
+import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb, useForcedDark } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -136,6 +136,7 @@ export function NeonMenu({ data, accent }: MenuDesignProps) {
                     locale={locale}
                     textDir={textDir}
                     showPrices={ctrl.showPrices}
+                    showImages={ctrl.showImages}
                     showCart={ctrl.showCart}
                     quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)}
@@ -171,6 +172,7 @@ function NeonRow({
   locale,
   textDir,
   showPrices,
+  showImages,
   showCart,
   quantity,
   onOpen,
@@ -182,6 +184,7 @@ function NeonRow({
   locale: Locale;
   textDir: "ltr" | "rtl";
   showPrices: boolean;
+  showImages: boolean;
   showCart: boolean;
   quantity: number;
   onOpen: () => void;
@@ -196,7 +199,10 @@ function NeonRow({
 
   return (
     <li className="flex items-center gap-4 py-4">
-      <span className="mt-1 h-2 w-2 shrink-0 rotate-45 bg-primary" style={{ boxShadow: "0 0 10px hsl(var(--primary) / 0.9)" }} aria-hidden />
+      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-14 w-14 rounded-lg ring-1 ring-primary/40" />
+      {!showImages ? (
+        <span className="mt-1 h-2 w-2 shrink-0 rotate-45 bg-primary" style={{ boxShadow: "0 0 10px hsl(var(--primary) / 0.9)" }} aria-hidden />
+      ) : null}
       <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
         <div className="flex items-baseline justify-between gap-3">
           <span className="truncate text-base font-semibold text-zinc-100">{name}</span>
