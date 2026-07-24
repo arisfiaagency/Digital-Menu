@@ -376,49 +376,77 @@ function BrutalistMotion() {
 
 function Glyph({ kind, size }: { kind: string; size: number }) {
   const s: CSSProperties = { width: size, height: size, display: "block" };
+  const line = { fill: "none", stroke: "currentColor", strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   switch (kind) {
-    case "bolt": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M13 2 L5 14 h5 l-1 8 8 -12 h-5 l1 -8 z" /></svg>;
-    case "spark": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M12 1 L14 10 L23 12 L14 14 L12 23 L10 14 L1 12 L10 10 Z" /></svg>;
-    case "star": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M12 2 l2.6 6.6 7 .4 -5.4 4.6 1.8 6.8 -6 -3.8 -6 3.8 1.8 -6.8 -5.4 -4.6 7 -.4 z" /></svg>;
-    case "diamond": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M12 2 L21 12 L12 22 L3 12 Z" /></svg>;
-    case "ring": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="12" cy="12" r="9" /></svg>;
-    case "triangle": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M12 3 L21 20 L3 20 Z" /></svg>;
-    case "plus": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden><path d="M12 5 v14 M5 12 h14" /></svg>;
-    case "wave": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M2 14 q4 -6 8 0 t8 0" /></svg>;
-    case "heart": return <svg viewBox="0 0 18 18" style={s} fill="currentColor" aria-hidden><path d="M9 16 C2 11 1 6 4 4 C6 2.5 8 3.5 9 5 C10 3.5 12 2.5 14 4 C17 6 16 11 9 16 Z" /></svg>;
-    case "leaf": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden><path d="M4 20 C4 9 12 4 20 4 C20 15 12 20 4 20 Z" /><path d="M7 17 L17 7" /></svg>;
-    case "enso": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden><path d="M17 5 a9 9 0 1 0 3.5 4.5" /></svg>;
-    case "boomerang": return <svg viewBox="0 0 34 34" style={s} fill="currentColor" aria-hidden><path d="M4 6 C16 8 24 16 28 28 L22 30 C19 20 13 13 3 11 Z" /></svg>;
-    case "utensil": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden><path d="M7 2 v6 a2 2 0 0 0 4 0 V2 M9 2 v20 M17 2 c-2 1 -2 7 0 9 v11" /></svg>;
-    case "asterisk": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden><path d="M12 4 v16 M5 8 L19 16 M5 16 L19 8" /></svg>;
-    case "square": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="4" y="4" width="16" height="16" rx="3" /></svg>;
-    case "xmark": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden><path d="M6 6 L18 18 M18 6 L6 18" /></svg>;
-    case "frame": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="3" y="5" width="18" height="14" rx="1" /><circle cx="8" cy="10" r="1.6" fill="currentColor" /></svg>;
-    case "stamp": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} strokeDasharray="2 2.5" aria-hidden><circle cx="12" cy="12" r="9" /></svg>;
-    case "chopstick": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M3 20 L20 4 M6 21 L22 8" /></svg>;
-    case "arrow": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 14 q7 -8 16 -3 M15 6 l5 4 -4 5" /></svg>;
-    case "folder": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M3 8 v11 a1 1 0 0 0 1 1 h16 a1 1 0 0 0 1 -1 V9 a1 1 0 0 0 -1 -1 h-8 l-2 -3 H4 a1 1 0 0 0 -1 1 z" /></svg>;
+    // ── food & drink ─────────────────────────────
+    case "coffee": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M5 8h11v4a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5z" /><path d="M16 9h2a2 2 0 0 1 0 4h-1" /><path d="M4 21h13" /></svg>;
+    case "cocktail": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M4 5h16l-8 8z" /><path d="M12 13v6M8 19h8" /></svg>;
+    case "wine": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M8 3h8c0 5-2 8-4 8s-4-3-4-8z" /><path d="M12 11v7M8 21h8" /></svg>;
+    case "milkshake": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M7 8h10l-1 12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z" /><path d="M8 8a4 3 0 0 1 8 0M14 4v4" /></svg>;
+    case "icecream": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M8 9a4 4 0 0 1 8 0z" /><path d="M8 9l4 12 4-12" /></svg>;
+    case "cupcake": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M6 11h12l-1.5 8a1 1 0 0 1-1 1H8.5a1 1 0 0 1-1-1z" /><path d="M6 11a6 5 0 0 1 12 0M12 3v3" /></svg>;
+    case "croissant": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M3 16c3-9 15-9 18 0c-4-2-6 4-9 4s-5-6-9-4z" /></svg>;
+    case "sushi": return <svg viewBox="0 0 24 24" style={s} aria-hidden><rect x="3" y="13" width="18" height="6" rx="3" fill="none" stroke="currentColor" strokeWidth={1.8} /><path d="M4 13a9 4 0 0 1 16 0z" fill="currentColor" /></svg>;
+    case "onigiri": return <svg viewBox="0 0 24 24" style={s} aria-hidden><path d="M12 4l8 15H4z" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" /><rect x="8" y="14" width="8" height="5" fill="currentColor" /></svg>;
+    case "fish": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M3 12c4-6 12-6 16 0c-4 6-12 6-16 0z" /><path d="M19 12l3-3v6z" /></svg>;
+    case "bean": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><ellipse cx="12" cy="12" rx="6" ry="9" transform="rotate(28 12 12)" /><path d="M10 5c2 4 2 10 0 14" /></svg>;
+    case "wheat": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.6} aria-hidden><path d="M12 22V6M12 6q-3-1-3-4 3 0 3 3M12 6q3-1 3-4-3 0-3 3M12 12q-3-1-3-4 3 0 3 3M12 12q3-1 3-4-3 0-3 3M12 17q-3-1-3-4 3 0 3 3M12 17q3-1 3-4-3 0-3 3" /></svg>;
+    case "spoon": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M12 12v9" /><path d="M12 12c-2.4 0-4-2-4-4.5S9.6 3 12 3s4 2 4 4.5S14.4 12 12 12z" /></svg>;
+    case "utensil": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.6} aria-hidden><path d="M7 2v6a2 2 0 0 0 4 0V2M9 2v20M17 2c-2 1-2 7 0 9v11" /></svg>;
+    case "chopstick": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2} aria-hidden><path d="M3 20L20 4M6 21L22 8" /></svg>;
+    // ── nature / zen ─────────────────────────────
+    case "enso": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2.4} aria-hidden><path d="M17 5a9 9 0 1 0 3.5 4.5" /></svg>;
+    case "leaf": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.6} aria-hidden><path d="M4 20C4 9 12 4 20 4C20 15 12 20 4 20z" /><path d="M7 17L17 7" /></svg>;
+    case "lotus": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M12 20c-8-4-8-10-8-10 4 0 6 3 8 10 2-7 4-10 8-10 0 0 0 6-8 10z" opacity=".85" /><path d="M12 20c-2-8 0-14 0-14s2 6 0 14z" /></svg>;
+    case "flower": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><circle cx="12" cy="5.5" r="3" /><circle cx="18.5" cy="10" r="3" /><circle cx="16" cy="17.5" r="3" /><circle cx="8" cy="17.5" r="3" /><circle cx="5.5" cy="10" r="3" /><circle cx="12" cy="12" r="3" fill="hsl(var(--background))" /></svg>;
+    case "wave": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2} aria-hidden><path d="M2 14q4-6 8 0t8 0" /></svg>;
+    // ── objects ──────────────────────────────────
+    case "crown": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M4 8l3 8h10l3-8-5 4-3-6-3 6z" /><path d="M6 19h12" /></svg>;
+    case "camera": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><rect x="3" y="7" width="18" height="13" rx="2" /><circle cx="12" cy="13" r="3.4" /><path d="M8 7l1.5-2h5L16 7" /></svg>;
+    case "frame": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><rect x="3" y="5" width="18" height="14" rx="1" /><path d="M7 17l4-4 3 2 3-4 3 6" /></svg>;
+    case "bookmark": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z" /></svg>;
+    case "folder": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-8l-2-3H4a1 1 0 0 0-1 1z" /></svg>;
+    case "boomerang": return <svg viewBox="0 0 34 34" style={s} fill="currentColor" aria-hidden><path d="M4 6C16 8 24 16 28 28L22 30C19 20 13 13 3 11z" /></svg>;
+    // ── marks ────────────────────────────────────
+    case "bolt": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M13 2L5 14h5l-1 8 8-12h-5l1-8z" /></svg>;
+    case "moon": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M20 14A8 8 0 1 1 11 4a6 6 0 1 0 9 10z" /></svg>;
+    case "star": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M12 2l2.6 6.6 7 .4-5.4 4.6 1.8 6.8-6-3.8-6 3.8 1.8-6.8-5.4-4.6 7-.4z" /></svg>;
+    case "spark": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M12 1l2 9 9 2-9 2-2 9-2-9-9-2 9-2z" /></svg>;
+    case "heart": return <svg viewBox="0 0 18 18" style={s} fill="currentColor" aria-hidden><path d="M9 16C2 11 1 6 4 4C6 2.5 8 3.5 9 5C10 3.5 12 2.5 14 4C17 6 16 11 9 16z" /></svg>;
+    case "diamond": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2} aria-hidden><path d="M12 2L21 12L12 22L3 12z" /></svg>;
+    case "musicnote": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={1.8} aria-hidden><path d="M8 17.5V6l9-2v11.5" /><circle cx="6" cy="17.5" r="2.2" fill="currentColor" stroke="none" /><circle cx="15" cy="15.5" r="2.2" fill="currentColor" stroke="none" /></svg>;
+    case "arrow": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2.2} aria-hidden><path d="M3 14q7-8 16-3M15 6l5 4-4 5" /></svg>;
+    case "asterisk": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2.4} aria-hidden><path d="M12 4v16M5 8l14 8M5 16l14-8" /></svg>;
+    case "quote": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M6 14c0-4 2-6 5-6v2c-2 0-3 1-3 3h3v5H6zM14 14c0-4 2-6 5-6v2c-2 0-3 1-3 3h3v5h-5z" /></svg>;
+    case "ampersand": return <svg viewBox="0 0 24 24" style={s} aria-hidden><text x="12" y="19" textAnchor="middle" fontFamily="Georgia, serif" fontSize="22" fontStyle="italic" fill="currentColor">&amp;</text></svg>;
+    case "hash": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2} aria-hidden><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16" /></svg>;
+    case "square": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2} aria-hidden><rect x="4" y="4" width="16" height="16" rx="3" /></svg>;
+    case "xmark": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={3} aria-hidden><path d="M6 6L18 18M18 6L6 18" /></svg>;
+    case "triangle": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2} aria-hidden><path d="M12 3L21 20L3 20z" /></svg>;
+    case "ring": return <svg viewBox="0 0 24 24" style={s} {...line} strokeWidth={2} aria-hidden><circle cx="12" cy="12" r="9" /></svg>;
     default: return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><circle cx="12" cy="12" r="4" /></svg>;
   }
 }
 
+// Each design's symbols relate to its name/theme (drinks, food, motifs) — not
+// generic geometry.
 const FLOAT_SETS: Record<MenuDesign, { tint: string; glow?: boolean; kinds: string[] }> = {
-  neon:       { tint: "text-primary", glow: true, kinds: ["star", "diamond", "ring", "triangle", "bolt"] },
-  luxury:     { tint: "text-primary", glow: true, kinds: ["spark", "diamond", "dot", "star"] },
-  classic:    { tint: "text-foreground", kinds: ["utensil", "diamond", "dot"] },
-  minimal:    { tint: "text-foreground", kinds: ["dot", "plus"] },
-  zen:        { tint: "text-primary", kinds: ["leaf", "enso", "wave", "dot"] },
-  retro:      { tint: "text-primary", kinds: ["boomerang", "ring", "star", "wave"] },
-  pastel:     { tint: "text-primary", kinds: ["heart", "star", "dot", "spark"] },
-  kraft:      { tint: "text-foreground", kinds: ["stamp", "xmark", "star", "dot"] },
-  bento:      { tint: "text-primary", kinds: ["square", "ring", "chopstick", "dot"] },
-  elegant:    { tint: "text-primary", kinds: ["diamond", "spark", "dot"] },
-  magazine:   { tint: "text-foreground", kinds: ["asterisk", "dot", "diamond"] },
+  neon:       { tint: "text-primary", glow: true, kinds: ["cocktail", "star", "moon", "bolt"] },
+  luxury:     { tint: "text-primary", glow: true, kinds: ["crown", "diamond", "spark", "wine"] },
+  classic:    { tint: "text-foreground", kinds: ["utensil", "coffee", "spoon"] },
+  minimal:    { tint: "text-foreground", kinds: ["dot", "ring"] },
+  zen:        { tint: "text-primary", kinds: ["enso", "leaf", "lotus", "wave"] },
+  retro:      { tint: "text-primary", kinds: ["boomerang", "milkshake", "star", "musicnote"] },
+  pastel:     { tint: "text-primary", kinds: ["cupcake", "heart", "icecream", "flower"] },
+  kraft:      { tint: "text-foreground", kinds: ["wheat", "bean", "croissant", "leaf"] },
+  bento:      { tint: "text-primary", kinds: ["sushi", "onigiri", "chopstick", "fish"] },
+  elegant:    { tint: "text-primary", kinds: ["wine", "spark", "diamond", "leaf"] },
+  magazine:   { tint: "text-foreground", kinds: ["quote", "asterisk", "ampersand", "hash"] },
   brutalist:  { tint: "text-foreground", kinds: ["square", "xmark", "asterisk", "triangle"] },
-  gallery:    { tint: "text-foreground", kinds: ["frame", "spark", "dot"] },
-  tabs:       { tint: "text-primary", kinds: ["folder", "dot", "plus"] },
-  chalkboard: { tint: "text-foreground", kinds: ["star", "wave", "arrow", "dot"] },
-  modern:     { tint: "text-primary", kinds: ["ring", "square", "plus", "dot"] }
+  gallery:    { tint: "text-foreground", kinds: ["camera", "frame", "spark"] },
+  tabs:       { tint: "text-primary", kinds: ["folder", "bookmark", "hash"] },
+  chalkboard: { tint: "text-foreground", kinds: ["coffee", "star", "arrow", "heart"] },
+  modern:     { tint: "text-primary", kinds: ["star", "heart", "bolt", "coffee"] }
 };
 
 // Fixed scatter of slots; each symbol wanders its own small loop (menu-roam).
