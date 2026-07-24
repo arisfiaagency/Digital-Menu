@@ -182,6 +182,21 @@ textarea {
   animation: pop-in 0.15s ease-out;
 }
 
+/* Item card "grows" into the detail popup: a bigger scale-up with a soft spring. */
+@keyframes pop-grow {
+  from { opacity: 0; transform: translateY(10px) scale(0.85); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pop-grow {
+  animation: pop-grow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop-grow { animation: none; }
+}
+
 /* Admin settings section entrance */
 @keyframes settings-panel-open {
   from {

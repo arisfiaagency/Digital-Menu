@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
+import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -64,9 +65,9 @@ export function ElegantMenu({ data, accent }: MenuDesignProps) {
                 </h2>
                 <span className="h-px w-10 bg-stone-300" />
               </div>
-              <ul className="space-y-7">
+              <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3">
                 {section.items.map((item) => (
-                  <ElegantRow key={item.id} item={item} locale={locale} textDir={textDir}
+                  <ElegantCard key={item.id} item={item} locale={locale} textDir={textDir}
                     showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)} onAdd={() => cart.add(item)}
                     onIncrement={() => cart.increment(item.id)} onDecrement={() => cart.decrement(item.id)} />
@@ -89,7 +90,7 @@ export function ElegantMenu({ data, accent }: MenuDesignProps) {
   );
 }
 
-function ElegantRow({
+function ElegantCard({
   item, locale, textDir, showPrices, showImages, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
 }: {
   item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showImages: boolean; showCart: boolean;
@@ -100,26 +101,44 @@ function ElegantRow({
   const price = effectiveItemPrice(item);
 
   return (
-    <li className="flex items-start justify-between gap-4 text-center">
-      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-16 w-16 rounded-full ring-1 ring-primary/25" />
-      <button type="button" onClick={onOpen} className="mx-auto min-w-0 flex-1 text-center">
-        <h3 className="text-xl font-normal tracking-wide">{name}</h3>
-        {description ? <p className="mx-auto mt-1 max-w-md text-sm font-light italic text-stone-500">{description}</p> : null}
-        {showPrices ? <p className="mt-2 text-base font-normal tracking-[0.2em] text-primary">{formatMoney(price, item.currency, locale)}</p> : null}
-        {item.isSoldOut ? <span className="mt-1 inline-block text-[11px] uppercase tracking-widest text-destructive">{translate(locale, "menu.soldOut")}</span> : null}
-      </button>
-      {showCart && !item.isSoldOut ? (
-        <div className="shrink-0 pt-1">
-          {quantity > 0 ? (
-            <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
-          ) : (
-            <button type="button" aria-label={`${translate(locale, "cart.add")} ${name}`} onClick={onAdd}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          )}
-        </div>
+    <li className="flex flex-col items-center text-center">
+      {showImages ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={name}
+          className="group relative aspect-square w-full overflow-hidden rounded-lg bg-muted ring-1 ring-primary/15"
+        >
+          <FallbackMenuImage src={item.imageUrl} alt={name} />
+          {item.isSoldOut ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-background/60 text-[11px] uppercase tracking-widest text-destructive">
+              {translate(locale, "menu.soldOut")}
+            </span>
+          ) : null}
+        </button>
       ) : null}
+      <div className="flex flex-1 flex-col items-center pt-2.5">
+        <button type="button" onClick={onOpen} className="min-w-0">
+          <h3 dir={textDir} className="text-lg font-normal tracking-wide">{name}</h3>
+          {description ? <p className="mx-auto mt-1 line-clamp-2 max-w-xs text-sm font-light italic text-stone-500">{description}</p> : null}
+          {!showImages && item.isSoldOut ? (
+            <span className="mt-1 inline-block text-[11px] uppercase tracking-widest text-destructive">{translate(locale, "menu.soldOut")}</span>
+          ) : null}
+        </button>
+        {showPrices ? <p className="mt-2 text-base font-normal tracking-[0.2em] text-primary">{formatMoney(price, item.currency, locale)}</p> : null}
+        {showCart && !item.isSoldOut ? (
+          <div className="mt-3">
+            {quantity > 0 ? (
+              <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
+            ) : (
+              <button type="button" aria-label={`${translate(locale, "cart.add")} ${name}`} onClick={onAdd}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            )}
+          </div>
+        ) : null}
+      </div>
     </li>
   );
 }

@@ -8,6 +8,8 @@ import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from 
 import { PaymentReports } from "@/components/admin/payment-reports";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { formatExpiryDate, formatMoney } from "@/lib/client-access";
@@ -35,6 +37,8 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
   const [loadingClients, setLoadingClients] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ClientAccount | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [updatingSlug, setUpdatingSlug] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -106,22 +110,22 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
     }
   }
 
-  async function removeClient(client: ClientAccount) {
-    const confirmed = window.confirm(
-      `Delete cafe "/${client.slug}" and ALL of its data?\n\nThis permanently removes menu items, categories, settings, staff accounts, POS/orders, and expenses. This cannot be undone.`
-    );
-    if (!confirmed) return;
-    const typed = window.prompt(`Type the slug "${client.slug}" to confirm deletion:`);
-    if (typed !== client.slug) {
-      setError("Deletion cancelled — slug did not match.");
-      return;
-    }
+  function removeClient(client: ClientAccount) {
+    setDeleteConfirmText("");
+    setPendingDelete(client);
+  }
+
+  async function confirmDelete() {
+    const client = pendingDelete;
+    if (!client || deleteConfirmText !== client.slug) return;
     setMessage("");
     setError("");
     setDeletingSlug(client.slug);
     try {
       await deleteClient(client.slug);
       setMessage(`Deleted /${client.slug} and all of its data.`);
+      setPendingDelete(null);
+      setDeleteConfirmText("");
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete client.");
@@ -327,6 +331,47 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           />
         ) : null}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        variant="destructive"
+        dir={textDir}
+        loading={deletingSlug === pendingDelete?.slug}
+        confirmDisabled={deleteConfirmText !== pendingDelete?.slug}
+        title={pendingDelete ? `Delete /${pendingDelete.slug}?` : "Delete cafe?"}
+        description={
+          pendingDelete ? (
+            <div className="space-y-3">
+              <p>
+                This permanently removes menu items, categories, settings, staff accounts, POS/orders, and expenses for{" "}
+                <span className="font-semibold text-foreground">/{pendingDelete.slug}</span>. This cannot be undone.
+              </p>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-foreground">
+                  Type <span className="font-mono font-semibold">{pendingDelete.slug}</span> to confirm
+                </span>
+                <Input
+                  autoFocus
+                  dir="ltr"
+                  value={deleteConfirmText}
+                  onChange={(event) => setDeleteConfirmText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && deleteConfirmText === pendingDelete.slug) void confirmDelete();
+                  }}
+                  placeholder={pendingDelete.slug}
+                />
+              </label>
+            </div>
+          ) : null
+        }
+        confirmLabel={deletingSlug === pendingDelete?.slug ? "Deleting…" : "Delete cafe"}
+        cancelLabel="Cancel"
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => {
+          setPendingDelete(null);
+          setDeleteConfirmText("");
+        }}
+      />
     </main>
   );
 }

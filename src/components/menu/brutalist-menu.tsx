@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
+import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -61,9 +62,9 @@ export function BrutalistMenu({ data, accent }: MenuDesignProps) {
                 style={{ boxShadow: "4px 4px 0 hsl(var(--foreground))" }}>
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <ul className="space-y-3">
+              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 {section.items.map((item) => (
-                  <BrutalRow key={item.id} item={item} locale={locale} textDir={textDir}
+                  <BrutalCard key={item.id} item={item} locale={locale} textDir={textDir}
                     showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)} onAdd={() => cart.add(item)}
                     onIncrement={() => cart.increment(item.id)} onDecrement={() => cart.decrement(item.id)} />
@@ -86,7 +87,7 @@ export function BrutalistMenu({ data, accent }: MenuDesignProps) {
   );
 }
 
-function BrutalRow({
+function BrutalCard({
   item, locale, textDir, showPrices, showImages, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
 }: {
   item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showImages: boolean; showCart: boolean;
@@ -97,24 +98,44 @@ function BrutalRow({
   const price = effectiveItemPrice(item);
 
   return (
-    <li className="flex items-center gap-3 border-2 border-foreground bg-card p-3" style={{ boxShadow: "4px 4px 0 hsl(var(--foreground))" }}>
-      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-14 w-14 rounded-none border-2 border-foreground" />
-      <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
-        <h3 dir={textDir} className="truncate text-base font-black uppercase">{name}</h3>
-        {description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{description}</p> : null}
-        {item.isSoldOut ? <span className="text-[10px] font-black uppercase text-destructive">{translate(locale, "menu.soldOut")}</span> : null}
-      </button>
-      {showPrices ? <span className="shrink-0 text-base font-black tabular-nums">{formatMoney(price, item.currency, locale)}</span> : null}
-      {showCart && !item.isSoldOut ? (
-        quantity > 0 ? (
-          <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
-        ) : (
-          <button type="button" aria-label={`${translate(locale, "cart.add")} ${name}`} onClick={onAdd}
-            className="flex h-9 w-9 items-center justify-center border-2 border-foreground bg-primary text-primary-foreground transition-transform active:translate-x-0.5 active:translate-y-0.5">
-            <Plus className="h-4 w-4" aria-hidden />
-          </button>
-        )
+    <li className="flex flex-col border-2 border-foreground bg-card" style={{ boxShadow: "4px 4px 0 hsl(var(--foreground))" }}>
+      {showImages ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={name}
+          className="group relative aspect-square overflow-hidden border-b-2 border-foreground bg-muted"
+        >
+          <FallbackMenuImage src={item.imageUrl} alt={name} />
+          {item.isSoldOut ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-background/70 text-[10px] font-black uppercase tracking-widest text-destructive">
+              {translate(locale, "menu.soldOut")}
+            </span>
+          ) : null}
+        </button>
       ) : null}
+      <div className="flex flex-1 flex-col gap-1.5 p-2.5">
+        <button type="button" onClick={onOpen} className="min-w-0 text-start">
+          <h3 dir={textDir} className="line-clamp-2 text-sm font-black uppercase leading-tight">{name}</h3>
+          {description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{description}</p> : null}
+          {!showImages && item.isSoldOut ? (
+            <span className="mt-1 inline-block text-[10px] font-black uppercase text-destructive">{translate(locale, "menu.soldOut")}</span>
+          ) : null}
+        </button>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          {showPrices ? <span className="text-sm font-black tabular-nums">{formatMoney(price, item.currency, locale)}</span> : <span />}
+          {showCart && !item.isSoldOut ? (
+            quantity > 0 ? (
+              <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
+            ) : (
+              <button type="button" aria-label={`${translate(locale, "cart.add")} ${name}`} onClick={onAdd}
+                className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-foreground bg-primary text-primary-foreground transition-transform active:translate-x-0.5 active:translate-y-0.5">
+                <Plus className="h-4 w-4" aria-hidden />
+              </button>
+            )
+          ) : null}
+        </div>
+      </div>
     </li>
   );
 }

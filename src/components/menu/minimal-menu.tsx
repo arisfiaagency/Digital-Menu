@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
+import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -64,9 +65,9 @@ export function MinimalMenu({ data, accent }: MenuDesignProps) {
               <h2 className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <ul className="divide-y divide-border/60">
+              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 {section.items.map((item) => (
-                  <MinimalRow
+                  <MinimalCard
                     key={item.id}
                     item={item}
                     locale={locale}
@@ -103,7 +104,7 @@ export function MinimalMenu({ data, accent }: MenuDesignProps) {
   );
 }
 
-function MinimalRow({
+function MinimalCard({
   item,
   locale,
   textDir,
@@ -134,39 +135,57 @@ function MinimalRow({
   const hasDiscount = Boolean(item.discountPrice);
 
   return (
-    <li className="flex items-center gap-4 py-4">
-      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-12 w-12 rounded-lg ring-1 ring-border" />
-      <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="truncate text-base font-medium">{name}</span>
+    <li className="flex flex-col gap-2">
+      {showImages ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={name}
+          className="group relative aspect-square overflow-hidden rounded-lg bg-muted ring-1 ring-border"
+        >
+          <FallbackMenuImage src={item.imageUrl} alt={name} />
+          {item.isSoldOut ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-background/60 text-[10px] font-semibold uppercase tracking-widest text-destructive">
+              {translate(locale, "menu.soldOut")}
+            </span>
+          ) : null}
+        </button>
+      ) : null}
+      <div className="flex flex-1 flex-col">
+        <button type="button" onClick={onOpen} className="min-w-0 text-start">
+          <h3 dir={textDir} className="truncate text-sm font-medium">{name}</h3>
+          {description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground/80">{description}</p> : null}
+          {!showImages && item.isSoldOut ? (
+            <span className="mt-1 inline-block text-[10px] font-semibold uppercase tracking-widest text-destructive">{translate(locale, "menu.soldOut")}</span>
+          ) : null}
+        </button>
+        <div className="mt-1.5 flex items-center justify-between gap-2">
           {showPrices ? (
-            <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+            <span className="text-sm tabular-nums text-muted-foreground">
               {formatMoney(price, item.currency, locale)}
               {hasDiscount ? (
                 <span className="ms-1.5 text-xs line-through opacity-60">{formatMoney(item.basePrice, item.currency, locale)}</span>
               ) : null}
             </span>
+          ) : (
+            <span />
+          )}
+          {showCart && !item.isSoldOut ? (
+            quantity > 0 ? (
+              <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
+            ) : (
+              <button
+                type="button"
+                aria-label={`${translate(locale, "cart.add")} ${name}`}
+                onClick={onAdd}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+              </button>
+            )
           ) : null}
         </div>
-        {description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground/80">{description}</p> : null}
-        {item.isSoldOut ? (
-          <span className="mt-1 inline-block text-[10px] font-semibold uppercase tracking-widest text-destructive">{translate(locale, "menu.soldOut")}</span>
-        ) : null}
-      </button>
-      {showCart && !item.isSoldOut ? (
-        quantity > 0 ? (
-          <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
-        ) : (
-          <button
-            type="button"
-            aria-label={`${translate(locale, "cart.add")} ${name}`}
-            onClick={onAdd}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-          </button>
-        )
-      ) : null}
+      </div>
     </li>
   );
 }

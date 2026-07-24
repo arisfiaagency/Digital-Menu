@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
+import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -57,9 +58,9 @@ export function ZenMenu({ data, accent }: MenuDesignProps) {
               <h2 dir={textDir} className="mb-7 text-sm font-normal uppercase tracking-[0.35em] text-stone-500">
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <ul className="space-y-8">
+              <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3">
                 {section.items.map((item) => (
-                  <ZenRow key={item.id} item={item} locale={locale} textDir={textDir}
+                  <ZenCard key={item.id} item={item} locale={locale} textDir={textDir}
                     showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)} onAdd={() => cart.add(item)}
                     onIncrement={() => cart.increment(item.id)} onDecrement={() => cart.decrement(item.id)} />
@@ -82,7 +83,7 @@ export function ZenMenu({ data, accent }: MenuDesignProps) {
   );
 }
 
-function ZenRow({
+function ZenCard({
   item, locale, textDir, showPrices, showImages, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
 }: {
   item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showImages: boolean; showCart: boolean;
@@ -93,28 +94,44 @@ function ZenRow({
   const price = effectiveItemPrice(item);
 
   return (
-    <li className="flex items-start justify-between gap-4">
-      <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-14 w-14 rounded-full ring-1 ring-primary/25" />
-      <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
-        <div className="flex items-baseline justify-between gap-3">
-          <h3 className="text-lg font-normal tracking-wide">{name}</h3>
-          {showPrices ? <span className="shrink-0 text-sm tracking-wider text-primary">{formatMoney(price, item.currency, locale)}</span> : null}
-        </div>
-        {description ? <p className="mt-1 text-sm font-light leading-relaxed text-stone-500">{description}</p> : null}
-        {item.isSoldOut ? <span className="mt-1 inline-block text-[11px] uppercase tracking-widest text-destructive">{translate(locale, "menu.soldOut")}</span> : null}
-      </button>
-      {showCart && !item.isSoldOut ? (
-        <div className="shrink-0">
-          {quantity > 0 ? (
-            <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
-          ) : (
-            <button type="button" aria-label={`${translate(locale, "cart.add")} ${name}`} onClick={onAdd}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          )}
-        </div>
+    <li className="flex flex-col gap-2">
+      {showImages ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={name}
+          className="group relative aspect-square overflow-hidden rounded-xl bg-muted ring-1 ring-primary/15"
+        >
+          <FallbackMenuImage src={item.imageUrl} alt={name} />
+          {item.isSoldOut ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-background/60 text-[11px] uppercase tracking-widest text-destructive">
+              {translate(locale, "menu.soldOut")}
+            </span>
+          ) : null}
+        </button>
       ) : null}
+      <div className="flex flex-1 flex-col">
+        <button type="button" onClick={onOpen} className="min-w-0 text-start">
+          <h3 dir={textDir} className="text-base font-normal tracking-wide">{name}</h3>
+          {description ? <p className="mt-1 line-clamp-2 text-sm font-light leading-relaxed text-stone-500">{description}</p> : null}
+          {!showImages && item.isSoldOut ? (
+            <span className="mt-1 inline-block text-[11px] uppercase tracking-widest text-destructive">{translate(locale, "menu.soldOut")}</span>
+          ) : null}
+        </button>
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          {showPrices ? <span className="text-sm tracking-wider text-primary">{formatMoney(price, item.currency, locale)}</span> : <span />}
+          {showCart && !item.isSoldOut ? (
+            quantity > 0 ? (
+              <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
+            ) : (
+              <button type="button" aria-label={`${translate(locale, "cart.add")} ${name}`} onClick={onAdd}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            )
+          ) : null}
+        </div>
+      </div>
     </li>
   );
 }

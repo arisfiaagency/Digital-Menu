@@ -24,6 +24,7 @@ export function ConfirmDialog({
   onCancel,
   variant = "default",
   loading = false,
+  confirmDisabled = false,
   dir = "ltr",
   icon
 }: {
@@ -36,6 +37,7 @@ export function ConfirmDialog({
   onCancel: () => void;
   variant?: "default" | "destructive";
   loading?: boolean;
+  confirmDisabled?: boolean;
   dir?: LocaleDirection;
   icon?: ReactNode;
 }) {
@@ -94,7 +96,7 @@ export function ConfirmDialog({
             ref={confirmRef}
             variant={variant === "destructive" ? "destructive" : "default"}
             onClick={onConfirm}
-            disabled={loading}
+            disabled={loading || confirmDisabled}
             className="sm:min-w-[6rem]"
           >
             {confirmLabel}

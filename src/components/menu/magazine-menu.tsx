@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
-import { useMenuController, MenuTopControls, MenuOverlays, MenuRowThumb } from "@/components/menu/menu-shell";
+import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
@@ -60,9 +61,9 @@ export function MagazineMenu({ data, accent }: MenuDesignProps) {
               <h2 dir={textDir} className="mb-4 border-b-2 border-foreground/70 pb-1 text-2xl font-black uppercase tracking-tight">
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <div className="gap-x-10 sm:columns-2">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {section.items.map((item) => (
-                  <MagazineRow key={item.id} item={item} locale={locale} textDir={textDir}
+                  <MagazineCard key={item.id} item={item} locale={locale} textDir={textDir}
                     showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}
                     onOpen={() => ctrl.setActiveItem(item)} onAdd={() => cart.add(item)}
                     onIncrement={() => cart.increment(item.id)} onDecrement={() => cart.decrement(item.id)} />
@@ -85,7 +86,7 @@ export function MagazineMenu({ data, accent }: MenuDesignProps) {
   );
 }
 
-function MagazineRow({
+function MagazineCard({
   item, locale, textDir, showPrices, showImages, showCart, quantity, onOpen, onAdd, onIncrement, onDecrement
 }: {
   item: MenuItem; locale: Locale; textDir: "ltr" | "rtl"; showPrices: boolean; showImages: boolean; showCart: boolean;
@@ -96,31 +97,44 @@ function MagazineRow({
   const price = effectiveItemPrice(item);
 
   return (
-    <div className="mb-5 break-inside-avoid">
-      <div className="flex items-start justify-between gap-3">
-        <MenuRowThumb item={item} name={name} show={showImages} onOpen={onOpen} className="h-16 w-16 rounded-none ring-1 ring-foreground/15" />
-        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-lg font-bold">{name}</h3>
-            <span className="mb-1 h-px flex-1 self-end border-b border-dotted border-foreground/30" aria-hidden />
-            {showPrices ? <span className="shrink-0 font-bold text-primary">{formatMoney(price, item.currency, locale)}</span> : null}
-          </div>
-          {description ? <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{description}</p> : null}
-          {item.isSoldOut ? <span className="text-[11px] font-semibold uppercase tracking-widest text-destructive">{translate(locale, "menu.soldOut")}</span> : null}
+    <article className="flex flex-col overflow-hidden border border-foreground/15 bg-card">
+      {showImages ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={name}
+          className="group relative aspect-[4/3] overflow-hidden bg-muted"
+        >
+          <FallbackMenuImage src={item.imageUrl} alt={name} />
+          {item.isSoldOut ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-background/60 text-[11px] font-semibold uppercase tracking-widest text-destructive">
+              {translate(locale, "menu.soldOut")}
+            </span>
+          ) : null}
         </button>
-        {showCart && !item.isSoldOut ? (
-          <div className="shrink-0">
-            {quantity > 0 ? (
+      ) : null}
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
+        <button type="button" onClick={onOpen} className="min-w-0 text-start">
+          <h3 dir={textDir} className="line-clamp-2 text-base font-bold leading-snug">{name}</h3>
+          {description ? <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-muted-foreground">{description}</p> : null}
+          {!showImages && item.isSoldOut ? (
+            <span className="mt-1 inline-block text-[11px] font-semibold uppercase tracking-widest text-destructive">{translate(locale, "menu.soldOut")}</span>
+          ) : null}
+        </button>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          {showPrices ? <span className="font-bold text-primary">{formatMoney(price, item.currency, locale)}</span> : <span />}
+          {showCart && !item.isSoldOut ? (
+            quantity > 0 ? (
               <QuantityStepper size="sm" quantity={quantity} locale={locale} onIncrement={onIncrement} onDecrement={onDecrement} />
             ) : (
               <button type="button" aria-label={`${translate(locale, "cart.add")} ${name}`} onClick={onAdd}
-                className="flex h-7 w-7 items-center justify-center rounded-full border border-primary/50 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
-                <Plus className="h-3.5 w-3.5" aria-hidden />
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/50 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+                <Plus className="h-4 w-4" aria-hidden />
               </button>
-            )}
-          </div>
-        ) : null}
+            )
+          ) : null}
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
