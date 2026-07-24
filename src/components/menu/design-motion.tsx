@@ -114,7 +114,7 @@ function ZenMotion() {
   return (
     <Stage tint="text-primary">
       {/* A koi gliding across every loop. */}
-      <div style={{ top: 0, left: 0, opacity: 0.55, animation: "menu-swim 16s linear infinite" }}>
+      <div style={{ top: 0, left: 0, opacity: 0.55, animation: "menu-swim calc(16s / var(--menu-speed, 1)) linear infinite" }}>
         <Koi />
       </div>
       {/* Drifting sakura petals. */}
@@ -127,7 +127,7 @@ function ZenMotion() {
               top: 0,
               "--drift": `${i % 2 ? 7 : -6}vw`,
               "--fade": 0.55,
-              animation: `menu-fall ${11 + (i % 4) * 2}s linear ${i * 1.6}s infinite`
+              animation: `menu-fall calc(${11 + (i % 4) * 2}s / var(--menu-speed, 1)) linear ${i * 1.6}s infinite`
             } as Vars
           }
         >
@@ -152,7 +152,7 @@ function NeonMotion() {
             borderRadius: 3,
             background: "linear-gradient(90deg, transparent, hsl(var(--primary)), transparent)",
             boxShadow: "0 0 14px hsl(var(--primary))",
-            animation: `menu-streak ${7 + i}s ease-in ${delay}s infinite`
+            animation: `menu-streak calc(${7 + i}s / var(--menu-speed, 1)) ease-in ${delay}s infinite`
           }}
         />
       ))}
@@ -166,7 +166,7 @@ function NeonMotion() {
           height: 90,
           borderRadius: "9999px",
           background: "radial-gradient(circle, hsl(var(--primary) / 0.45), transparent 70%)",
-          animation: "menu-flicker 4s steps(1, end) infinite"
+          animation: "menu-flicker calc(4s / var(--menu-speed, 1)) steps(1, end) infinite"
         }}
       />
     </Stage>
@@ -176,8 +176,8 @@ function NeonMotion() {
 function RetroMotion() {
   return (
     <Stage tint="text-primary">
-      <div style={{ top: 0, left: 0, opacity: 0.5, animation: "menu-glide 12s linear infinite" }}>
-        <div style={{ animation: "menu-spin 1.1s linear infinite" }}>
+      <div style={{ top: 0, left: 0, opacity: 0.5, animation: "menu-glide calc(12s / var(--menu-speed, 1)) linear infinite" }}>
+        <div style={{ animation: "menu-spin calc(1.1s / var(--menu-speed, 1)) linear infinite" }}>
           <Boomerang />
         </div>
       </div>
@@ -188,7 +188,7 @@ function RetroMotion() {
 function KraftMotion() {
   return (
     <Stage tint="text-foreground">
-      <div style={{ top: 0, left: 0, opacity: 0.4, animation: "menu-glide 14s linear infinite", ["--tilt" as string]: "-8deg" } as Vars}>
+      <div style={{ top: 0, left: 0, opacity: 0.4, animation: "menu-glide calc(14s / var(--menu-speed, 1)) linear infinite", ["--tilt" as string]: "-8deg" } as Vars}>
         <PaperPlane />
       </div>
     </Stage>
@@ -207,7 +207,7 @@ function PastelMotion() {
               top: 0,
               "--drift": `${i % 2 ? -5 : 5}vw`,
               "--fade": 0.5,
-              animation: `menu-rise ${12 + (i % 4) * 2}s linear ${i * 1.3}s infinite`
+              animation: `menu-rise calc(${12 + (i % 4) * 2}s / var(--menu-speed, 1)) linear ${i * 1.3}s infinite`
             } as Vars
           }
         >
@@ -233,7 +233,7 @@ function LuxuryMotion() {
   return (
     <Stage tint="text-primary">
       {/* Comet with a fading tail. */}
-      <div style={{ top: 0, left: 0, animation: "menu-streak 9s ease-in 1s infinite" }}>
+      <div style={{ top: 0, left: 0, animation: "menu-streak calc(9s / var(--menu-speed, 1)) ease-in 1s infinite" }}>
         <div style={{ position: "relative", width: 150, height: 22 }}>
           <div style={{ position: "absolute", top: 9, left: 0, width: 120, height: 2, background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.85))" }} />
           <span style={{ position: "absolute", left: 110, top: 1 }}><Spark w={20} /></span>
@@ -246,7 +246,7 @@ function LuxuryMotion() {
         { left: "58%", top: "58%" },
         { left: "32%", top: "70%" }
       ].map((p, i) => (
-        <span key={i} style={{ left: p.left, top: p.top, animation: `menu-flicker ${3 + i}s steps(1, end) ${i * 0.6}s infinite` }}>
+        <span key={i} style={{ left: p.left, top: p.top, animation: `menu-flicker calc(${3 + i}s / var(--menu-speed, 1)) steps(1, end) ${i * 0.6}s infinite` }}>
           <Spark w={12 + (i % 2) * 6} />
         </span>
       ))}
@@ -266,7 +266,7 @@ function ElegantMotion() {
               top: 0,
               "--drift": `${i % 2 ? 9 : -7}vw`,
               "--fade": 0.4,
-              animation: `menu-fall ${16 + i * 3}s ease-in-out ${i * 4}s infinite`
+              animation: `menu-fall calc(${16 + i * 3}s / var(--menu-speed, 1)) ease-in-out ${i * 4}s infinite`
             } as Vars
           }
         >
@@ -293,7 +293,7 @@ function ChalkboardMotion() {
               background: "currentColor",
               "--drift": `${i % 2 ? 3 : -3}vw`,
               "--fade": 0.35,
-              animation: `menu-rise ${14 + (i % 5) * 2}s linear ${i * 1.4}s infinite`
+              animation: `menu-rise calc(${14 + (i % 5) * 2}s / var(--menu-speed, 1)) linear ${i * 1.4}s infinite`
             } as Vars
           }
         />
@@ -320,7 +320,7 @@ function BentoMotion() {
               filter: "blur(2px)",
               "--drift": `${i % 2 ? 4 : -4}vw`,
               "--fade": 0.5,
-              animation: `menu-rise ${13 + i * 2}s linear ${i * 2.5}s infinite`
+              animation: `menu-rise calc(${13 + i * 2}s / var(--menu-speed, 1)) linear ${i * 2.5}s infinite`
             } as Vars
           }
         />
@@ -348,7 +348,7 @@ function ModernMotion() {
               background: "radial-gradient(circle, hsl(var(--primary)), transparent 70%)",
               opacity: b.o,
               filter: "blur(6px)",
-              animation: `menu-glide ${b.dur}s linear ${i * 6}s infinite`
+              animation: `menu-glide calc(${b.dur}s / var(--menu-speed, 1)) linear ${i * 6}s infinite`
             } as Vars
           }
         />
@@ -361,8 +361,8 @@ function BrutalistMotion() {
   return (
     <Stage tint="text-foreground">
       {/* A chunky asterisk-star gliding across with a jerky, mechanical spin. */}
-      <div style={{ top: 0, left: 0, opacity: 0.5, animation: "menu-glide 13s linear infinite" }}>
-        <div style={{ animation: "menu-spin 3.4s steps(8, end) infinite" }}>
+      <div style={{ top: 0, left: 0, opacity: 0.5, animation: "menu-glide calc(13s / var(--menu-speed, 1)) linear infinite" }}>
+        <div style={{ animation: "menu-spin calc(3.4s / var(--menu-speed, 1)) steps(8, end) infinite" }}>
           <BurstStar />
         </div>
       </div>
@@ -489,7 +489,14 @@ export function FloatingSymbols({ design }: { design: MenuDesign }) {
   );
 }
 
-export function DesignMotion({ design }: { design: MenuDesign }) {
+export function DesignMotion({ design, speed = 1 }: { design: MenuDesign; speed?: number }) {
+  const motion = renderMotion(design);
+  if (!motion) return null;
+  // --menu-speed scales every mascot animation duration (see the calc()s above).
+  return <div style={{ display: "contents", "--menu-speed": speed } as Vars}>{motion}</div>;
+}
+
+function renderMotion(design: MenuDesign) {
   switch (design) {
     case "zen":
       return <ZenMotion />;

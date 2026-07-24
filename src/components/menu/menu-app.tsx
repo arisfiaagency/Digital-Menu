@@ -18,6 +18,7 @@ import { BrutalistMenu } from "@/components/menu/brutalist-menu";
 import { ZenMenu } from "@/components/menu/zen-menu";
 import { defaultAppData } from "@/data/default-data";
 import { menuAccentCss } from "@/lib/utils/accent";
+import { MenuChromeProvider } from "@/components/menu/menu-chrome";
 import type { AppData, MenuDesign } from "@/types/models";
 
 // Entry point for the customer-facing menu. The design is chosen by the platform
@@ -27,19 +28,25 @@ import type { AppData, MenuDesign } from "@/types/models";
 export function MenuApp({
   initialData,
   design = "classic",
-  accent
+  accent,
+  backdrop = true,
+  mascot = true,
+  speed = 1
 }: {
   initialData?: AppData;
   design?: MenuDesign;
   accent?: string;
+  backdrop?: boolean;
+  mascot?: boolean;
+  speed?: number;
 }) {
   const data = initialData ?? defaultAppData;
   return (
-    <>
+    <MenuChromeProvider value={{ backdrop, mascot, speed }}>
       {/* Recolor the whole design from the cafe's accent (light + dark). */}
       <style dangerouslySetInnerHTML={{ __html: menuAccentCss(accent) }} />
       {renderDesign(design, data, accent)}
-    </>
+    </MenuChromeProvider>
   );
 }
 

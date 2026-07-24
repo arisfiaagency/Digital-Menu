@@ -10,6 +10,7 @@ import { OpenStatusBadge, type OpenStatusStyle } from "@/components/menu/open-st
 import { SocialLinks, type SocialLinkStyle } from "@/components/menu/social-links";
 import { useForcedDark } from "@/components/menu/menu-shell";
 import { DesignBackdrop } from "@/components/menu/design-backdrop";
+import { MenuChromeProvider } from "@/components/menu/menu-chrome";
 import { BrandCredit } from "@/components/brand-credit";
 import { useLocale } from "@/hooks/use-locale";
 import { localized, locales } from "@/lib/i18n/config";
@@ -196,20 +197,26 @@ export function WelcomeApp({
   menu,
   design = "classic",
   accent,
-  slug
+  slug,
+  backdrop = true,
+  mascot = true,
+  speed = 1
 }: {
   general: GeneralSettings;
   menu: MenuSettings;
   design?: MenuDesign;
   accent?: string;
   slug: string;
+  backdrop?: boolean;
+  mascot?: boolean;
+  speed?: number;
 }) {
   const theme = WELCOME_THEMES[design] ?? WELCOME_THEMES.classic;
   return (
-    <>
+    <MenuChromeProvider value={{ backdrop, mascot, speed }}>
       <style dangerouslySetInnerHTML={{ __html: menuAccentCss(accent) }} />
       <WelcomeScreen theme={theme} design={design} general={general} menu={menu} accent={accent} slug={slug} />
-    </>
+    </MenuChromeProvider>
   );
 }
 

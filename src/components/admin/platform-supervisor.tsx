@@ -178,12 +178,21 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
     }
   }
 
-  async function changeDesign(client: ClientAccount, next: { menuDesign: MenuDesign; menuAccent: string }) {
+  async function changeDesign(
+    client: ClientAccount,
+    next: { menuDesign: MenuDesign; menuAccent: string; menuBackdrop: boolean; menuMascot: boolean; menuMascotSpeed: number }
+  ) {
     setUpdatingSlug(client.slug);
     setMessage("");
     setError("");
     try {
-      await patchClient(client.slug, { menuDesign: next.menuDesign, menuAccent: next.menuAccent });
+      await patchClient(client.slug, {
+        menuDesign: next.menuDesign,
+        menuAccent: next.menuAccent,
+        menuBackdrop: next.menuBackdrop,
+        menuMascot: next.menuMascot,
+        menuMascotSpeed: next.menuMascotSpeed
+      });
       setMessage(`Updated menu design for /${client.slug}.`);
       await refresh();
     } catch (err) {

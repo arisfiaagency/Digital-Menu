@@ -377,6 +377,12 @@ export type ClientAccount = {
   menuDesign?: MenuDesign;
   /** Accent color (hex) tinting the locked design. Set at creation. */
   menuAccent?: string;
+  /** Show the roaming background symbols + glow behind the menu. Default on. */
+  menuBackdrop?: boolean;
+  /** Show the animated mascot (koi, comet, paper plane, …). Default on. */
+  menuMascot?: boolean;
+  /** Mascot animation speed multiplier (1 = normal, >1 faster). Default 1. */
+  menuMascotSpeed?: number;
   /** Supervisor kill-switch (e.g. unpaid). Overrides trial/subscription access. */
   blocked?: boolean;
   blockedReason?: string;

@@ -36,7 +36,14 @@ export default async function ClientMenuPage({ params }: { params: Promise<{ cli
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: THEME_PREPAINT }} />
-      <MenuApp initialData={data} design={client.menuDesign ?? "classic"} accent={client.menuAccent} />
+      <MenuApp
+        initialData={data}
+        design={client.menuDesign ?? "classic"}
+        accent={client.menuAccent}
+        backdrop={client.menuBackdrop !== false}
+        mascot={client.menuMascot !== false}
+        speed={client.menuMascotSpeed ?? 1}
+      />
     </>
   );
 }

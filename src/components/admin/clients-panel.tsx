@@ -73,6 +73,56 @@ const DESIGN_OPTIONS: { id: MenuDesign; name: string; blurb: string }[] = [
   { id: "zen", name: "Japanese Zen", blurb: "Muted, hairlines, vertical accent, spacious" }
 ];
 const DEFAULT_ACCENT = "#2F7D4F";
+
+// Shape passed to onSaveDesign — design + accent + the decoration toggles.
+type DesignChoice = {
+  menuDesign: MenuDesign;
+  menuAccent: string;
+  menuBackdrop: boolean;
+  menuMascot: boolean;
+  menuMascotSpeed: number;
+};
+
+// A small on/off switch used by the Menu Design decoration toggles.
+function DesignSwitch({
+  label,
+  desc,
+  checked,
+  onChange
+}: {
+  label: string;
+  desc: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{desc}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          "ms-auto inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors",
+          checked ? "border-primary bg-primary" : "border-border bg-muted"
+        )}
+      >
+        <span
+          className={cn(
+            "mx-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+            checked ? "translate-x-5" : "translate-x-0"
+          )}
+        />
+      </button>
+    </div>
+  );
+}
+
 const plans: ClientSubscriptionPlan[] = ["free", "basic", "pro", "custom"];
 const subStatuses: ClientSubscriptionStatus[] = ["trialing", "active", "past_due", "canceled", "none"];
 
@@ -145,7 +195,7 @@ export function ClientsPanel({
     }
   ) => void;
   onRecordPayment: (client: ClientAccount, amount: number, months: number) => void;
-  onSaveDesign: (client: ClientAccount, next: { menuDesign: MenuDesign; menuAccent: string }) => void;
+  onSaveDesign: (client: ClientAccount, next: DesignChoice) => void;
 }) {
   const [showCreate, setShowCreate] = useState(false);
   const [query, setQuery] = useState("");
@@ -508,7 +558,7 @@ function ClientCard({
     blockedReason?: string;
   }) => void;
   onRecordPayment: (amount: number, months: number) => void;
-  onSaveDesign: (next: { menuDesign: MenuDesign; menuAccent: string }) => void;
+  onSaveDesign: (next: DesignChoice) => void;
 }) {
   const currency = client.billing?.currency || client.subscription?.currency || client.defaultCurrency || "IQD";
   const tone = statusTone(client);
@@ -534,6 +584,9 @@ function ClientCard({
   const [paymentMonths, setPaymentMonths] = useState(1);
   const [designId, setDesignId] = useState<MenuDesign>(client.menuDesign ?? "classic");
   const [designAccent, setDesignAccent] = useState(client.menuAccent ?? DEFAULT_ACCENT);
+  const [designBackdrop, setDesignBackdrop] = useState(client.menuBackdrop !== false);
+  const [designMascot, setDesignMascot] = useState(client.menuMascot !== false);
+  const [designSpeed, setDesignSpeed] = useState(client.menuMascotSpeed ?? 1);
 
   useEffect(() => {
     setPlan(client.subscription?.plan || "basic");
@@ -551,6 +604,9 @@ function ClientCard({
     setPaymentMonths(1);
     setDesignId(client.menuDesign ?? "classic");
     setDesignAccent(client.menuAccent ?? DEFAULT_ACCENT);
+    setDesignBackdrop(client.menuBackdrop !== false);
+    setDesignMascot(client.menuMascot !== false);
+    setDesignSpeed(client.menuMascotSpeed ?? 1);
   }, [client]);
 
   const previewExpiry = useMemo(
@@ -736,11 +792,63 @@ function ClientCard({
                 aria-label="Accent color"
               />
               <span className="text-xs text-muted-foreground">{designAccent}</span>
+            </div>
+
+            <div className="mt-3 space-y-3 rounded-xl border bg-muted/20 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Decorations behind the menu</p>
+              <DesignSwitch
+                label="Background symbols"
+                desc="The roaming icons + glow behind the menu"
+                checked={designBackdrop}
+                onChange={setDesignBackdrop}
+              />
+              <DesignSwitch
+                label="Mascot"
+                desc="The animated character that drifts across the page"
+                checked={designMascot}
+                onChange={setDesignMascot}
+              />
+              <div className={cn("flex items-center gap-3", !designMascot && "opacity-50")}>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Mascot speed</p>
+                  <p className="text-xs text-muted-foreground">How fast the mascot moves.</p>
+                </div>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={2}
+                  step={0.1}
+                  value={designSpeed}
+                  onChange={(e) => setDesignSpeed(Number(e.target.value))}
+                  disabled={!designMascot}
+                  aria-label="Mascot speed"
+                  className="ms-auto w-40 cursor-pointer accent-primary"
+                />
+                <span className="w-9 text-end text-xs tabular-nums text-muted-foreground">{designSpeed.toFixed(1)}×</span>
+              </div>
+            </div>
+
+            <div className="mt-3 flex justify-end">
               <Button
                 type="button"
                 size="sm"
-                disabled={updating || (designId === (client.menuDesign ?? "classic") && designAccent === (client.menuAccent ?? DEFAULT_ACCENT))}
-                onClick={() => onSaveDesign({ menuDesign: designId, menuAccent: designAccent })}
+                disabled={
+                  updating ||
+                  (designId === (client.menuDesign ?? "classic") &&
+                    designAccent === (client.menuAccent ?? DEFAULT_ACCENT) &&
+                    designBackdrop === (client.menuBackdrop !== false) &&
+                    designMascot === (client.menuMascot !== false) &&
+                    designSpeed === (client.menuMascotSpeed ?? 1))
+                }
+                onClick={() =>
+                  onSaveDesign({
+                    menuDesign: designId,
+                    menuAccent: designAccent,
+                    menuBackdrop: designBackdrop,
+                    menuMascot: designMascot,
+                    menuMascotSpeed: designSpeed
+                  })
+                }
               >
                 <Save className="h-4 w-4" aria-hidden />
                 {updating ? "Saving…" : "Save design"}

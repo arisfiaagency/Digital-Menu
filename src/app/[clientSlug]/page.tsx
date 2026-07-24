@@ -42,6 +42,9 @@ export default async function ClientWelcomePage({ params }: { params: Promise<{ 
         design={client.menuDesign ?? "classic"}
         accent={client.menuAccent}
         slug={client.slug}
+        backdrop={client.menuBackdrop !== false}
+        mascot={client.menuMascot !== false}
+        speed={client.menuMascotSpeed ?? 1}
       />
     </>
   );

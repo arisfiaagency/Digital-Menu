@@ -135,6 +135,9 @@ export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: stri
     // path writes the client doc). Existing docs keep their value on later saves.
     menuDesign: client.menuDesign ?? prev?.menuDesign ?? "classic",
     menuAccent: client.menuAccent ?? prev?.menuAccent ?? "#2F7D4F",
+    menuBackdrop: client.menuBackdrop ?? prev?.menuBackdrop ?? true,
+    menuMascot: client.menuMascot ?? prev?.menuMascot ?? true,
+    menuMascotSpeed: client.menuMascotSpeed ?? prev?.menuMascotSpeed ?? 1,
     blocked: client.blocked ?? prev?.blocked ?? false,
     blockedReason: client.blockedReason ?? prev?.blockedReason,
     blockedAt: client.blockedAt ?? prev?.blockedAt,

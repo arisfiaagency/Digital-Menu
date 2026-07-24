@@ -1,6 +1,9 @@
+"use client";
+
 import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import { DesignMotion, FloatingSymbols } from "@/components/menu/design-motion";
+import { useMenuChrome } from "@/components/menu/menu-chrome";
 import type { MenuDesign } from "@/types/models";
 
 // A per-design "signature" background. Each menu design and its matching welcome
@@ -76,12 +79,15 @@ function Tiles({
 }
 
 // Public entry: static base/texture + roaming symbols + the drifting mascot.
+// The `backdrop` and `mascot` layers are each toggleable per cafe (Menu Design
+// editor), and the mascot honors the cafe's speed multiplier.
 export function DesignBackdrop({ design }: { design: MenuDesign }) {
+  const { backdrop, mascot, speed } = useMenuChrome();
   return (
     <>
-      <StaticBackdrop design={design} />
-      <FloatingSymbols design={design} />
-      <DesignMotion design={design} />
+      {backdrop ? <StaticBackdrop design={design} /> : null}
+      {backdrop ? <FloatingSymbols design={design} /> : null}
+      {mascot ? <DesignMotion design={design} speed={speed} /> : null}
     </>
   );
 }
