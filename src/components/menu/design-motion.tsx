@@ -370,6 +370,97 @@ function BrutalistMotion() {
   );
 }
 
+/* ── Floating design symbols ───────────────────────────────────────────────── */
+// A few name-themed glyphs that slowly wander the page (replacing the old dense
+// tiled patterns). Behind content, tinted, and hidden under reduced-motion.
+
+function Glyph({ kind, size }: { kind: string; size: number }) {
+  const s: CSSProperties = { width: size, height: size, display: "block" };
+  switch (kind) {
+    case "bolt": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M13 2 L5 14 h5 l-1 8 8 -12 h-5 l1 -8 z" /></svg>;
+    case "spark": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M12 1 L14 10 L23 12 L14 14 L12 23 L10 14 L1 12 L10 10 Z" /></svg>;
+    case "star": return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><path d="M12 2 l2.6 6.6 7 .4 -5.4 4.6 1.8 6.8 -6 -3.8 -6 3.8 1.8 -6.8 -5.4 -4.6 7 -.4 z" /></svg>;
+    case "diamond": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M12 2 L21 12 L12 22 L3 12 Z" /></svg>;
+    case "ring": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="12" cy="12" r="9" /></svg>;
+    case "triangle": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M12 3 L21 20 L3 20 Z" /></svg>;
+    case "plus": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden><path d="M12 5 v14 M5 12 h14" /></svg>;
+    case "wave": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M2 14 q4 -6 8 0 t8 0" /></svg>;
+    case "heart": return <svg viewBox="0 0 18 18" style={s} fill="currentColor" aria-hidden><path d="M9 16 C2 11 1 6 4 4 C6 2.5 8 3.5 9 5 C10 3.5 12 2.5 14 4 C17 6 16 11 9 16 Z" /></svg>;
+    case "leaf": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden><path d="M4 20 C4 9 12 4 20 4 C20 15 12 20 4 20 Z" /><path d="M7 17 L17 7" /></svg>;
+    case "enso": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden><path d="M17 5 a9 9 0 1 0 3.5 4.5" /></svg>;
+    case "boomerang": return <svg viewBox="0 0 34 34" style={s} fill="currentColor" aria-hidden><path d="M4 6 C16 8 24 16 28 28 L22 30 C19 20 13 13 3 11 Z" /></svg>;
+    case "utensil": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden><path d="M7 2 v6 a2 2 0 0 0 4 0 V2 M9 2 v20 M17 2 c-2 1 -2 7 0 9 v11" /></svg>;
+    case "asterisk": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden><path d="M12 4 v16 M5 8 L19 16 M5 16 L19 8" /></svg>;
+    case "square": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="4" y="4" width="16" height="16" rx="3" /></svg>;
+    case "xmark": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden><path d="M6 6 L18 18 M18 6 L6 18" /></svg>;
+    case "frame": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="3" y="5" width="18" height="14" rx="1" /><circle cx="8" cy="10" r="1.6" fill="currentColor" /></svg>;
+    case "stamp": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} strokeDasharray="2 2.5" aria-hidden><circle cx="12" cy="12" r="9" /></svg>;
+    case "chopstick": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M3 20 L20 4 M6 21 L22 8" /></svg>;
+    case "arrow": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 14 q7 -8 16 -3 M15 6 l5 4 -4 5" /></svg>;
+    case "folder": return <svg viewBox="0 0 24 24" style={s} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M3 8 v11 a1 1 0 0 0 1 1 h16 a1 1 0 0 0 1 -1 V9 a1 1 0 0 0 -1 -1 h-8 l-2 -3 H4 a1 1 0 0 0 -1 1 z" /></svg>;
+    default: return <svg viewBox="0 0 24 24" style={s} fill="currentColor" aria-hidden><circle cx="12" cy="12" r="4" /></svg>;
+  }
+}
+
+const FLOAT_SETS: Record<MenuDesign, { tint: string; glow?: boolean; kinds: string[] }> = {
+  neon:       { tint: "text-primary", glow: true, kinds: ["star", "diamond", "ring", "triangle", "bolt"] },
+  luxury:     { tint: "text-primary", glow: true, kinds: ["spark", "diamond", "dot", "star"] },
+  classic:    { tint: "text-foreground", kinds: ["utensil", "diamond", "dot"] },
+  minimal:    { tint: "text-foreground", kinds: ["dot", "plus"] },
+  zen:        { tint: "text-primary", kinds: ["leaf", "enso", "wave", "dot"] },
+  retro:      { tint: "text-primary", kinds: ["boomerang", "ring", "star", "wave"] },
+  pastel:     { tint: "text-primary", kinds: ["heart", "star", "dot", "spark"] },
+  kraft:      { tint: "text-foreground", kinds: ["stamp", "xmark", "star", "dot"] },
+  bento:      { tint: "text-primary", kinds: ["square", "ring", "chopstick", "dot"] },
+  elegant:    { tint: "text-primary", kinds: ["diamond", "spark", "dot"] },
+  magazine:   { tint: "text-foreground", kinds: ["asterisk", "dot", "diamond"] },
+  brutalist:  { tint: "text-foreground", kinds: ["square", "xmark", "asterisk", "triangle"] },
+  gallery:    { tint: "text-foreground", kinds: ["frame", "spark", "dot"] },
+  tabs:       { tint: "text-primary", kinds: ["folder", "dot", "plus"] },
+  chalkboard: { tint: "text-foreground", kinds: ["star", "wave", "arrow", "dot"] },
+  modern:     { tint: "text-primary", kinds: ["ring", "square", "plus", "dot"] }
+};
+
+// Fixed scatter of slots; each symbol wanders its own small loop (menu-roam).
+const FLOAT_POS = [
+  { left: "9%", top: "20%", s: 30, o: 0.18, dur: 16, delay: 0, dx: "5vw", dy: "-4vh", dr: "16deg" },
+  { left: "80%", top: "15%", s: 34, o: 0.16, dur: 20, delay: 1.4, dx: "-5vw", dy: "5vh", dr: "-14deg" },
+  { left: "67%", top: "62%", s: 26, o: 0.2, dur: 18, delay: 0.8, dx: "5vw", dy: "-3vh", dr: "20deg" },
+  { left: "17%", top: "68%", s: 32, o: 0.15, dur: 22, delay: 2.1, dx: "-4vw", dy: "-6vh", dr: "-18deg" },
+  { left: "45%", top: "33%", s: 24, o: 0.18, dur: 17, delay: 1.0, dx: "6vw", dy: "5vh", dr: "12deg" },
+  { left: "90%", top: "46%", s: 28, o: 0.16, dur: 19, delay: 0.4, dx: "-6vw", dy: "-4vh", dr: "-22deg" },
+  { left: "33%", top: "85%", s: 26, o: 0.17, dur: 15, delay: 2.6, dx: "4vw", dy: "-6vh", dr: "14deg" },
+  { left: "57%", top: "88%", s: 22, o: 0.15, dur: 21, delay: 1.8, dx: "-5vw", dy: "-7vh", dr: "-12deg" }
+];
+
+export function FloatingSymbols({ design }: { design: MenuDesign }) {
+  const set = FLOAT_SETS[design] ?? FLOAT_SETS.zen;
+  const count = design === "minimal" ? 4 : 6; // keep it sparse — a few, not a wall
+  return (
+    <div aria-hidden className={cn("menu-motion -z-10", set.tint)}>
+      {FLOAT_POS.slice(0, count).map((p, i) => (
+        <span
+          key={i}
+          style={
+            {
+              left: p.left,
+              top: p.top,
+              opacity: p.o,
+              filter: set.glow ? "drop-shadow(0 0 6px hsl(var(--primary) / 0.7))" : undefined,
+              "--dx": p.dx,
+              "--dy": p.dy,
+              "--dr": p.dr,
+              animation: `menu-roam ${p.dur}s ease-in-out ${p.delay}s infinite`
+            } as Vars
+          }
+        >
+          <Glyph kind={set.kinds[i % set.kinds.length]} size={p.s} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function DesignMotion({ design }: { design: MenuDesign }) {
   switch (design) {
     case "zen":

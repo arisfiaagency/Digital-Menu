@@ -748,6 +748,14 @@ textarea {
   66% { opacity: .95; }
 }
 
+/* Slow wander loop for the few floating design symbols (menu-roam). */
+@keyframes menu-roam {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(var(--dx, 4vw), var(--dy, -3vh)) rotate(var(--dr, 10deg)); }
+  50% { transform: translate(calc(var(--dx, 4vw) * -0.3), calc(var(--dy, -3vh) * -0.9)) rotate(calc(var(--dr, 10deg) * -1)); }
+  75% { transform: translate(calc(var(--dx, 4vw) * -0.8), calc(var(--dy, -3vh) * 0.6)) rotate(calc(var(--dr, 10deg) * 0.6)); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .menu-motion { display: none !important; }
 }
