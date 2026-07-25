@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Star, X } from "lucide-react";
 import { useMenuChrome } from "@/components/menu/menu-chrome";
 import { translate } from "@/lib/i18n/config";
@@ -18,8 +19,8 @@ export function RatingButton({ locale, textDir }: { locale: Locale; textDir: Loc
   const [count, setCount] = useState(chrome.ratingCount ?? 0);
   const [open, setOpen] = useState(false);
 
-  // No slug (e.g. the welcome page context) → nothing to rate.
-  if (!slug) return null;
+  // No slug (welcome page context) or the platform admin turned ratings off.
+  if (!slug || chrome.ratingEnabled === false) return null;
 
   return (
     <>
@@ -75,9 +76,12 @@ function RatingDialog({
   const [comment, setComment] = useState("");
   const [name, setName] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [mounted, setMounted] = useState(false);
 
-  // Lock scroll + close on Escape, matching the item detail modal.
+  // Lock scroll + close on Escape; only render the portal after mount so it
+  // targets document.body (and escapes any transformed/overflow-clipped header).
   useEffect(() => {
+    setMounted(true);
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(event: KeyboardEvent) {
@@ -113,98 +117,110 @@ function RatingDialog({
     }
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] overflow-y-auto bg-black/50 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
-      <div
-        dir={textDir}
-        className="pop-grow w-full max-w-md rounded-t-3xl border border-border bg-card p-6 shadow-xl sm:rounded-3xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">{translate(locale, "menu.rateTitle")}</h2>
-            {count > 0 ? (
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {avg.toFixed(1)} ★ · {count} {translate(locale, "menu.ratingsWord")}
-              </p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={translate(locale, "menu.cancel")}
-            className="rounded-full p-1 text-muted-foreground hover:bg-muted"
-          >
-            <X className="h-5 w-5" aria-hidden />
-          </button>
-        </div>
-
-        {status === "done" ? (
-          <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Star key={n} className={cn("h-6 w-6", n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40")} aria-hidden />
-              ))}
+      <div className="flex min-h-full items-start justify-center p-4 pt-[8vh] sm:pt-[10vh]">
+        <div
+          dir={textDir}
+          className="drop-in mb-8 w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">{translate(locale, "menu.rateTitle")}</h2>
+              {count > 0 ? (
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {avg.toFixed(1)} ★ · {count} {translate(locale, "menu.ratingsWord")}
+                </p>
+              ) : null}
             </div>
-            <p className="font-medium text-foreground">{translate(locale, "menu.ratingThanks")}</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex justify-center gap-2">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  aria-label={`${n}`}
-                  onClick={() => setRating(n)}
-                  className="p-1 transition-transform active:scale-90"
-                >
-                  <Star
-                    className={cn("h-9 w-9", n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40 hover:text-amber-300")}
-                    aria-hidden
-                  />
-                </button>
-              ))}
-            </div>
-
-            <textarea
-              dir={textDir}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              maxLength={500}
-              rows={3}
-              placeholder={translate(locale, "menu.ratingComment")}
-              className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
-            <input
-              dir={textDir}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={60}
-              placeholder={translate(locale, "menu.ratingName")}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
-
-            {status === "error" ? (
-              <p className="text-sm text-destructive">{translate(locale, "menu.ratingError")}</p>
-            ) : null}
-
             <button
               type="button"
-              onClick={submit}
-              disabled={rating < 1 || status === "sending"}
-              className="w-full rounded-full bg-primary py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              onClick={onClose}
+              aria-label={translate(locale, "menu.cancel")}
+              className="rounded-full p-1 text-muted-foreground hover:bg-muted"
             >
-              {status === "sending" ? translate(locale, "menu.ratingSending") : translate(locale, "menu.ratingSubmit")}
+              <X className="h-5 w-5" aria-hidden />
             </button>
           </div>
-        )}
+
+          {status === "done" ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star
+                    key={n}
+                    className={cn("h-6 w-6", n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40")}
+                    aria-hidden
+                  />
+                ))}
+              </div>
+              <p className="font-medium text-foreground">{translate(locale, "menu.ratingThanks")}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-label={`${n}`}
+                    onClick={() => setRating(n)}
+                    className="p-1 transition-transform active:scale-90"
+                  >
+                    <Star
+                      className={cn(
+                        "h-9 w-9",
+                        n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40 hover:text-amber-300"
+                      )}
+                      aria-hidden
+                    />
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                dir={textDir}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                maxLength={500}
+                rows={3}
+                placeholder={translate(locale, "menu.ratingComment")}
+                className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              />
+              <input
+                dir={textDir}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={60}
+                placeholder={translate(locale, "menu.ratingName")}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              />
+
+              {status === "error" ? (
+                <p className="text-sm text-destructive">{translate(locale, "menu.ratingError")}</p>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={submit}
+                disabled={rating < 1 || status === "sending"}
+                className="w-full rounded-full bg-primary py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              >
+                {status === "sending" ? translate(locale, "menu.ratingSending") : translate(locale, "menu.ratingSubmit")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

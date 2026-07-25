@@ -34,7 +34,8 @@ export function MenuApp({
   speed = 1,
   slug,
   ratingAvg,
-  ratingCount
+  ratingCount,
+  ratingEnabled = true
 }: {
   initialData?: AppData;
   design?: MenuDesign;
@@ -45,10 +46,11 @@ export function MenuApp({
   slug?: string;
   ratingAvg?: number;
   ratingCount?: number;
+  ratingEnabled?: boolean;
 }) {
   const data = initialData ?? defaultAppData;
   return (
-    <MenuChromeProvider value={{ backdrop, mascot, speed, slug, ratingAvg, ratingCount }}>
+    <MenuChromeProvider value={{ backdrop, mascot, speed, slug, ratingAvg, ratingCount, ratingEnabled }}>
       {/* Recolor the whole design from the cafe's accent (light + dark). */}
       <style dangerouslySetInnerHTML={{ __html: menuAccentCss(accent) }} />
       {renderDesign(design, data, accent)}

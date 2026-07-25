@@ -148,6 +148,7 @@ export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: stri
     menuMascot: client.menuMascot ?? prev?.menuMascot ?? true,
     menuMascotSpeed: client.menuMascotSpeed ?? prev?.menuMascotSpeed ?? 1,
     qrEnabled: client.qrEnabled ?? prev?.qrEnabled ?? true,
+    ratingEnabled: client.ratingEnabled ?? prev?.ratingEnabled ?? true,
     blocked: client.blocked ?? prev?.blocked ?? false,
     blockedReason: client.blockedReason ?? prev?.blockedReason,
     blockedAt: client.blockedAt ?? prev?.blockedAt,

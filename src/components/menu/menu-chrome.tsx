@@ -12,6 +12,7 @@ export type MenuChrome = {
   slug?: string; // cafe slug, used to submit ratings from the public menu
   ratingAvg?: number; // aggregated average rating (0 when none yet)
   ratingCount?: number; // number of ratings received
+  ratingEnabled?: boolean; // platform toggle: show the "Rate us" button (default on)
 };
 
 export const MENU_CHROME_DEFAULT: MenuChrome = { backdrop: true, mascot: true, speed: 1 };

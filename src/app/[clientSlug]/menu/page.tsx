@@ -46,6 +46,7 @@ export default async function ClientMenuPage({ params }: { params: Promise<{ cli
         slug={client.slug}
         ratingAvg={client.ratingAvg}
         ratingCount={client.ratingCount}
+        ratingEnabled={client.ratingEnabled !== false}
       />
     </>
   );

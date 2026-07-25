@@ -385,6 +385,8 @@ export type ClientAccount = {
   menuMascotSpeed?: number;
   /** Show the QR-code page in this cafe's own admin. Platform-controlled. Default on. */
   qrEnabled?: boolean;
+  /** Show the "Rate us" button on the public menu. Platform-controlled. Default on. */
+  ratingEnabled?: boolean;
   /** Aggregated customer rating, maintained server-side by /api/reviews. */
   ratingCount?: number;
   ratingSum?: number;
