@@ -888,7 +888,9 @@ function ClientCard({
                 download: "Download PNG",
                 print: "Print",
                 copyLink: "Copy link",
-                copied: "Copied!"
+                copied: "Copied!",
+                uploadLogo: "Upload logo",
+                removeLogo: "Remove logo"
               }}
             />
 

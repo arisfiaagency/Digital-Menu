@@ -39,7 +39,9 @@ export function QrManager() {
               download: text.qrDownload,
               print: text.qrPrint,
               copyLink: text.qrCopyLink,
-              copied: text.qrCopied
+              copied: text.qrCopied,
+              uploadLogo: text.qrUploadLogo,
+              removeLogo: text.qrRemoveLogo
             }}
           />
         </CardContent>
