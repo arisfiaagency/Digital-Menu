@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ExternalLink,
   Plus,
+  QrCode,
   Save,
   Search,
   Trash2,
@@ -23,6 +24,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QrCodeBox } from "@/components/admin/qr-code-box";
 import {
   accessExpiryLabel,
   daysUntilExpiry,
@@ -74,13 +76,15 @@ const DESIGN_OPTIONS: { id: MenuDesign; name: string; blurb: string }[] = [
 ];
 const DEFAULT_ACCENT = "#2F7D4F";
 
-// Shape passed to onSaveDesign — design + accent + the decoration toggles.
+// Shape passed to onSaveDesign — design + accent + the decoration toggles + the
+// per-cafe QR visibility flag.
 type DesignChoice = {
   menuDesign: MenuDesign;
   menuAccent: string;
   menuBackdrop: boolean;
   menuMascot: boolean;
   menuMascotSpeed: number;
+  qrEnabled: boolean;
 };
 
 // A small on/off switch used by the Menu Design decoration toggles.
@@ -587,6 +591,12 @@ function ClientCard({
   const [designBackdrop, setDesignBackdrop] = useState(client.menuBackdrop !== false);
   const [designMascot, setDesignMascot] = useState(client.menuMascot !== false);
   const [designSpeed, setDesignSpeed] = useState(client.menuMascotSpeed ?? 1);
+  const [designQrEnabled, setDesignQrEnabled] = useState(client.qrEnabled !== false);
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     setPlan(client.subscription?.plan || "basic");
@@ -607,6 +617,7 @@ function ClientCard({
     setDesignBackdrop(client.menuBackdrop !== false);
     setDesignMascot(client.menuMascot !== false);
     setDesignSpeed(client.menuMascotSpeed ?? 1);
+    setDesignQrEnabled(client.qrEnabled !== false);
   }, [client]);
 
   const previewExpiry = useMemo(
@@ -846,12 +857,68 @@ function ClientCard({
                     menuAccent: designAccent,
                     menuBackdrop: designBackdrop,
                     menuMascot: designMascot,
-                    menuMascotSpeed: designSpeed
+                    menuMascotSpeed: designSpeed,
+                    qrEnabled: designQrEnabled
                   })
                 }
               >
                 <Save className="h-4 w-4" aria-hidden />
                 {updating ? "Saving…" : "Save design"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-background p-4">
+            <div className="mb-3 flex items-start gap-2">
+              <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              <div>
+                <p className="font-medium">QR code</p>
+                <p className="text-sm text-muted-foreground">
+                  Print or download the QR for /{client.slug} — customers scan it to open the menu.
+                </p>
+              </div>
+            </div>
+
+            <QrCodeBox
+              url={origin ? `${origin}/${client.slug}` : ""}
+              fileName={`${client.slug}-qr.png`}
+              size="sm"
+              labels={{
+                scanHint: "Scan to view the menu",
+                download: "Download PNG",
+                print: "Print",
+                copyLink: "Copy link",
+                copied: "Copied!"
+              }}
+            />
+
+            <div className="mt-4 rounded-xl border bg-muted/20 p-3">
+              <DesignSwitch
+                label="Show QR in the cafe's admin"
+                desc="When off, this cafe won't see the QR page in its own admin."
+                checked={designQrEnabled}
+                onChange={setDesignQrEnabled}
+              />
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                disabled={updating || designQrEnabled === (client.qrEnabled !== false)}
+                onClick={() =>
+                  onSaveDesign({
+                    menuDesign: designId,
+                    menuAccent: designAccent,
+                    menuBackdrop: designBackdrop,
+                    menuMascot: designMascot,
+                    menuMascotSpeed: designSpeed,
+                    qrEnabled: designQrEnabled
+                  })
+                }
+              >
+                <Save className="h-4 w-4" aria-hidden />
+                {updating ? "Saving…" : "Save QR setting"}
               </Button>
             </div>
           </div>

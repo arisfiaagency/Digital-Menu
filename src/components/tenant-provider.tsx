@@ -6,14 +6,25 @@ import { clientAdminPath, normalizeClientSlug, setActiveClientSlug } from "@/lib
 type TenantContextValue = {
   clientSlug: string | null;
   adminBasePath: string;
+  /** Whether this cafe's admin may see the QR-code page (platform-controlled). */
+  qrEnabled: boolean;
 };
 
 const TenantContext = createContext<TenantContextValue>({
   clientSlug: null,
-  adminBasePath: "/admin"
+  adminBasePath: "/admin",
+  qrEnabled: true
 });
 
-export function TenantProvider({ clientSlug, children }: { clientSlug: string | null; children: React.ReactNode }) {
+export function TenantProvider({
+  clientSlug,
+  qrEnabled = true,
+  children
+}: {
+  clientSlug: string | null;
+  qrEnabled?: boolean;
+  children: React.ReactNode;
+}) {
   const normalized = clientSlug ? normalizeClientSlug(clientSlug) : null;
   setActiveClientSlug(normalized);
 
@@ -25,9 +36,10 @@ export function TenantProvider({ clientSlug, children }: { clientSlug: string | 
   const value = useMemo<TenantContextValue>(
     () => ({
       clientSlug: normalized,
-      adminBasePath: normalized ? clientAdminPath(normalized) : "/admin"
+      adminBasePath: normalized ? clientAdminPath(normalized) : "/admin",
+      qrEnabled
     }),
-    [normalized]
+    [normalized, qrEnabled]
   );
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;

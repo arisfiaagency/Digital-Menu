@@ -77,7 +77,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const auth = useAdminAuth();
   const { text, dir: textDir } = useAdminLocale();
-  const { adminBasePath } = useTenant();
+  const { adminBasePath, qrEnabled } = useTenant();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const loginPath = `${adminBasePath}/login`;
   const usersHref = `${adminBasePath}/users`;
@@ -134,14 +134,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const onUsersRoute = pathname.startsWith(usersHref);
   const onAuditRoute = pathname.startsWith(auditHref);
+  const onQrRoute = pathname.startsWith(qrHref);
   const currentNav = navItems.find((entry) => pathname.startsWith(entry.href));
   const routeAllowed = onAuditRoute
     ? auth.isMainAdmin
     : onUsersRoute
       ? auth.canManageUsers
-      : currentNav
-        ? auth.can(currentNav.feature)
-        : true;
+      : onQrRoute
+        ? qrEnabled
+        : currentNav
+          ? auth.can(currentNav.feature)
+          : true;
 
   if (!routeAllowed) {
     if (firstAllowedHref) {
@@ -199,6 +202,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           settingsHref={settingsHref}
           auditHref={auditHref}
           qrHref={qrHref}
+          qrEnabled={qrEnabled}
           homeHref={adminBasePath}
           onLogout={handleLogout}
         />
@@ -242,6 +246,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           settingsHref={settingsHref}
           auditHref={auditHref}
           qrHref={qrHref}
+          qrEnabled={qrEnabled}
           homeHref={adminBasePath}
           onNavigate={() => setMobileNavOpen(false)}
           onLogout={handleLogout}
@@ -270,6 +275,7 @@ function AdminNavigation({
   settingsHref,
   auditHref,
   qrHref,
+  qrEnabled,
   homeHref,
   onNavigate,
   onLogout
@@ -286,14 +292,16 @@ function AdminNavigation({
   settingsHref: string;
   auditHref: string;
   qrHref: string;
+  qrEnabled: boolean;
   homeHref: string;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
   const items = [
     ...navItems,
-    // The public menu QR is available to every cafe admin — a printable link to /{slug}.
-    { href: qrHref, labelKey: "qrCode", icon: QrCode },
+    // The public menu QR — a printable link to /{slug}. The platform admin can
+    // hide it per cafe from the supervisor Clients tab.
+    ...(qrEnabled ? [{ href: qrHref, labelKey: "qrCode", icon: QrCode }] : []),
     ...(canManageUsers ? [{ href: usersHref, labelKey: "users", icon: UsersRound }] : []),
     // The Activity Log is the Main Admin's oversight view — only they see the nav item.
     ...(isMainAdmin ? [{ href: auditHref, labelKey: "auditLog", icon: History }] : [])

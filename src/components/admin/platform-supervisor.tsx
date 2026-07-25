@@ -184,7 +184,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
 
   async function changeDesign(
     client: ClientAccount,
-    next: { menuDesign: MenuDesign; menuAccent: string; menuBackdrop: boolean; menuMascot: boolean; menuMascotSpeed: number }
+    next: { menuDesign: MenuDesign; menuAccent: string; menuBackdrop: boolean; menuMascot: boolean; menuMascotSpeed: number; qrEnabled: boolean }
   ) {
     setUpdatingSlug(client.slug);
     setMessage("");
@@ -195,7 +195,8 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         menuAccent: next.menuAccent,
         menuBackdrop: next.menuBackdrop,
         menuMascot: next.menuMascot,
-        menuMascotSpeed: next.menuMascotSpeed
+        menuMascotSpeed: next.menuMascotSpeed,
+        qrEnabled: next.qrEnabled
       });
       setMessage(`Updated menu design for /${client.slug}.`);
       await refresh();

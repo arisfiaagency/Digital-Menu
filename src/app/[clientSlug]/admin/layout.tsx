@@ -15,7 +15,7 @@ export default async function ClientAdminLayout({
   const client = await getClientAccountRest(clientSlug);
   if (!client || !isClientServiceActive(client)) notFound();
   return (
-    <TenantProvider clientSlug={client.slug}>
+    <TenantProvider clientSlug={client.slug} qrEnabled={client.qrEnabled !== false}>
       <AdminShell>{children}</AdminShell>
     </TenantProvider>
   );

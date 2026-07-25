@@ -383,6 +383,8 @@ export type ClientAccount = {
   menuMascot?: boolean;
   /** Mascot animation speed multiplier (1 = normal, >1 faster). Default 1. */
   menuMascotSpeed?: number;
+  /** Show the QR-code page in this cafe's own admin. Platform-controlled. Default on. */
+  qrEnabled?: boolean;
   /** Supervisor kill-switch (e.g. unpaid). Overrides trial/subscription access. */
   blocked?: boolean;
   blockedReason?: string;
