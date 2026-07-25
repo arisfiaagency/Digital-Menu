@@ -143,13 +143,52 @@ async function batchGetSettings(clientSlug: string): Promise<Record<string, Reco
   return map;
 }
 
+// A cafe-scoped EMPTY menu, used whenever the real content can't be read
+// (missing config, an inactive cafe, or a transient Firestore error). It carries
+// the cafe's OWN name (from its account doc) and blanks out the built-in demo
+// brand's contact details — so a live cafe never renders another cafe's menu.
+// The customer just sees an empty menu that the next revalidation fills in.
+function emptyAppDataForClient(client: ClientAccount | null): AppData {
+  const name = client?.name?.trim() ?? "";
+  return {
+    categories: [],
+    menuItems: [],
+    general: {
+      ...defaultAppData.general,
+      restaurantName: { en: name, ar: name, ckb: name },
+      description: {},
+      promoText: undefined,
+      phone: "",
+      whatsapp: "",
+      email: "",
+      address: "",
+      googleMapsUrl: "",
+      socialLinks: {},
+      defaultLanguage: client?.defaultLanguage ?? defaultAppData.general.defaultLanguage,
+      defaultCurrency: client?.defaultCurrency ?? defaultAppData.general.defaultCurrency
+    },
+    menu: defaultAppData.menu
+  };
+}
+
 async function fetchPublicAppData(clientSlug: string): Promise<AppData> {
-  if (!DOCUMENTS_BASE || !API_KEY) return defaultAppData;
   const slug = normalizeClientSlug(clientSlug);
-  if (!slug) return defaultAppData;
+  if (!DOCUMENTS_BASE || !API_KEY || !slug) return emptyAppDataForClient(null);
+
+  // Read the account FIRST so any later failure can still render this cafe's own
+  // (empty) menu with its real name — never the built-in Stone Cafe demo.
+  let client: ClientAccount | null = null;
   try {
-    const client = (await getRestDocument(`clients/${slug}`)) as ClientAccount | null;
-    if (!isClientServiceActive(client)) return defaultAppData;
+    client = (await getRestDocument(`clients/${slug}`)) as ClientAccount | null;
+  } catch {
+    client = null;
+  }
+  if (!isClientServiceActive(client)) return emptyAppDataForClient(client);
+
+  // Cafe-scoped base for settings so unset fields fall back to blanks + this
+  // cafe's name, not the demo brand.
+  const base = emptyAppDataForClient(client);
+  try {
     const parentPath = `clients/${slug}`;
     const [categories, menuItemsRaw, settings] = await Promise.all([
       runBoolQuery(parentPath, "categories", "isActive", "displayOrder", 100),
@@ -166,13 +205,13 @@ async function fetchPublicAppData(clientSlug: string): Promise<AppData> {
     return {
       categories: categories as unknown as Category[],
       menuItems,
-      general: { ...defaultAppData.general, ...(settings.general as Partial<GeneralSettings>) },
-      menu: { ...defaultAppData.menu, ...(settings.menu as Partial<MenuSettings>) }
+      general: { ...base.general, ...(settings.general as Partial<GeneralSettings>) },
+      menu: { ...base.menu, ...(settings.menu as Partial<MenuSettings>) }
     };
   } catch {
-    // Never break the page — fall back to the offline defaults; the next
-    // revalidation retries.
-    return defaultAppData;
+    // A transient read failure must never surface another cafe's menu — show
+    // this cafe's own (empty) menu; the next revalidation retries.
+    return emptyAppDataForClient(client);
   }
 }
 
