@@ -9,14 +9,13 @@ import { cn } from "@/lib/utils/cn";
 import type { Locale } from "@/types/models";
 import type { LocaleDirection } from "@/lib/i18n/config";
 
-// The "how people rate us" control shown in every design's top bar (via
-// MenuTopControls). Displays the average + count and opens a dialog to submit a
-// rating. Submissions POST to /api/reviews, which updates the aggregate.
+// The "Rate us" control shown in every design's top bar (via MenuTopControls).
+// It only opens the rating FORM — the public menu never shows the cafe's current
+// average/score (that lives in the admin Reviews tab). Submissions POST to
+// /api/reviews, which updates the aggregate behind the scenes.
 export function RatingButton({ locale, textDir }: { locale: Locale; textDir: LocaleDirection }) {
   const chrome = useMenuChrome();
   const slug = chrome.slug;
-  const [avg, setAvg] = useState(chrome.ratingAvg ?? 0);
-  const [count, setCount] = useState(chrome.ratingCount ?? 0);
   const [open, setOpen] = useState(false);
 
   // No slug (welcome page context) or the platform admin turned ratings off.
@@ -31,26 +30,9 @@ export function RatingButton({ locale, textDir }: { locale: Locale; textDir: Loc
         className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card/70 px-3 text-sm font-semibold text-foreground backdrop-blur transition-colors hover:bg-muted"
       >
         <Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden />
-        {count > 0 ? (
-          <span className="tabular-nums">{avg.toFixed(1)}</span>
-        ) : (
-          <span>{translate(locale, "menu.rateUs")}</span>
-        )}
+        <span>{translate(locale, "menu.rateUs")}</span>
       </button>
-      {open ? (
-        <RatingDialog
-          slug={slug}
-          locale={locale}
-          textDir={textDir}
-          avg={avg}
-          count={count}
-          onClose={() => setOpen(false)}
-          onSubmitted={(nextAvg, nextCount) => {
-            setAvg(nextAvg);
-            setCount(nextCount);
-          }}
-        />
-      ) : null}
+      {open ? <RatingDialog slug={slug} locale={locale} textDir={textDir} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }
@@ -59,18 +41,12 @@ function RatingDialog({
   slug,
   locale,
   textDir,
-  avg,
-  count,
-  onClose,
-  onSubmitted
+  onClose
 }: {
   slug: string;
   locale: Locale;
   textDir: LocaleDirection;
-  avg: number;
-  count: number;
   onClose: () => void;
-  onSubmitted: (avg: number, count: number) => void;
 }) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -103,9 +79,8 @@ function RatingDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, rating, comment, name })
       });
-      const json = (await res.json()) as { ok?: boolean; ratingAvg?: number; ratingCount?: number };
+      const json = (await res.json()) as { ok?: boolean };
       if (!res.ok || !json.ok) throw new Error("failed");
-      onSubmitted(json.ratingAvg ?? avg, json.ratingCount ?? count + 1);
       try {
         localStorage.setItem(`mdm-rated-${slug}`, "1");
       } catch {
@@ -133,14 +108,7 @@ function RatingDialog({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">{translate(locale, "menu.rateTitle")}</h2>
-              {count > 0 ? (
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  {avg.toFixed(1)} ★ · {count} {translate(locale, "menu.ratingsWord")}
-                </p>
-              ) : null}
-            </div>
+            <h2 className="text-lg font-semibold text-foreground">{translate(locale, "menu.rateTitle")}</h2>
             <button
               type="button"
               onClick={onClose}
