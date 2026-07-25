@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   MenuSquare,
+  QrCode,
   ReceiptText,
   Settings,
   SlidersHorizontal,
@@ -82,6 +83,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const usersHref = `${adminBasePath}/users`;
   const settingsHref = `${adminBasePath}/settings`;
   const auditHref = `${adminBasePath}/audit`;
+  const qrHref = `${adminBasePath}/qr-code`;
   const navItems = nav.map((entry) => ({ ...entry, href: `${adminBasePath}${entry.path}` }));
   const isLogin = pathname === loginPath;
 
@@ -196,6 +198,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           usersHref={usersHref}
           settingsHref={settingsHref}
           auditHref={auditHref}
+          qrHref={qrHref}
           homeHref={adminBasePath}
           onLogout={handleLogout}
         />
@@ -238,6 +241,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           usersHref={usersHref}
           settingsHref={settingsHref}
           auditHref={auditHref}
+          qrHref={qrHref}
           homeHref={adminBasePath}
           onNavigate={() => setMobileNavOpen(false)}
           onLogout={handleLogout}
@@ -265,6 +269,7 @@ function AdminNavigation({
   usersHref,
   settingsHref,
   auditHref,
+  qrHref,
   homeHref,
   onNavigate,
   onLogout
@@ -280,12 +285,15 @@ function AdminNavigation({
   usersHref: string;
   settingsHref: string;
   auditHref: string;
+  qrHref: string;
   homeHref: string;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
   const items = [
     ...navItems,
+    // The public menu QR is available to every cafe admin — a printable link to /{slug}.
+    { href: qrHref, labelKey: "qrCode", icon: QrCode },
     ...(canManageUsers ? [{ href: usersHref, labelKey: "users", icon: UsersRound }] : []),
     // The Activity Log is the Main Admin's oversight view — only they see the nav item.
     ...(isMainAdmin ? [{ href: auditHref, labelKey: "auditLog", icon: History }] : [])

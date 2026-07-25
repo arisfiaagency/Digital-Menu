@@ -844,4 +844,21 @@ textarea {
     padding: 0 !important;
     font-size: 12px !important;
   }
+
+  /* Menu QR — prints the QR (and its scan hint + link) alone, centered. */
+  body.qr-printing * {
+    visibility: hidden !important;
+  }
+
+  body.qr-printing .qr-print-area,
+  body.qr-printing .qr-print-area * {
+    visibility: visible !important;
+  }
+
+  body.qr-printing .qr-print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+  }
 }
