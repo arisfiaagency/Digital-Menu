@@ -9,6 +9,19 @@ import { cn } from "@/lib/utils/cn";
 import type { Locale } from "@/types/models";
 import type { LocaleDirection } from "@/lib/i18n/config";
 
+// One rating per device per cafe every 5 hours (enforced via localStorage — the
+// natural "per device" store; a determined user clearing storage can bypass it).
+const RATE_LIMIT_MS = 5 * 60 * 60 * 1000;
+
+function ratedRecently(slug: string): boolean {
+  try {
+    const last = Number(localStorage.getItem(`mdm-rated-${slug}`) || 0);
+    return last > 0 && Date.now() - last < RATE_LIMIT_MS;
+  } catch {
+    return false;
+  }
+}
+
 // The "Rate us" control shown in every design's top bar (via MenuTopControls).
 // It only opens the rating FORM — the public menu never shows the cafe's current
 // average/score (that lives in the admin Reviews tab). Submissions POST to
@@ -53,11 +66,13 @@ function RatingDialog({
   const [name, setName] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [mounted, setMounted] = useState(false);
+  const [limited, setLimited] = useState(false);
 
   // Lock scroll + close on Escape; only render the portal after mount so it
   // targets document.body (and escapes any transformed/overflow-clipped header).
   useEffect(() => {
     setMounted(true);
+    setLimited(ratedRecently(slug));
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(event: KeyboardEvent) {
@@ -68,10 +83,10 @@ function RatingDialog({
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, [onClose, slug]);
 
   async function submit() {
-    if (rating < 1 || status === "sending") return;
+    if (rating < 1 || status === "sending" || limited) return;
     setStatus("sending");
     try {
       const res = await fetch("/api/reviews", {
@@ -82,7 +97,8 @@ function RatingDialog({
       const json = (await res.json()) as { ok?: boolean };
       if (!res.ok || !json.ok) throw new Error("failed");
       try {
-        localStorage.setItem(`mdm-rated-${slug}`, "1");
+        // Stamp this device so it can't rate this cafe again for 5 hours.
+        localStorage.setItem(`mdm-rated-${slug}`, String(Date.now()));
       } catch {
         /* storage may be unavailable */
       }
@@ -131,6 +147,11 @@ function RatingDialog({
                 ))}
               </div>
               <p className="font-medium text-foreground">{translate(locale, "menu.ratingThanks")}</p>
+            </div>
+          ) : limited ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <Star className="h-8 w-8 fill-amber-400 text-amber-400" aria-hidden />
+              <p className="font-medium text-foreground">{translate(locale, "menu.ratingAlready")}</p>
             </div>
           ) : (
             <div className="space-y-4">

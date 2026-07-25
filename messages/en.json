@@ -8,6 +8,7 @@
     "ratingSubmit": "Submit rating",
     "ratingSending": "Sending…",
     "ratingThanks": "Thanks for your feedback!",
+    "ratingAlready": "You've already rated. Please come back later.",
     "ratingError": "Couldn't send. Please try again.",
     "ratingsWord": "ratings",
     "search": "Search menu",
