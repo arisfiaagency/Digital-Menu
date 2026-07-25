@@ -8,21 +8,26 @@ type TenantContextValue = {
   adminBasePath: string;
   /** Whether this cafe's admin may see the QR-code page (platform-controlled). */
   qrEnabled: boolean;
+  /** Whether ratings are on — gates the public "Rate us" button AND the admin Reviews tab. */
+  ratingEnabled: boolean;
 };
 
 const TenantContext = createContext<TenantContextValue>({
   clientSlug: null,
   adminBasePath: "/admin",
-  qrEnabled: true
+  qrEnabled: true,
+  ratingEnabled: true
 });
 
 export function TenantProvider({
   clientSlug,
   qrEnabled = true,
+  ratingEnabled = true,
   children
 }: {
   clientSlug: string | null;
   qrEnabled?: boolean;
+  ratingEnabled?: boolean;
   children: React.ReactNode;
 }) {
   const normalized = clientSlug ? normalizeClientSlug(clientSlug) : null;
@@ -37,9 +42,10 @@ export function TenantProvider({
     () => ({
       clientSlug: normalized,
       adminBasePath: normalized ? clientAdminPath(normalized) : "/admin",
-      qrEnabled
+      qrEnabled,
+      ratingEnabled
     }),
-    [normalized, qrEnabled]
+    [normalized, qrEnabled, ratingEnabled]
   );
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;

@@ -78,7 +78,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const auth = useAdminAuth();
   const { text, dir: textDir } = useAdminLocale();
-  const { adminBasePath, qrEnabled } = useTenant();
+  const { adminBasePath, qrEnabled, ratingEnabled } = useTenant();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const loginPath = `${adminBasePath}/login`;
   const usersHref = `${adminBasePath}/users`;
@@ -137,6 +137,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const onUsersRoute = pathname.startsWith(usersHref);
   const onAuditRoute = pathname.startsWith(auditHref);
   const onQrRoute = pathname.startsWith(qrHref);
+  const onReviewsRoute = pathname.startsWith(reviewsHref);
   const currentNav = navItems.find((entry) => pathname.startsWith(entry.href));
   const routeAllowed = onAuditRoute
     ? auth.isMainAdmin
@@ -144,9 +145,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       ? auth.canManageUsers
       : onQrRoute
         ? qrEnabled
-        : currentNav
-          ? auth.can(currentNav.feature)
-          : true;
+        : onReviewsRoute
+          ? ratingEnabled
+          : currentNav
+            ? auth.can(currentNav.feature)
+            : true;
 
   if (!routeAllowed) {
     if (firstAllowedHref) {
@@ -206,6 +209,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           qrHref={qrHref}
           qrEnabled={qrEnabled}
           reviewsHref={reviewsHref}
+          reviewsEnabled={ratingEnabled}
           homeHref={adminBasePath}
           onLogout={handleLogout}
         />
@@ -251,6 +255,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           qrHref={qrHref}
           qrEnabled={qrEnabled}
           reviewsHref={reviewsHref}
+          reviewsEnabled={ratingEnabled}
           homeHref={adminBasePath}
           onNavigate={() => setMobileNavOpen(false)}
           onLogout={handleLogout}
@@ -281,6 +286,7 @@ function AdminNavigation({
   qrHref,
   qrEnabled,
   reviewsHref,
+  reviewsEnabled,
   homeHref,
   onNavigate,
   onLogout
@@ -299,14 +305,16 @@ function AdminNavigation({
   qrHref: string;
   qrEnabled: boolean;
   reviewsHref: string;
+  reviewsEnabled: boolean;
   homeHref: string;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
   const items = [
     ...navItems,
-    // Customer ratings/reviews from the public menu.
-    { href: reviewsHref, labelKey: "reviews", icon: Star },
+    // Customer ratings/reviews from the public menu — hidden when the platform
+    // admin turns ratings off for this cafe.
+    ...(reviewsEnabled ? [{ href: reviewsHref, labelKey: "reviews", icon: Star }] : []),
     // The public menu QR — a printable link to /{slug}. The platform admin can
     // hide it per cafe from the supervisor Clients tab.
     ...(qrEnabled ? [{ href: qrHref, labelKey: "qrCode", icon: QrCode }] : []),
