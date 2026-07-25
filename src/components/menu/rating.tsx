@@ -1,0 +1,210 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Star, X } from "lucide-react";
+import { useMenuChrome } from "@/components/menu/menu-chrome";
+import { translate } from "@/lib/i18n/config";
+import { cn } from "@/lib/utils/cn";
+import type { Locale } from "@/types/models";
+import type { LocaleDirection } from "@/lib/i18n/config";
+
+// The "how people rate us" control shown in every design's top bar (via
+// MenuTopControls). Displays the average + count and opens a dialog to submit a
+// rating. Submissions POST to /api/reviews, which updates the aggregate.
+export function RatingButton({ locale, textDir }: { locale: Locale; textDir: LocaleDirection }) {
+  const chrome = useMenuChrome();
+  const slug = chrome.slug;
+  const [avg, setAvg] = useState(chrome.ratingAvg ?? 0);
+  const [count, setCount] = useState(chrome.ratingCount ?? 0);
+  const [open, setOpen] = useState(false);
+
+  // No slug (e.g. the welcome page context) → nothing to rate.
+  if (!slug) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={translate(locale, "menu.rateUs")}
+        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card/70 px-3 text-sm font-semibold text-foreground backdrop-blur transition-colors hover:bg-muted"
+      >
+        <Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden />
+        {count > 0 ? (
+          <span className="tabular-nums">{avg.toFixed(1)}</span>
+        ) : (
+          <span>{translate(locale, "menu.rateUs")}</span>
+        )}
+      </button>
+      {open ? (
+        <RatingDialog
+          slug={slug}
+          locale={locale}
+          textDir={textDir}
+          avg={avg}
+          count={count}
+          onClose={() => setOpen(false)}
+          onSubmitted={(nextAvg, nextCount) => {
+            setAvg(nextAvg);
+            setCount(nextCount);
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function RatingDialog({
+  slug,
+  locale,
+  textDir,
+  avg,
+  count,
+  onClose,
+  onSubmitted
+}: {
+  slug: string;
+  locale: Locale;
+  textDir: LocaleDirection;
+  avg: number;
+  count: number;
+  onClose: () => void;
+  onSubmitted: (avg: number, count: number) => void;
+}) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [name, setName] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
+
+  // Lock scroll + close on Escape, matching the item detail modal.
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  async function submit() {
+    if (rating < 1 || status === "sending") return;
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, rating, comment, name })
+      });
+      const json = (await res.json()) as { ok?: boolean; ratingAvg?: number; ratingCount?: number };
+      if (!res.ok || !json.ok) throw new Error("failed");
+      onSubmitted(json.ratingAvg ?? avg, json.ratingCount ?? count + 1);
+      try {
+        localStorage.setItem(`mdm-rated-${slug}`, "1");
+      } catch {
+        /* storage may be unavailable */
+      }
+      setStatus("done");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        dir={textDir}
+        className="pop-grow w-full max-w-md rounded-t-3xl border border-border bg-card p-6 shadow-xl sm:rounded-3xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">{translate(locale, "menu.rateTitle")}</h2>
+            {count > 0 ? (
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {avg.toFixed(1)} ★ · {count} {translate(locale, "menu.ratingsWord")}
+              </p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={translate(locale, "menu.cancel")}
+            className="rounded-full p-1 text-muted-foreground hover:bg-muted"
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+
+        {status === "done" ? (
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star key={n} className={cn("h-6 w-6", n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40")} aria-hidden />
+              ))}
+            </div>
+            <p className="font-medium text-foreground">{translate(locale, "menu.ratingThanks")}</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  aria-label={`${n}`}
+                  onClick={() => setRating(n)}
+                  className="p-1 transition-transform active:scale-90"
+                >
+                  <Star
+                    className={cn("h-9 w-9", n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40 hover:text-amber-300")}
+                    aria-hidden
+                  />
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              dir={textDir}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder={translate(locale, "menu.ratingComment")}
+              className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+            />
+            <input
+              dir={textDir}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={60}
+              placeholder={translate(locale, "menu.ratingName")}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+            />
+
+            {status === "error" ? (
+              <p className="text-sm text-destructive">{translate(locale, "menu.ratingError")}</p>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={submit}
+              disabled={rating < 1 || status === "sending"}
+              className="w-full rounded-full bg-primary py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            >
+              {status === "sending" ? translate(locale, "menu.ratingSending") : translate(locale, "menu.ratingSubmit")}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

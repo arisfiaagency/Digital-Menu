@@ -5,6 +5,7 @@ import { CartFab, CartIconButton, CartSheet } from "@/components/menu/cart";
 import { LanguageGlobe } from "@/components/menu/language-globe";
 import { ThemeToggle } from "@/components/menu/theme-toggle";
 import { MenuItemDetailModal } from "@/components/menu/menu-item-detail-modal";
+import { RatingButton } from "@/components/menu/rating";
 import { useMenuBrowse, type MenuBrowse } from "@/components/menu/use-menu-browse";
 import { useCart, type Cart } from "@/hooks/use-cart";
 import { useLocale } from "@/hooks/use-locale";
@@ -94,6 +95,7 @@ export function useMenuController(data: AppData): MenuController {
 export function MenuTopControls({ ctrl, hideTheme = false }: { ctrl: MenuController; hideTheme?: boolean }) {
   return (
     <div className="flex items-center gap-2">
+      <RatingButton locale={ctrl.locale} textDir={ctrl.textDir} />
       {ctrl.showCart ? (
         <CartIconButton count={ctrl.cart.totalQuantity} locale={ctrl.locale} onClick={() => ctrl.setCartOpen(true)} />
       ) : null}

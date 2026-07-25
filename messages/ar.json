@@ -1,6 +1,15 @@
 {
   "menu": {
     "title": "القائمة",
+    "rateUs": "قيّمنا",
+    "rateTitle": "قيّم تجربتك",
+    "ratingComment": "أضف تعليقاً (اختياري)",
+    "ratingName": "اسمك (اختياري)",
+    "ratingSubmit": "إرسال التقييم",
+    "ratingSending": "جارٍ الإرسال…",
+    "ratingThanks": "شكراً لتقييمك!",
+    "ratingError": "تعذّر الإرسال. حاول مرة أخرى.",
+    "ratingsWord": "تقييم",
     "search": "ابحث في القائمة",
     "categories": "الأقسام",
     "all": "الكل",

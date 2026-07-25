@@ -25,7 +25,7 @@ import { removeImage } from "@/lib/storage";
 import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { extendSubscriptionExpiry } from "@/lib/client-access";
 import { slugify } from "@/lib/utils/format";
-import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape } from "@/types/models";
+import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, Review } from "@/types/models";
 
 function converter<T extends { id: string }>(): FirestoreDataConverter<T> {
   return {
@@ -101,6 +101,15 @@ export async function listClients(): Promise<ClientAccount[]> {
   if (!db) return [];
   const snap = await getDocs(query(collection(db, "clients").withConverter(clientConverter), orderBy("name"), limit(500)));
   return snap.docs.map((entry) => entry.data());
+}
+
+// Customer reviews for the active cafe (newest first). Tenant-scoped read; the
+// admin reads these, public submissions arrive via the /api/reviews route.
+export async function listReviews(max = 500): Promise<Review[]> {
+  const db = getFirebaseDb();
+  if (!db) return [];
+  const snap = await getDocs(query(tenantCollection(db, "reviews"), orderBy("createdAt", "desc"), limit(max)));
+  return snap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<Review, "id">) }));
 }
 
 export async function getClient(slug: string): Promise<ClientAccount | null> {

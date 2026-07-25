@@ -195,6 +195,14 @@ service cloud.firestore {
         allow create: if isTenantAdmin(clientId);
         allow update, delete: if false;
       }
+
+      match /reviews/{reviewId} {
+        // Customer ratings/reviews: cafe staff read them in the admin. Public
+        // submissions go through the Admin-SDK /api/reviews route (which also
+        // updates the aggregate on the client doc), so no client-side writes.
+        allow read: if isTenantAdmin(clientId);
+        allow create, update, delete: if false;
+      }
     }
 
     match /{document=**} {

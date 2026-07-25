@@ -385,6 +385,10 @@ export type ClientAccount = {
   menuMascotSpeed?: number;
   /** Show the QR-code page in this cafe's own admin. Platform-controlled. Default on. */
   qrEnabled?: boolean;
+  /** Aggregated customer rating, maintained server-side by /api/reviews. */
+  ratingCount?: number;
+  ratingSum?: number;
+  ratingAvg?: number;
   /** Supervisor kill-switch (e.g. unpaid). Overrides trial/subscription access. */
   blocked?: boolean;
   blockedReason?: string;
@@ -394,6 +398,16 @@ export type ClientAccount = {
   billing?: ClientBilling;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+};
+
+/** A customer rating/review left from the public menu (1–5 stars + optional note). */
+export type Review = {
+  id: string;
+  rating: number;
+  comment?: string;
+  name?: string;
+  at?: string;
+  createdAt?: Timestamp;
 };
 
 export type AppData = {

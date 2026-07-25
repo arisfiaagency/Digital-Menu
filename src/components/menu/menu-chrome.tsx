@@ -9,6 +9,9 @@ export type MenuChrome = {
   backdrop: boolean; // roaming background symbols + glow behind the menu
   mascot: boolean; // the animated mascot (koi, comet, paper plane, …)
   speed: number; // mascot speed multiplier (1 = normal, >1 faster)
+  slug?: string; // cafe slug, used to submit ratings from the public menu
+  ratingAvg?: number; // aggregated average rating (0 when none yet)
+  ratingCount?: number; // number of ratings received
 };
 
 export const MENU_CHROME_DEFAULT: MenuChrome = { backdrop: true, mascot: true, speed: 1 };

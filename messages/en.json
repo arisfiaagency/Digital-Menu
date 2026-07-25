@@ -1,6 +1,15 @@
 {
   "menu": {
     "title": "Menu",
+    "rateUs": "Rate us",
+    "rateTitle": "Rate your experience",
+    "ratingComment": "Add a comment (optional)",
+    "ratingName": "Your name (optional)",
+    "ratingSubmit": "Submit rating",
+    "ratingSending": "Sending…",
+    "ratingThanks": "Thanks for your feedback!",
+    "ratingError": "Couldn't send. Please try again.",
+    "ratingsWord": "ratings",
     "search": "Search menu",
     "categories": "Categories",
     "all": "All",

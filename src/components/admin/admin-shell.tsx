@@ -17,6 +17,7 @@ import {
   MenuSquare,
   QrCode,
   ReceiptText,
+  Star,
   Settings,
   SlidersHorizontal,
   Table2,
@@ -84,6 +85,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const settingsHref = `${adminBasePath}/settings`;
   const auditHref = `${adminBasePath}/audit`;
   const qrHref = `${adminBasePath}/qr-code`;
+  const reviewsHref = `${adminBasePath}/reviews`;
   const navItems = nav.map((entry) => ({ ...entry, href: `${adminBasePath}${entry.path}` }));
   const isLogin = pathname === loginPath;
 
@@ -203,6 +205,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           auditHref={auditHref}
           qrHref={qrHref}
           qrEnabled={qrEnabled}
+          reviewsHref={reviewsHref}
           homeHref={adminBasePath}
           onLogout={handleLogout}
         />
@@ -247,6 +250,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           auditHref={auditHref}
           qrHref={qrHref}
           qrEnabled={qrEnabled}
+          reviewsHref={reviewsHref}
           homeHref={adminBasePath}
           onNavigate={() => setMobileNavOpen(false)}
           onLogout={handleLogout}
@@ -276,6 +280,7 @@ function AdminNavigation({
   auditHref,
   qrHref,
   qrEnabled,
+  reviewsHref,
   homeHref,
   onNavigate,
   onLogout
@@ -293,12 +298,15 @@ function AdminNavigation({
   auditHref: string;
   qrHref: string;
   qrEnabled: boolean;
+  reviewsHref: string;
   homeHref: string;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
   const items = [
     ...navItems,
+    // Customer ratings/reviews from the public menu.
+    { href: reviewsHref, labelKey: "reviews", icon: Star },
     // The public menu QR — a printable link to /{slug}. The platform admin can
     // hide it per cafe from the supervisor Clients tab.
     ...(qrEnabled ? [{ href: qrHref, labelKey: "qrCode", icon: QrCode }] : []),

@@ -43,6 +43,9 @@ export default async function ClientMenuPage({ params }: { params: Promise<{ cli
         backdrop={client.menuBackdrop !== false}
         mascot={client.menuMascot !== false}
         speed={client.menuMascotSpeed ?? 1}
+        slug={client.slug}
+        ratingAvg={client.ratingAvg}
+        ratingCount={client.ratingCount}
       />
     </>
   );
