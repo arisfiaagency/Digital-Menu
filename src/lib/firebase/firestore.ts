@@ -99,7 +99,9 @@ function tenantDoc(db: Firestore, collectionName: string, id: string) {
 export async function listClients(): Promise<ClientAccount[]> {
   const db = getFirebaseDb();
   if (!db) return [];
-  const snap = await getDocs(query(collection(db, "clients").withConverter(clientConverter), orderBy("name"), limit(500)));
+  // No server-side orderBy — supervisor UI sorts by created date / name.
+  // Avoids dropping older docs that lack `createdAt` under an orderBy query.
+  const snap = await getDocs(query(collection(db, "clients").withConverter(clientConverter), limit(500)));
   return snap.docs.map((entry) => entry.data());
 }
 

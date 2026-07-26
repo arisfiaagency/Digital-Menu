@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowDownAZ,
+  ArrowUpAZ,
   Ban,
   CalendarClock,
   CheckCircle2,
@@ -133,6 +135,36 @@ const plans: ClientSubscriptionPlan[] = ["free", "basic", "pro", "custom"];
 const subStatuses: ClientSubscriptionStatus[] = ["trialing", "active", "past_due", "canceled", "none"];
 
 type ClientFilter = "all" | "online" | "near" | "expired" | "blocked" | "owed";
+type ClientSort = "newest" | "oldest" | "name-asc" | "name-desc";
+
+function clientCreatedAtMs(client: ClientAccount) {
+  const value = client.createdAt as unknown;
+  if (!value) return 0;
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  if (typeof value === "object" && value !== null) {
+    const maybe = value as { toMillis?: () => number; seconds?: number };
+    if (typeof maybe.toMillis === "function") return maybe.toMillis();
+    if (typeof maybe.seconds === "number") return maybe.seconds * 1000;
+  }
+  return 0;
+}
+
+function compareClients(a: ClientAccount, b: ClientAccount, sort: ClientSort) {
+  switch (sort) {
+    case "oldest":
+      return clientCreatedAtMs(a) - clientCreatedAtMs(b) || a.name.localeCompare(b.name);
+    case "name-asc":
+      return a.name.localeCompare(b.name) || a.slug.localeCompare(b.slug);
+    case "name-desc":
+      return b.name.localeCompare(a.name) || b.slug.localeCompare(a.slug);
+    case "newest":
+    default:
+      return clientCreatedAtMs(b) - clientCreatedAtMs(a) || a.name.localeCompare(b.name);
+  }
+}
 
 function defaultTrial(days = 14): ClientTrial {
   const start = new Date();
@@ -206,6 +238,7 @@ export function ClientsPanel({
   const [showCreate, setShowCreate] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ClientFilter>("all");
+  const [sort, setSort] = useState<ClientSort>("newest");
   const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
 
   const [name, setName] = useState("");
@@ -262,19 +295,8 @@ export function ClientsPanel({
             return true;
         }
       })
-      .sort((a, b) => {
-        const rank = (client: ClientAccount) => {
-          if (client.blocked) return 0;
-          const expiry = getAccessExpiryState(client);
-          if (expiry === "expired") return 1;
-          if (expiry === "near_expiry") return 2;
-          return 3;
-        };
-        const diff = rank(a) - rank(b);
-        if (diff !== 0) return diff;
-        return a.name.localeCompare(b.name);
-      });
-  }, [clients, query, filter]);
+      .sort((a, b) => compareClients(a, b, sort));
+  }, [clients, query, filter, sort]);
 
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -453,8 +475,8 @@ export function ClientsPanel({
 
       <Card>
         <CardContent className="space-y-4 pt-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative max-w-md flex-1">
+          <div className="flex flex-col gap-3">
+            <div className="relative max-w-md">
               <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input
                 className="ps-9"
@@ -463,21 +485,46 @@ export function ClientsPanel({
                 placeholder="Search by name, slug, or email…"
               />
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {filterChips.map((chip) => (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => setFilter(chip.id)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                    filter === chip.id ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted/60",
-                    filter !== chip.id && chip.tone
-                  )}
-                >
-                  {chip.label} ({chip.count})
-                </button>
-              ))}
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter cafes">
+                {filterChips.map((chip) => (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => setFilter(chip.id)}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      filter === chip.id ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted/60",
+                      filter !== chip.id && chip.tone
+                    )}
+                  >
+                    {chip.label} ({chip.count})
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Sort cafes">
+                {(
+                  [
+                    ["newest", "Newest", CalendarClock],
+                    ["oldest", "Oldest", CalendarClock],
+                    ["name-asc", "A → Z", ArrowDownAZ],
+                    ["name-desc", "Z → A", ArrowUpAZ]
+                  ] as const
+                ).map(([id, label, Icon]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSort(id)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      sort === id ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted/60"
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" aria-hidden />
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
