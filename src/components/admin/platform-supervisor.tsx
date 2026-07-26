@@ -95,6 +95,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         defaultLanguage: input.defaultLanguage,
         menuDesign: input.menuDesign,
         menuAccent: input.menuAccent,
+        demoMenuEnabled: true,
         blocked: false,
         subscription,
         trial,
@@ -184,7 +185,16 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
 
   async function changeDesign(
     client: ClientAccount,
-    next: { menuDesign: MenuDesign; menuAccent: string; menuBackdrop: boolean; menuMascot: boolean; menuMascotSpeed: number; qrEnabled: boolean; ratingEnabled: boolean }
+    next: {
+      menuDesign: MenuDesign;
+      menuAccent: string;
+      menuBackdrop: boolean;
+      menuMascot: boolean;
+      menuMascotSpeed: number;
+      qrEnabled: boolean;
+      ratingEnabled: boolean;
+      demoMenuEnabled: boolean;
+    }
   ) {
     setUpdatingSlug(client.slug);
     setMessage("");
@@ -197,7 +207,8 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         menuMascot: next.menuMascot,
         menuMascotSpeed: next.menuMascotSpeed,
         qrEnabled: next.qrEnabled,
-        ratingEnabled: next.ratingEnabled
+        ratingEnabled: next.ratingEnabled,
+        demoMenuEnabled: next.demoMenuEnabled
       });
       setMessage(`Updated menu design for /${client.slug}.`);
       await refresh();

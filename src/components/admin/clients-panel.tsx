@@ -86,6 +86,7 @@ type DesignChoice = {
   menuMascotSpeed: number;
   qrEnabled: boolean;
   ratingEnabled: boolean;
+  demoMenuEnabled: boolean;
 };
 
 // A small on/off switch used by the Menu Design decoration toggles.
@@ -594,6 +595,7 @@ function ClientCard({
   const [designSpeed, setDesignSpeed] = useState(client.menuMascotSpeed ?? 1);
   const [designQrEnabled, setDesignQrEnabled] = useState(client.qrEnabled !== false);
   const [designRatingEnabled, setDesignRatingEnabled] = useState(client.ratingEnabled !== false);
+  const [designDemoMenuEnabled, setDesignDemoMenuEnabled] = useState(client.demoMenuEnabled !== false);
   const [origin, setOrigin] = useState("");
 
   useEffect(() => {
@@ -621,6 +623,7 @@ function ClientCard({
     setDesignSpeed(client.menuMascotSpeed ?? 1);
     setDesignQrEnabled(client.qrEnabled !== false);
     setDesignRatingEnabled(client.ratingEnabled !== false);
+    setDesignDemoMenuEnabled(client.demoMenuEnabled !== false);
   }, [client]);
 
   const previewExpiry = useMemo(
@@ -842,12 +845,18 @@ function ClientCard({
               </div>
             </div>
 
-            <div className="mt-3 rounded-xl border bg-muted/20 p-3">
+            <div className="mt-3 space-y-3 rounded-xl border bg-muted/20 p-3">
               <DesignSwitch
                 label="Customer rating on menu"
                 desc="Show the “Rate us” star button on the public menu."
                 checked={designRatingEnabled}
                 onChange={setDesignRatingEnabled}
+              />
+              <DesignSwitch
+                label="Demo menu items"
+                desc="When this cafe has no real items yet, show ~20 sample items and 4 categories on the public menu (not saved to the database)."
+                checked={designDemoMenuEnabled}
+                onChange={setDesignDemoMenuEnabled}
               />
             </div>
 
@@ -862,7 +871,8 @@ function ClientCard({
                     designBackdrop === (client.menuBackdrop !== false) &&
                     designMascot === (client.menuMascot !== false) &&
                     designSpeed === (client.menuMascotSpeed ?? 1) &&
-                    designRatingEnabled === (client.ratingEnabled !== false))
+                    designRatingEnabled === (client.ratingEnabled !== false) &&
+                    designDemoMenuEnabled === (client.demoMenuEnabled !== false))
                 }
                 onClick={() =>
                   onSaveDesign({
@@ -872,7 +882,8 @@ function ClientCard({
                     menuMascot: designMascot,
                     menuMascotSpeed: designSpeed,
                     qrEnabled: designQrEnabled,
-                    ratingEnabled: designRatingEnabled
+                    ratingEnabled: designRatingEnabled,
+                    demoMenuEnabled: designDemoMenuEnabled
                   })
                 }
               >
@@ -930,7 +941,8 @@ function ClientCard({
                     menuMascot: designMascot,
                     menuMascotSpeed: designSpeed,
                     qrEnabled: designQrEnabled,
-                    ratingEnabled: designRatingEnabled
+                    ratingEnabled: designRatingEnabled,
+                    demoMenuEnabled: designDemoMenuEnabled
                   })
                 }
               >

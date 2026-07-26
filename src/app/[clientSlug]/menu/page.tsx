@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MenuApp } from "@/components/menu/menu-app";
+import { withDemoMenuCatalog } from "@/data/demo-menu";
 import { getPublicAppDataRest, getPublicClientRest } from "@/lib/firebase/rest";
 import { localized } from "@/lib/i18n/config";
 
@@ -32,7 +33,7 @@ export default async function ClientMenuPage({ params }: { params: Promise<{ cli
   const { clientSlug } = await params;
   const client = await getPublicClientRest(clientSlug);
   if (!client) notFound();
-  const data = await getPublicAppDataRest(client.slug);
+  const data = withDemoMenuCatalog(await getPublicAppDataRest(client.slug), client);
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: THEME_PREPAINT }} />

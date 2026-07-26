@@ -387,6 +387,12 @@ export type ClientAccount = {
   qrEnabled?: boolean;
   /** Show the "Rate us" button on the public menu. Platform-controlled. Default on. */
   ratingEnabled?: boolean;
+  /**
+   * When on (default) and the cafe has no real menu items yet, the public menu
+   * shows an in-memory sample catalog (~4 categories / ~20 items) so the locked
+   * design can be previewed. Never written to Firestore as menu data.
+   */
+  demoMenuEnabled?: boolean;
   /** Aggregated customer rating, maintained server-side by /api/reviews. */
   ratingCount?: number;
   ratingSum?: number;
