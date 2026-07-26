@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 400 400" role="img" aria-label="Espresso">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2C1810"/>
+      <stop offset="100%" stop-color="#5C3A21"/>
+    </linearGradient>
+    <radialGradient id="v" cx="30%" cy="25%" r="70%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#g)"/>
+  <rect width="400" height="400" fill="url(#v)"/>
+  
+        <ellipse cx="200" cy="250" rx="70" ry="18" fill="#F5E6D3" opacity="0.25"/>
+        <path d="M140 120 h100 a12 12 0 0 1 12 12 v90 a50 50 0 0 1-50 50 h-24 a50 50 0 0 1-50-50 v-90 a12 12 0 0 1 12-12z" fill="#F5E6D3" opacity="0.92"/>
+        <path d="M252 145 h22 a28 28 0 0 1 0 56 h-22" fill="none" stroke="#F5E6D3" stroke-width="10" opacity="0.85"/>
+        <ellipse cx="200" cy="128" rx="48" ry="10" fill="#1a120b" opacity="0.55"/>
+        <path d="M175 95 c5-18 20-18 25 0 M195 90 c5-16 18-16 22 2 M215 96 c4-14 14-12 18 4" fill="none" stroke="#F5E6D3" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+  <rect x="24" y="320" width="352" height="52" rx="16" fill="#000000" opacity="0.28"/>
+  <text x="200" y="354" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="600" fill="#ffffff">Espresso</text>
+</svg>

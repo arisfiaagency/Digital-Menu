@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 400 400" role="img" aria-label="Croissant">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF8F00"/>
+      <stop offset="100%" stop-color="#FFE082"/>
+    </linearGradient>
+    <radialGradient id="v" cx="30%" cy="25%" r="70%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#g)"/>
+  <rect width="400" height="400" fill="url(#v)"/>
+  
+        <ellipse cx="200" cy="250" rx="90" ry="20" fill="#5D4037" opacity="0.18"/>
+        <path d="M110 190 C140 110, 260 110, 290 190 C250 170, 150 170, 110 190 Z" fill="#5D4037" opacity="0.9"/>
+        <path d="M130 185 C160 140, 240 140, 270 185" fill="none" stroke="#fff" stroke-width="6" opacity="0.35"/>
+        <path d="M150 182 C175 155, 225 155, 250 182" fill="none" stroke="#fff" stroke-width="4" opacity="0.25"/>
+  <rect x="24" y="320" width="352" height="52" rx="16" fill="#000000" opacity="0.28"/>
+  <text x="200" y="354" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="600" fill="#ffffff">Croissant</text>
+</svg>

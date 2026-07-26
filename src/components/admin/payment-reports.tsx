@@ -1,15 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, RefreshCw } from "lucide-react";
+import { Banknote, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatExpiryDate, formatMoney, getAccessExpiryState } from "@/lib/client-access";
-import { listClients, listPlatformPayments } from "@/lib/firebase/firestore";
+import {
+  deleteAllPlatformPayments,
+  deletePlatformPayments,
+  listClients,
+  listPlatformPayments
+} from "@/lib/firebase/firestore";
+import { cn } from "@/lib/utils/cn";
 import type { ClientAccount, Currency, PlatformPayment } from "@/types/models";
+
+const DELETE_CONFIRM_WORD = "delete";
 
 function monthKey(iso?: string) {
   if (!iso) return "";
@@ -31,13 +41,20 @@ function formatWhen(iso?: string) {
   });
 }
 
+type DeleteMode = "selected" | "all" | null;
+
 export function PaymentReports() {
   const [payments, setPayments] = useState<PlatformPayment[]>([]);
   const [clients, setClients] = useState<ClientAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [clientFilter, setClientFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteMode, setDeleteMode] = useState<DeleteMode>(null);
+  const [confirmText, setConfirmText] = useState("");
 
   async function refresh() {
     setLoading(true);
@@ -46,6 +63,13 @@ export function PaymentReports() {
       const [paymentRows, clientRows] = await Promise.all([listPlatformPayments(), listClients()]);
       setPayments(paymentRows);
       setClients(clientRows);
+      setSelectedIds((prev) => {
+        const next = new Set<string>();
+        for (const id of prev) {
+          if (paymentRows.some((row) => row.id === id)) next.add(id);
+        }
+        return next;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load payment reports.");
     } finally {
@@ -73,6 +97,10 @@ export function PaymentReports() {
       return true;
     });
   }, [payments, clientFilter, monthFilter]);
+
+  const filteredIds = useMemo(() => filtered.map((payment) => payment.id), [filtered]);
+  const selectedInView = filteredIds.filter((id) => selectedIds.has(id));
+  const allFilteredSelected = filteredIds.length > 0 && selectedInView.length === filteredIds.length;
 
   const totalsByCurrency = useMemo(() => {
     const map = new Map<Currency, number>();
@@ -114,6 +142,81 @@ export function PaymentReports() {
     [clients]
   );
 
+  function toggleOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllFiltered() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        for (const id of filteredIds) next.delete(id);
+      } else {
+        for (const id of filteredIds) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function openDelete(mode: Exclude<DeleteMode, null>) {
+    if (mode === "selected" && selectedInView.length === 0) {
+      setError("Select at least one payment first.");
+      return;
+    }
+    if (mode === "all" && payments.length === 0) {
+      setError("There is no payment history to delete.");
+      return;
+    }
+    setError("");
+    setMessage("");
+    setConfirmText("");
+    setDeleteMode(mode);
+  }
+
+  function closeDelete() {
+    if (deleting) return;
+    setDeleteMode(null);
+    setConfirmText("");
+  }
+
+  async function confirmDelete() {
+    if (confirmText.trim().toLowerCase() !== DELETE_CONFIRM_WORD || !deleteMode) return;
+    setDeleting(true);
+    setError("");
+    setMessage("");
+    try {
+      if (deleteMode === "all") {
+        const result = await deleteAllPlatformPayments();
+        setMessage(`Deleted ${result.deleted} payment${result.deleted === 1 ? "" : "s"} from history.`);
+        setSelectedIds(new Set());
+      } else {
+        const ids = selectedInView;
+        const result = await deletePlatformPayments(ids);
+        setMessage(`Deleted ${result.deleted} selected payment${result.deleted === 1 ? "" : "s"}.`);
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          for (const id of ids) next.delete(id);
+          return next;
+        });
+      }
+      setDeleteMode(null);
+      setConfirmText("");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete payments.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const confirmReady = confirmText.trim().toLowerCase() === DELETE_CONFIRM_WORD;
+  const deleteCount = deleteMode === "all" ? payments.length : selectedInView.length;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -121,12 +224,13 @@ export function PaymentReports() {
           <h2 className="text-2xl font-semibold">Payment reports</h2>
           <p className="text-sm text-muted-foreground">Ledger of cafe subscription payments and upcoming expiries.</p>
         </div>
-        <Button type="button" variant="outline" onClick={() => void refresh()} disabled={loading}>
+        <Button type="button" variant="outline" onClick={() => void refresh()} disabled={loading || deleting}>
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
           Refresh
         </Button>
       </div>
 
+      {message ? <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm text-primary">{message}</p> : null}
       {error ? <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p> : null}
 
       {(nearExpiryClients.length > 0 || expiredClients.length > 0) && (
@@ -219,10 +323,34 @@ export function PaymentReports() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-primary" aria-hidden />
-            Payment history
-          </CardTitle>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-primary" aria-hidden />
+              Payment history
+            </CardTitle>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={loading || deleting || selectedInView.length === 0}
+                onClick={() => openDelete("selected")}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+                Delete selected{selectedInView.length ? ` (${selectedInView.length})` : ""}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={loading || deleting || payments.length === 0}
+                onClick={() => openDelete("all")}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+                Delete all
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -256,9 +384,18 @@ export function PaymentReports() {
             </div>
           ) : filtered.length ? (
             <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full min-w-[720px] text-start text-sm">
+              <table className="w-full min-w-[760px] text-start text-sm">
                 <thead className="border-b bg-muted/40 text-muted-foreground">
                   <tr>
+                    <th className="w-10 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleAllFiltered}
+                        aria-label="Select all payments in view"
+                        className="h-4 w-4 accent-primary"
+                      />
+                    </th>
                     <th className="px-3 py-2 font-medium">Date</th>
                     <th className="px-3 py-2 font-medium">Cafe</th>
                     <th className="px-3 py-2 font-medium">Amount</th>
@@ -269,22 +406,37 @@ export function PaymentReports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((payment) => (
-                    <tr key={payment.id} className="border-b last:border-0">
-                      <td className="px-3 py-2 whitespace-nowrap">{formatWhen(payment.createdAt)}</td>
-                      <td className="px-3 py-2">
-                        <p className="font-medium">{payment.clientName}</p>
-                        <p className="text-xs text-muted-foreground">/{payment.clientSlug}</p>
-                      </td>
-                      <td className="px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-400">
-                        {formatMoney(payment.amount, payment.currency)}
-                      </td>
-                      <td className="px-3 py-2">{payment.monthsAdded ? `+${payment.monthsAdded}` : "—"}</td>
-                      <td className="px-3 py-2">{formatExpiryDate(payment.expiresAtAfter)}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{payment.note || "—"}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{payment.recordedByEmail || "—"}</td>
-                    </tr>
-                  ))}
+                  {filtered.map((payment) => {
+                    const checked = selectedIds.has(payment.id);
+                    return (
+                      <tr
+                        key={payment.id}
+                        className={cn("border-b last:border-0", checked && "bg-primary/5")}
+                      >
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleOne(payment.id)}
+                            aria-label={`Select payment for ${payment.clientName}`}
+                            className="h-4 w-4 accent-primary"
+                          />
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{formatWhen(payment.createdAt)}</td>
+                        <td className="px-3 py-2">
+                          <p className="font-medium">{payment.clientName}</p>
+                          <p className="text-xs text-muted-foreground">/{payment.clientSlug}</p>
+                        </td>
+                        <td className="px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-400">
+                          {formatMoney(payment.amount, payment.currency)}
+                        </td>
+                        <td className="px-3 py-2">{payment.monthsAdded ? `+${payment.monthsAdded}` : "—"}</td>
+                        <td className="px-3 py-2">{formatExpiryDate(payment.expiresAtAfter)}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{payment.note || "—"}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{payment.recordedByEmail || "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -295,6 +447,57 @@ export function PaymentReports() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(deleteMode)}
+        variant="destructive"
+        loading={deleting}
+        confirmDisabled={!confirmReady || deleting}
+        title={deleteMode === "all" ? "Delete all payment history?" : "Delete selected payments?"}
+        description={
+          deleteMode ? (
+            <div className="space-y-3">
+              <p>
+                {deleteMode === "all" ? (
+                  <>
+                    This permanently removes <span className="font-semibold text-foreground">all {deleteCount}</span>{" "}
+                    payment history records.
+                  </>
+                ) : (
+                  <>
+                    This permanently removes{" "}
+                    <span className="font-semibold text-foreground">{deleteCount}</span> selected payment
+                    {deleteCount === 1 ? "" : "s"}.
+                  </>
+                )}{" "}
+                Cafe billing balances and subscription expiry dates are <span className="font-semibold text-foreground">not</span>{" "}
+                changed. This cannot be undone.
+              </p>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-foreground">
+                  Type <span className="font-mono font-semibold">{DELETE_CONFIRM_WORD}</span> to confirm
+                </span>
+                <Input
+                  autoFocus
+                  dir="ltr"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={confirmText}
+                  onChange={(event) => setConfirmText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && confirmReady) void confirmDelete();
+                  }}
+                  placeholder={DELETE_CONFIRM_WORD}
+                />
+              </label>
+            </div>
+          ) : null
+        }
+        confirmLabel={deleting ? "Deleting…" : deleteMode === "all" ? "Delete all history" : "Delete selected"}
+        cancelLabel="Cancel"
+        onConfirm={() => void confirmDelete()}
+        onCancel={closeDelete}
+      />
     </div>
   );
 }

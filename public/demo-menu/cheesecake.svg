@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 400 400" role="img" aria-label="Cheesecake">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F8BBD0"/>
+      <stop offset="100%" stop-color="#FCE4EC"/>
+    </linearGradient>
+    <radialGradient id="v" cx="30%" cy="25%" r="70%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#g)"/>
+  <rect width="400" height="400" fill="url(#v)"/>
+  
+        <ellipse cx="200" cy="250" rx="90" ry="22" fill="#5D4037" opacity="0.2"/>
+        <path d="M120 180 h160 v50 a20 20 0 0 1-20 20 H140 a20 20 0 0 1-20-20z" fill="#5D4037" opacity="0.35"/>
+        <path d="M130 140 h140 l10 40 H120z" fill="#5D4037" opacity="0.85"/>
+        <path d="M130 140 q20 20 35 0 t35 0 t35 0 t35 0" fill="#fff" opacity="0.55"/>
+        <circle cx="200" cy="125" r="10" fill="#e53935" opacity="0.8"/>
+  <rect x="24" y="320" width="352" height="52" rx="16" fill="#000000" opacity="0.28"/>
+  <text x="200" y="354" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="600" fill="#ffffff">Cheesecake</text>
+</svg>

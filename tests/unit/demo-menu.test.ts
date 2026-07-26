@@ -38,4 +38,13 @@ describe("withDemoMenuCatalog", () => {
     expect(next.menuItems).toHaveLength(demoMenuItems.length);
     expect(next.categories).toHaveLength(demoCategories.length);
   });
+
+  it("gives each sample item a static public image (not R2 / not Firestore)", () => {
+    for (const entry of demoMenuItems) {
+      expect(entry.imageUrl).toMatch(/^\/demo-menu\/.+\.svg$/);
+      expect(entry.imagePath).toBeUndefined();
+    }
+    const urls = new Set(demoMenuItems.map((entry) => entry.imageUrl));
+    expect(urls.size).toBe(demoMenuItems.length);
+  });
 });

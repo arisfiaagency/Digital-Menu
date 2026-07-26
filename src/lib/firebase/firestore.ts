@@ -770,6 +770,31 @@ export async function listPlatformPayments(max = 500): Promise<PlatformPayment[]
   return snap.docs.map((entry) => entry.data());
 }
 
+/** Delete payment ledger rows by id. Does not change cafe billing/subscription. */
+export async function deletePlatformPayments(ids: string[]) {
+  const db = getFirebaseDb();
+  if (!db) throw new Error("Firestore is not configured.");
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (!unique.length) throw new Error("No payments selected.");
+
+  // Firestore batches are capped at 500 operations.
+  const pageSize = 400;
+  for (let i = 0; i < unique.length; i += pageSize) {
+    const chunk = unique.slice(i, i + pageSize);
+    const batch = writeBatch(db);
+    for (const id of chunk) batch.delete(doc(db, "platformPayments", id));
+    await batch.commit();
+  }
+  return { deleted: unique.length };
+}
+
+/** Delete every document in `platformPayments`. Does not change cafe billing/subscription. */
+export async function deleteAllPlatformPayments() {
+  const rows = await listPlatformPayments(2000);
+  if (!rows.length) return { deleted: 0 };
+  return deletePlatformPayments(rows.map((row) => row.id));
+}
+
 export async function getPosState(): Promise<PosState> {
   const db = getFirebaseDb();
   if (!db) return defaultPosState;

@@ -2,11 +2,13 @@ import type { AppData, Category, ClientAccount, Currency, MenuItem } from "@/typ
 
 /**
  * Display-only sample catalog for empty public menus.
- * Never written to Firestore — used only when `demoMenuEnabled` is on and the
- * cafe has no real menu items yet, so the locked design can be previewed.
+ * Never written to Firestore or Cloudflare R2 — used only when `demoMenuEnabled`
+ * is on and the cafe has no real menu items yet, so the locked design can be
+ * previewed. Images are static files under /public/demo-menu/.
  */
 
 const DEMO_PREFIX = "demo-";
+const DEMO_IMAGE_BASE = "/demo-menu";
 
 export function isDemoMenuId(id: string) {
   return id.startsWith(DEMO_PREFIX);
@@ -117,6 +119,8 @@ function item(
       ar: tags.join(", "),
       ckb: tags.join(", ")
     },
+    // Bundled static asset — never uploaded to R2 / never stored in Firestore.
+    imageUrl: `${DEMO_IMAGE_BASE}/${id}.svg`,
     basePrice: price,
     currency: "IQD",
     dietaryLabels: tags.filter((tag) => ["vegetarian", "vegan", "gluten-free", "sugar-free"].includes(tag)),
