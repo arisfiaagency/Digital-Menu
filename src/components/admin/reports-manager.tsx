@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BadgePercent, BarChart3, FileText, ListOrdered, Pencil, Printer, Receipt, Scale, ShoppingBag, Trash2, TrendingDown, TrendingUp, X } from "lucide-react";
+import Link from "next/link";
+import { BadgePercent, BarChart3, Clock3, FileText, ListOrdered, Pencil, Printer, Receipt, Scale, ShoppingBag, Trash2, TrendingDown, TrendingUp, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { adminErrorText, useAdminLocale } from "@/components/admin/admin-preferences";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
+import { useTenant } from "@/components/tenant-provider";
 import { deleteCompletedOrder, getAdminAppData, getPosState, listExpenses, updateCompletedOrder } from "@/lib/firebase/firestore";
 import { localized } from "@/lib/i18n/config";
 import { formatMoney, roundCashTotal } from "@/lib/utils/format";
@@ -21,6 +23,7 @@ type Mode = "daily" | "monthly" | "all";
 export function ReportsManager() {
   const { locale, text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
+  const { adminBasePath } = useTenant();
   const canManageOrders = !auth.loading && auth.role === "admin";
   const [orders, setOrders] = useState<PosCompletedOrder[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -208,6 +211,12 @@ export function ReportsManager() {
           <p dir={textDir} className="text-muted-foreground">{text.reportsDesc}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href={`${adminBasePath}/reports/shifts`}>
+              <Clock3 className="h-4 w-4" aria-hidden />
+              {text.shiftReports}
+            </Link>
+          </Button>
           <div className="flex gap-1.5">
             {modes.map((entry) => (
               <button
