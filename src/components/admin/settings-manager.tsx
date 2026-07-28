@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Building2, CheckCircle2, Eye, EyeOff, KeyRound, Save, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Building2, CheckCircle2, Eye, EyeOff, KeyRound, Plus, Printer, Save, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { changeAdminPassword } from "@/lib/firebase/auth";
 import { getAdminAppData, saveSettings } from "@/lib/firebase/firestore";
@@ -15,6 +15,13 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUploadField } from "@/components/forms/image-upload-field";
 import { useAdminLocale } from "@/components/admin/admin-preferences";
+import { useTenant } from "@/components/tenant-provider";
+import {
+  emptyPosPrinterConfig,
+  loadPosPrinterConfig,
+  savePosPrinterConfig,
+  type PosPrinterConfig
+} from "@/lib/pos-printers";
 import { cn } from "@/lib/utils/cn";
 import type { GeneralSettings, MenuSettings } from "@/types/models";
 import { defaultGeneralSettings, defaultMenuSettings } from "@/data/default-data";
@@ -23,6 +30,7 @@ type SettingsSection = "general" | "menu" | "account";
 
 export function SettingsManager() {
   const { text } = useAdminLocale();
+  const { clientSlug } = useTenant();
   const [general, setGeneral] = useState<GeneralSettings>(defaultGeneralSettings);
   const [menu, setMenu] = useState<MenuSettings>(defaultMenuSettings);
   const [activeSection, setActiveSection] = useState<SettingsSection | null>(null);
@@ -33,6 +41,9 @@ export function SettingsManager() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [printerConfig, setPrinterConfig] = useState<PosPrinterConfig>(emptyPosPrinterConfig);
+  const [printerDraft, setPrinterDraft] = useState("");
+  const [printerMessage, setPrinterMessage] = useState("");
 
   useEffect(() => {
     getAdminAppData().then((data) => {
@@ -41,6 +52,37 @@ export function SettingsManager() {
       setSavedSignature(settingsSignature(data.general, data.menu));
     });
   }, []);
+
+  useEffect(() => {
+    setPrinterConfig(loadPosPrinterConfig(clientSlug));
+  }, [clientSlug]);
+
+  function updatePrinterConfig(next: PosPrinterConfig) {
+    const saved = savePosPrinterConfig(clientSlug, next) || next;
+    setPrinterConfig(saved);
+    setPrinterMessage(text.posPrintersSaved);
+  }
+
+  function addPrinterName() {
+    const name = printerDraft.trim();
+    if (!name) return;
+    if (printerConfig.printers.some((entry) => entry.toLowerCase() === name.toLowerCase())) {
+      setPrinterDraft("");
+      return;
+    }
+    updatePrinterConfig({ ...printerConfig, printers: [...printerConfig.printers, name] });
+    setPrinterDraft("");
+  }
+
+  function removePrinterName(name: string) {
+    updatePrinterConfig({
+      ...printerConfig,
+      printers: printerConfig.printers.filter((entry) => entry !== name),
+      invoice: printerConfig.invoice === name ? "" : printerConfig.invoice,
+      kitchen: printerConfig.kitchen === name ? "" : printerConfig.kitchen,
+      bar: printerConfig.bar === name ? "" : printerConfig.bar
+    });
+  }
 
   useEffect(() => {
     function syncSectionFromHash() {
@@ -268,6 +310,109 @@ export function SettingsManager() {
                 </Field>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{text.hoursHint}</p>
+            </SettingsFormSection>
+            <SettingsFormSection title={text.posPrinters}>
+              <p className="text-xs text-muted-foreground">{text.posPrintersHint}</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={printerDraft}
+                  placeholder={text.posPrinterNamePlaceholder}
+                  onChange={(event) => setPrinterDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addPrinterName();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={addPrinterName} disabled={!printerDraft.trim()}>
+                  <Plus className="h-4 w-4" aria-hidden />
+                  {text.addPrinter}
+                </Button>
+              </div>
+              {printerConfig.printers.length ? (
+                <ul className="space-y-2">
+                  {printerConfig.printers.map((name) => (
+                    <li
+                      key={name}
+                      className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2 text-sm"
+                    >
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        <Printer className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="truncate font-medium">{name}</span>
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={text.remove}
+                        title={text.remove}
+                        onClick={() => removePrinterName(name)}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">{text.noPrintersYet}</p>
+              )}
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <Field label={text.thermalPaperWidth}>
+                  <Select
+                    value={String(printerConfig.paperWidth)}
+                    onChange={(event) =>
+                      updatePrinterConfig({
+                        ...printerConfig,
+                        paperWidth: event.target.value === "58" ? 58 : 80
+                      })
+                    }
+                  >
+                    <option value="80">{text.thermalPaper80}</option>
+                    <option value="58">{text.thermalPaper58}</option>
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">{text.thermalPaperHint}</p>
+                </Field>
+                <Field label={text.invoicePrinter}>
+                  <Select
+                    value={printerConfig.invoice}
+                    onChange={(event) => updatePrinterConfig({ ...printerConfig, invoice: event.target.value })}
+                  >
+                    <option value="">{text.usePrintDialog}</option>
+                    {printerConfig.printers.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={text.kitchenPrinter}>
+                  <Select
+                    value={printerConfig.kitchen}
+                    onChange={(event) => updatePrinterConfig({ ...printerConfig, kitchen: event.target.value })}
+                  >
+                    <option value="">{text.usePrintDialog}</option>
+                    {printerConfig.printers.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={text.barPrinter}>
+                  <Select
+                    value={printerConfig.bar}
+                    onChange={(event) => updatePrinterConfig({ ...printerConfig, bar: event.target.value })}
+                  >
+                    <option value="">{text.usePrintDialog}</option>
+                    {printerConfig.printers.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+              {printerMessage ? (
+                <p className="inline-flex items-center gap-2 text-sm text-primary">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden />
+                  {printerMessage}
+                </p>
+              ) : null}
             </SettingsFormSection>
             <div>
               <Button onClick={saveAll} disabled={saving || !hasUnsavedChanges}>{saving ? text.saving : text.saveSettings}</Button>

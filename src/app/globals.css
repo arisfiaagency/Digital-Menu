@@ -834,6 +834,37 @@ textarea {
     width: 58mm !important;
   }
 
+  /* Kitchen / bar prep tickets — same thermal roll size; staff pick that station's printer. */
+  body.pos-printing-kitchen *,
+  body.pos-printing-bar * {
+    visibility: hidden !important;
+  }
+
+  body.pos-printing-kitchen .pos-print-area-kitchen,
+  body.pos-printing-kitchen .pos-print-area-kitchen *,
+  body.pos-printing-bar .pos-print-area-bar,
+  body.pos-printing-bar .pos-print-area-bar * {
+    visibility: visible !important;
+  }
+
+  body.pos-printing-kitchen .pos-print-area-kitchen,
+  body.pos-printing-bar .pos-print-area-bar {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
+    opacity: 1 !important;
+    z-index: 1 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    font-family: "Courier New", Courier, monospace !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+  }
+
   /* Daily-close / shift summary — prints alone on the same thermal roll. */
   body.report-printing * {
     visibility: hidden !important;

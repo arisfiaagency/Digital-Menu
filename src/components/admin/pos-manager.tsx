@@ -31,6 +31,8 @@ import {
   Trash2,
   Triangle,
   Umbrella,
+  UtensilsCrossed,
+  Wine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +42,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   adminErrorText,
+  formatAdminText,
   useAdminLocale,
 } from "@/components/admin/admin-preferences";
 import { BRAND_AGENCY } from "@/components/brand-credit";
@@ -51,10 +54,17 @@ import {
   savePosState,
   subscribePosLiveState,
 } from "@/lib/firebase/firestore";
+import {
+  loadPosPrinterConfig,
+  printerForRole,
+  type PosPrinterConfig,
+} from "@/lib/pos-printers";
+import { printThermalTicket } from "@/lib/thermal-print";
 import { localized } from "@/lib/i18n/config";
 import type { LocaleDirection } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils/cn";
 import { formatMoney, normalizeSearch, roundCashTotal } from "@/lib/utils/format";
+import { useTenant } from "@/components/tenant-provider";
 import type {
   AppData,
   Currency,
@@ -102,6 +112,7 @@ const ALIGN_THRESHOLD = 8;
 export function PosManager() {
   const { locale, text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
+  const { clientSlug } = useTenant();
   // Editing the table layout (add/rename/delete tables) is an admin-only setup
   // task. Employees with POS access can still take, transfer, merge and complete
   // orders — they just can't change the tables themselves. Default-deny while the
@@ -130,6 +141,9 @@ export function PosManager() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [printerConfig, setPrinterConfig] = useState<PosPrinterConfig>(() =>
+    loadPosPrinterConfig(null),
+  );
   const menuPickerRef = useRef<HTMLDivElement | null>(null);
   const pendingPickerScroll = useRef(false);
   // While a save is in flight, skip remote snapshots so optimistic UI doesn't flash back.
@@ -147,6 +161,15 @@ export function PosManager() {
         setError(err instanceof Error ? err.message : text.settingsSaveFailed),
       );
   }, [text.settingsSaveFailed]);
+
+  useEffect(() => {
+    setPrinterConfig(loadPosPrinterConfig(clientSlug));
+    function refreshPrinters() {
+      setPrinterConfig(loadPosPrinterConfig(clientSlug));
+    }
+    window.addEventListener("focus", refreshPrinters);
+    return () => window.removeEventListener("focus", refreshPrinters);
+  }, [clientSlug]);
 
   useEffect(() => {
     const unsubscribe = subscribePosLiveState(
@@ -594,12 +617,107 @@ export function PosManager() {
     });
   }
 
+  function remindAssignedPrinter(role: "invoice" | "kitchen" | "bar") {
+    const name = printerForRole(printerConfig, role);
+    if (name) {
+      setMessage(formatAdminText(text.selectAssignedPrinter, { name }));
+    }
+    return name;
+  }
+
   function printInvoice() {
-    document.body.classList.add("pos-printing");
-    const cleanup = () => document.body.classList.remove("pos-printing");
-    window.addEventListener("afterprint", cleanup, { once: true });
-    window.print();
-    window.setTimeout(cleanup, 1000);
+    if (!selectedTable || !selectedOrder?.lines.length || !totals) return;
+    const printerName = remindAssignedPrinter("invoice") || undefined;
+    const issuedAt = formatReceiptDateTime(new Date());
+    const restaurantName = localized(
+      data?.general.restaurantName,
+      locale,
+      "Cafe",
+    );
+    const receiptLocale: "en" | "ckb" = locale === "ckb" ? "ckb" : "en";
+    printThermalTicket({
+      kind: "invoice",
+      title: text.printInvoice,
+      restaurantName,
+      logoUrl:
+        typeof window !== "undefined"
+          ? `${window.location.origin}/stone-cafe-receipt-logo.png`
+          : "/stone-cafe-receipt-logo.png",
+      tableName: selectedTable.name,
+      tableLabel: text.table,
+      printerName,
+      printerLabel: text.printerLabel,
+      date: issuedAt.date,
+      time: issuedAt.time,
+      lines: selectedOrder.lines.map((line) => ({
+        quantity: line.quantity,
+        nameEn: line.name.en,
+        nameCkb: line.name.ckb,
+        variantEn: line.variantName?.en,
+        variantCkb: line.variantName?.ckb,
+        flavor: line.flavor?.trim() || undefined,
+        unitPriceLabel: formatMoney(line.unitPrice, line.currency, receiptLocale),
+        lineTotalLabel: formatMoney(
+          line.quantity * line.unitPrice,
+          line.currency,
+          receiptLocale,
+        ),
+      })),
+      totals: {
+        subtotalLabel: text.subtotal,
+        subtotal: formatMoney(totals.subtotal, totals.currency, receiptLocale),
+        ...(totals.discountAmount > 0
+          ? {
+              discountLabel: text.discount,
+              discount: `-${formatMoney(totals.discountAmount, totals.currency, receiptLocale)}`,
+            }
+          : {}),
+        ...(totals.serviceFeeAmount > 0
+          ? {
+              serviceLabel: serviceFeeLabel(locale, serviceFeePercent),
+              service: formatMoney(
+                totals.serviceFeeAmount,
+                totals.currency,
+                receiptLocale,
+              ),
+            }
+          : {}),
+        totalLabel: text.total,
+        total: formatMoney(totals.total, totals.currency, receiptLocale),
+      },
+      footerEn: "Thank You and Visit Again",
+      footerCkb: "سوپاس، جارێکی تر سەردانمان بکەنەوە",
+      brand: BRAND_AGENCY,
+      paperWidth: printerConfig.paperWidth,
+    });
+  }
+
+  function printStationTicket(station: "kitchen" | "bar") {
+    if (!selectedTable || !selectedOrder?.lines.length) return;
+    const printerName = remindAssignedPrinter(station) || undefined;
+    const issuedAt = formatReceiptDateTime(new Date());
+    printThermalTicket({
+      kind: station,
+      title: station === "kitchen" ? text.kitchenTicket : text.barTicket,
+      tableName: selectedTable.name,
+      tableLabel: text.table,
+      takenBy: selectedOrder.takenBy || currentActor || undefined,
+      takenByLabel: text.orderTakenBy,
+      printerName,
+      printerLabel: text.printerLabel,
+      date: issuedAt.date,
+      time: issuedAt.time,
+      lines: selectedOrder.lines.map((line) => ({
+        quantity: line.quantity,
+        nameEn: line.name.en,
+        nameCkb: line.name.ckb,
+        variantEn: line.variantName?.en,
+        variantCkb: line.variantName?.ckb,
+        flavor: line.flavor?.trim() || undefined,
+      })),
+      qtyLabel: text.qty,
+      paperWidth: printerConfig.paperWidth,
+    });
   }
 
   const totals = selectedOrder
@@ -1023,21 +1141,63 @@ export function PosManager() {
                   />
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
                   <Button
                     type="button"
                     onClick={() => void completeOrder()}
                     disabled={!selectedOrder.lines.length}>
                     {text.completeOrder}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={printInvoice}
-                    disabled={!selectedOrder.lines.length}>
-                    <Printer className="h-4 w-4" aria-hidden />
-                    {text.printInvoice}
-                  </Button>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-auto min-h-10 flex-col gap-0.5 py-2"
+                      onClick={printInvoice}
+                      disabled={!selectedOrder.lines.length}>
+                      <span className="inline-flex items-center gap-2">
+                        <Printer className="h-4 w-4" aria-hidden />
+                        {text.printInvoice}
+                      </span>
+                      {printerConfig.invoice ? (
+                        <span className="max-w-full truncate text-[10px] font-normal text-muted-foreground">
+                          {printerConfig.invoice}
+                        </span>
+                      ) : null}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-auto min-h-10 flex-col gap-0.5 py-2"
+                      onClick={() => printStationTicket("kitchen")}
+                      disabled={!selectedOrder.lines.length}>
+                      <span className="inline-flex items-center gap-2">
+                        <UtensilsCrossed className="h-4 w-4" aria-hidden />
+                        {text.sendToKitchen}
+                      </span>
+                      {printerConfig.kitchen ? (
+                        <span className="max-w-full truncate text-[10px] font-normal text-muted-foreground">
+                          {printerConfig.kitchen}
+                        </span>
+                      ) : null}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-auto min-h-10 flex-col gap-0.5 py-2"
+                      onClick={() => printStationTicket("bar")}
+                      disabled={!selectedOrder.lines.length}>
+                      <span className="inline-flex items-center gap-2">
+                        <Wine className="h-4 w-4" aria-hidden />
+                        {text.sendToBar}
+                      </span>
+                      {printerConfig.bar ? (
+                        <span className="max-w-full truncate text-[10px] font-normal text-muted-foreground">
+                          {printerConfig.bar}
+                        </span>
+                      ) : null}
+                    </Button>
+                  </div>
                 </div>
 
                 <ReceiptPreview
@@ -1047,6 +1207,8 @@ export function PosManager() {
                   locale={locale}
                   serviceFeePercent={serviceFeePercent}
                   restaurantName={localized(data?.general.restaurantName, locale, "Cafe")}
+                  printerName={printerConfig.invoice || undefined}
+                  printerLabel={text.printerLabel}
                 />
               </>
             ) : null}
@@ -2628,6 +2790,8 @@ function ReceiptPreview({
   locale,
   serviceFeePercent,
   restaurantName,
+  printerName,
+  printerLabel,
 }: {
   table: PosTable;
   order: PosTableOrder;
@@ -2635,12 +2799,14 @@ function ReceiptPreview({
   locale: "en" | "ar" | "ckb";
   serviceFeePercent: number;
   restaurantName: string;
+  printerName?: string;
+  printerLabel?: string;
 }) {
   const receiptLocale: "en" | "ckb" = locale === "ckb" ? "ckb" : "en";
   const issuedAt = formatReceiptDateTime(new Date());
 
   return (
-    <div className="pos-print-area pos-receipt rounded-lg border bg-white p-5 font-mono text-black shadow-sm">
+    <div className="pos-print-area pos-receipt no-print rounded-lg border bg-white p-5 font-mono text-black shadow-sm">
       <div className="text-center">
         <Image
           src="/stone-cafe-receipt-logo.png"
@@ -2652,6 +2818,11 @@ function ReceiptPreview({
         <h2 className="mt-2 text-2xl font-black uppercase tracking-[0.14em]">
           {restaurantName}
         </h2>
+        {printerName ? (
+          <p className="mt-2 text-xs font-black uppercase tracking-wide">
+            {printerLabel || "Printer"}: {printerName}
+          </p>
+        ) : null}
       </div>
 
       <ReceiptRule />
