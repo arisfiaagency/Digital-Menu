@@ -635,7 +635,7 @@ export function PosManager() {
       "Cafe",
     );
     const receiptLocale: "en" | "ckb" = locale === "ckb" ? "ckb" : "en";
-    printThermalTicket({
+    void printThermalTicket({
       kind: "invoice",
       title: text.printInvoice,
       restaurantName,
@@ -696,7 +696,7 @@ export function PosManager() {
     if (!selectedTable || !selectedOrder?.lines.length) return;
     const printerName = remindAssignedPrinter(station) || undefined;
     const issuedAt = formatReceiptDateTime(new Date());
-    printThermalTicket({
+    void printThermalTicket({
       kind: station,
       title: station === "kitchen" ? text.kitchenTicket : text.barTicket,
       tableName: selectedTable.name,

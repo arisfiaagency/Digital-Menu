@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Building2, CheckCircle2, Eye, EyeOff, KeyRound, Plus, Printer, Save, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
+import { Building2, CheckCircle2, Eye, EyeOff, KeyRound, Plus, Printer, RefreshCw, Save, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { changeAdminPassword } from "@/lib/firebase/auth";
 import { getAdminAppData, saveSettings } from "@/lib/firebase/firestore";
@@ -14,7 +14,7 @@ import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUploadField } from "@/components/forms/image-upload-field";
-import { useAdminLocale } from "@/components/admin/admin-preferences";
+import { useAdminLocale, formatAdminText } from "@/components/admin/admin-preferences";
 import { useTenant } from "@/components/tenant-provider";
 import {
   emptyPosPrinterConfig,
@@ -22,6 +22,7 @@ import {
   savePosPrinterConfig,
   type PosPrinterConfig
 } from "@/lib/pos-printers";
+import { detectConnectedPrinters } from "@/lib/qz-printers";
 import { cn } from "@/lib/utils/cn";
 import type { GeneralSettings, MenuSettings } from "@/types/models";
 import { defaultGeneralSettings, defaultMenuSettings } from "@/data/default-data";
@@ -44,6 +45,9 @@ export function SettingsManager() {
   const [printerConfig, setPrinterConfig] = useState<PosPrinterConfig>(emptyPosPrinterConfig);
   const [printerDraft, setPrinterDraft] = useState("");
   const [printerMessage, setPrinterMessage] = useState("");
+  const [printerError, setPrinterError] = useState("");
+  const [detectingPrinters, setDetectingPrinters] = useState(false);
+  const [detectedPrinters, setDetectedPrinters] = useState<string[]>([]);
 
   useEffect(() => {
     getAdminAppData().then((data) => {
@@ -57,14 +61,15 @@ export function SettingsManager() {
     setPrinterConfig(loadPosPrinterConfig(clientSlug));
   }, [clientSlug]);
 
-  function updatePrinterConfig(next: PosPrinterConfig) {
+  function updatePrinterConfig(next: PosPrinterConfig, notice?: string) {
     const saved = savePosPrinterConfig(clientSlug, next) || next;
     setPrinterConfig(saved);
-    setPrinterMessage(text.posPrintersSaved);
+    setPrinterError("");
+    setPrinterMessage(notice ?? text.posPrintersSaved);
   }
 
-  function addPrinterName() {
-    const name = printerDraft.trim();
+  function addPrinterName(nameOverride?: string) {
+    const name = (nameOverride ?? printerDraft).trim();
     if (!name) return;
     if (printerConfig.printers.some((entry) => entry.toLowerCase() === name.toLowerCase())) {
       setPrinterDraft("");
@@ -82,6 +87,32 @@ export function SettingsManager() {
       kitchen: printerConfig.kitchen === name ? "" : printerConfig.kitchen,
       bar: printerConfig.bar === name ? "" : printerConfig.bar
     });
+  }
+
+  async function handleDetectPrinters() {
+    setDetectingPrinters(true);
+    setPrinterError("");
+    setPrinterMessage("");
+    const result = await detectConnectedPrinters();
+    setDetectingPrinters(false);
+    if (!result.ok) {
+      setDetectedPrinters([]);
+      setPrinterError(
+        result.code === "not_installed" ? text.qzTrayRequired : result.message || text.printerDetectFailed
+      );
+      return;
+    }
+    setDetectedPrinters(result.printers);
+    if (!result.printers.length) {
+      setPrinterError(text.noConnectedPrinters);
+      return;
+    }
+    // Merge every detected printer into this device's list so dropdowns are ready.
+    const merged = [...new Set([...printerConfig.printers, ...result.printers])];
+    updatePrinterConfig(
+      { ...printerConfig, printers: merged },
+      formatAdminText(text.printersDetected, { count: result.printers.length })
+    );
   }
 
   useEffect(() => {
@@ -313,6 +344,30 @@ export function SettingsManager() {
             </SettingsFormSection>
             <SettingsFormSection title={text.posPrinters}>
               <p className="text-xs text-muted-foreground">{text.posPrintersHint}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void handleDetectPrinters()}
+                  disabled={detectingPrinters}
+                >
+                  <RefreshCw className={cn("h-4 w-4", detectingPrinters && "animate-spin")} aria-hidden />
+                  {detectingPrinters ? text.detectingPrinters : text.detectPrinters}
+                </Button>
+              </div>
+              {detectedPrinters.length ? (
+                <div className="rounded-md border bg-background p-3">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">{text.connectedPrinters}</p>
+                  <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
+                    {detectedPrinters.map((name) => (
+                      <li key={name} className="flex items-center gap-2">
+                        <Printer className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="truncate">{name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   value={printerDraft}
@@ -325,7 +380,7 @@ export function SettingsManager() {
                     }
                   }}
                 />
-                <Button type="button" variant="outline" onClick={addPrinterName} disabled={!printerDraft.trim()}>
+                <Button type="button" variant="outline" onClick={() => addPrinterName()} disabled={!printerDraft.trim()}>
                   <Plus className="h-4 w-4" aria-hidden />
                   {text.addPrinter}
                 </Button>
@@ -357,6 +412,19 @@ export function SettingsManager() {
               ) : (
                 <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">{text.noPrintersYet}</p>
               )}
+              {printerError ? (
+                <p className="text-sm text-destructive">
+                  {printerError}{" "}
+                  <a
+                    href="https://qz.io/download/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    {text.downloadQzTray}
+                  </a>
+                </p>
+              ) : null}
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <Field label={text.thermalPaperWidth}>
                   <Select

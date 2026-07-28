@@ -212,13 +212,29 @@ function buildThermalHtml(payload: ThermalTicketPayload) {
 }
 
 /**
- * Prints a thermal ticket through a hidden iframe so drivers get a clean
- * 58/80mm document instead of a scaled full admin page.
+ * Prints a thermal ticket. If `printerName` is set and QZ Tray is running,
+ * prints silently to that OS printer; otherwise opens the browser print dialog
+ * with a clean 58/80mm document.
  */
-export function printThermalTicket(payload: ThermalTicketPayload) {
+export async function printThermalTicket(payload: ThermalTicketPayload) {
   if (typeof window === "undefined") return;
 
   const html = buildThermalHtml(payload);
+
+  if (payload.printerName?.trim()) {
+    try {
+      const { printHtmlWithQz } = await import("@/lib/qz-printers");
+      const printed = await printHtmlWithQz(payload.printerName, html);
+      if (printed) return;
+    } catch {
+      // Fall through to browser print dialog.
+    }
+  }
+
+  printThermalTicketInBrowser(html);
+}
+
+function printThermalTicketInBrowser(html: string) {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
   iframe.style.position = "fixed";
