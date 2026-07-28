@@ -146,9 +146,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     : onUsersRoute
       ? auth.canManageUsers
       : onQrRoute
-        ? qrEnabled
+        ? qrEnabled && auth.can("qrCode")
         : onReviewsRoute
-          ? ratingEnabled
+          ? ratingEnabled && auth.can("reviews")
           : currentNav
             ? auth.can(currentNav.feature)
             : true;
@@ -209,9 +209,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           settingsHref={settingsHref}
           auditHref={auditHref}
           qrHref={qrHref}
-          qrEnabled={qrEnabled}
+          qrEnabled={qrEnabled && auth.can("qrCode")}
           reviewsHref={reviewsHref}
-          reviewsEnabled={ratingEnabled}
+          reviewsEnabled={ratingEnabled && auth.can("reviews")}
           homeHref={adminBasePath}
           onLogout={handleLogout}
         />
@@ -255,9 +255,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           settingsHref={settingsHref}
           auditHref={auditHref}
           qrHref={qrHref}
-          qrEnabled={qrEnabled}
+          qrEnabled={qrEnabled && auth.can("qrCode")}
           reviewsHref={reviewsHref}
-          reviewsEnabled={ratingEnabled}
+          reviewsEnabled={ratingEnabled && auth.can("reviews")}
           homeHref={adminBasePath}
           onNavigate={() => setMobileNavOpen(false)}
           onLogout={handleLogout}

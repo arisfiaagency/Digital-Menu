@@ -24,16 +24,22 @@ import {
   setMainAdmin
 } from "@/lib/firebase/firestore";
 import { createStaffAuthUser, deleteStaffAccount } from "@/lib/firebase/user-admin";
-import { ADMIN_FEATURES, emptyPermissions, roleOf } from "@/lib/admin/permissions";
+import { employeeAccessFeatures, emptyPermissions, roleOf } from "@/lib/admin/permissions";
 import { cn } from "@/lib/utils/cn";
 import { normalizeSearch } from "@/lib/utils/format";
-import type { AdminPermissions, AdminProfile, AdminRole } from "@/types/models";
+import { useTenant } from "@/components/tenant-provider";
+import type { AdminFeature, AdminPermissions, AdminProfile, AdminRole } from "@/types/models";
 
 const USERNAME_PATTERN = /^[a-z0-9._-]{3,20}$/;
 
 export function UserManager() {
   const { text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
+  const { qrEnabled, ratingEnabled } = useTenant();
+  const accessFeatures = useMemo(
+    () => employeeAccessFeatures({ qrEnabled, ratingEnabled }),
+    [qrEnabled, ratingEnabled]
+  );
   const [users, setUsers] = useState<AdminProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -343,7 +349,7 @@ export function UserManager() {
             <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
               <span dir={textDir} className="text-sm font-medium">{text.employeeAccess}</span>
               <div className="grid gap-2 sm:grid-cols-2">
-                {ADMIN_FEATURES.map((feature) => (
+                {accessFeatures.map((feature) => (
                   <PermissionRow
                     key={feature}
                     label={text[feature]}
@@ -395,6 +401,7 @@ export function UserManager() {
               profile={profile}
               text={text}
               textDir={textDir}
+              accessFeatures={accessFeatures}
               isSelf={profile.uid === auth.user?.uid}
               viewerIsMainAdmin={auth.isMainAdmin}
               onUpdate={updateUser}
@@ -481,6 +488,7 @@ function UserRow({
   profile,
   text,
   textDir,
+  accessFeatures,
   isSelf,
   viewerIsMainAdmin,
   onUpdate,
@@ -492,6 +500,7 @@ function UserRow({
   profile: AdminProfile;
   text: Record<string, string>;
   textDir: "ltr" | "rtl";
+  accessFeatures: AdminFeature[];
   isSelf: boolean;
   viewerIsMainAdmin: boolean;
   onUpdate: (profile: AdminProfile, changes: { role?: AdminRole; permissions?: AdminPermissions }) => void;
@@ -580,7 +589,7 @@ function UserRow({
             <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
               <span dir={textDir} className="text-sm font-medium">{text.employeeAccess}</span>
               <div className="grid gap-2 sm:grid-cols-2">
-                {ADMIN_FEATURES.map((feature) => (
+                {accessFeatures.map((feature) => (
                   <PermissionRow
                     key={feature}
                     label={text[feature]}

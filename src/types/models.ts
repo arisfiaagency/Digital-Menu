@@ -259,7 +259,17 @@ export type ThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "contrast";
 
 export type AdminRole = "admin" | "employee";
 
-export type AdminFeature = "dashboard" | "categories" | "menuItems" | "pos" | "shift" | "reports" | "expenses" | "settings";
+export type AdminFeature =
+  | "dashboard"
+  | "categories"
+  | "menuItems"
+  | "pos"
+  | "shift"
+  | "reports"
+  | "expenses"
+  | "settings"
+  | "reviews"
+  | "qrCode";
 
 export type AdminPermissions = Partial<Record<AdminFeature, boolean>>;
 

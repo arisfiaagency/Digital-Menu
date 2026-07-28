@@ -168,7 +168,7 @@ service cloud.firestore {
         allow read: if isTenantAdmin(clientId);
         allow create: if hasTenantFeature(clientId, 'shift')
           && (
-            shiftId == '__lock__'
+            shiftId == 'shiftLock'
             || request.resource.data.status == 'open'
           );
         allow update: if hasTenantFeature(clientId, 'shift');

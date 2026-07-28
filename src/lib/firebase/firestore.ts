@@ -686,7 +686,7 @@ export async function cancelExpense(expenseId: string, cancelledByUid?: string, 
 }
 
 /** Pointer doc so only one cashier shift can be open at a time. */
-const SHIFT_LOCK_DOC_ID = "__lock__";
+const SHIFT_LOCK_DOC_ID = "shiftLock";
 
 type ShiftLock = {
   id: string;

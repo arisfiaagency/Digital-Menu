@@ -10,8 +10,19 @@ export const ADMIN_FEATURES: AdminFeature[] = [
   "shift",
   "reports",
   "expenses",
-  "settings"
+  "settings",
+  "reviews",
+  "qrCode"
 ];
+
+/** Features shown in employee-access toggles for this cafe (platform flags gate reviews / QR). */
+export function employeeAccessFeatures(opts: { qrEnabled: boolean; ratingEnabled: boolean }): AdminFeature[] {
+  return ADMIN_FEATURES.filter((feature) => {
+    if (feature === "reviews") return opts.ratingEnabled;
+    if (feature === "qrCode") return opts.qrEnabled;
+    return true;
+  });
+}
 
 // Profiles without a stored role are the original full-access admins.
 export function roleOf(profile: Pick<AdminProfile, "role"> | null | undefined): AdminRole {
