@@ -1,7 +1,26 @@
 import { deleteApp, initializeApp } from "firebase/app";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { getFirebaseAuth, getFirebaseConfig, hasFirebaseClientConfig } from "@/lib/firebase/client";
-import { getActiveClientSlug } from "@/lib/tenant";
+import { getActiveClientSlug, normalizeClientSlug } from "@/lib/tenant";
+
+const STAFF_EMAIL_DOMAIN = "staff.digitalmenu.internal";
+
+/** True when the Auth email was auto-generated for username-only staff. */
+export function isSyntheticStaffEmail(email: string) {
+  return email.trim().toLowerCase().endsWith(`@${STAFF_EMAIL_DOMAIN}`);
+}
+
+/**
+ * Firebase Auth requires an email. Prefer a real one when provided; otherwise
+ * mint a private address from username + cafe slug so staff can log in by username.
+ */
+export function staffAuthEmail(input: { username: string; email?: string; clientSlug?: string | null }) {
+  const trimmed = input.email?.trim().toLowerCase() || "";
+  if (trimmed) return trimmed;
+  const username = input.username.trim().toLowerCase();
+  const slug = normalizeClientSlug(input.clientSlug || getActiveClientSlug() || "cafe") || "cafe";
+  return `${username}.${slug}@${STAFF_EMAIL_DOMAIN}`;
+}
 
 // Create the Firebase Auth account for a new staff member without signing the
 // current admin out. We spin up a throwaway secondary Firebase app, create the

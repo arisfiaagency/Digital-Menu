@@ -23,7 +23,7 @@ import {
   setAdminProfileDisabled,
   setMainAdmin
 } from "@/lib/firebase/firestore";
-import { createStaffAuthUser, deleteStaffAccount } from "@/lib/firebase/user-admin";
+import { createStaffAuthUser, deleteStaffAccount, isSyntheticStaffEmail, staffAuthEmail } from "@/lib/firebase/user-admin";
 import { employeeAccessFeatures, emptyPermissions, roleOf } from "@/lib/admin/permissions";
 import { cn } from "@/lib/utils/cn";
 import { normalizeSearch } from "@/lib/utils/format";
@@ -35,7 +35,7 @@ const USERNAME_PATTERN = /^[a-z0-9._-]{3,20}$/;
 export function UserManager() {
   const { text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
-  const { qrEnabled, ratingEnabled } = useTenant();
+  const { clientSlug, qrEnabled, ratingEnabled } = useTenant();
   const accessFeatures = useMemo(
     () => employeeAccessFeatures({ qrEnabled, ratingEnabled }),
     [qrEnabled, ratingEnabled]
@@ -83,7 +83,11 @@ export function UserManager() {
     setError("");
     const trimmedEmail = email.trim().toLowerCase();
     const cleanUsername = username.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    if (!USERNAME_PATTERN.test(cleanUsername)) {
+      setError(text.usernameInvalid);
+      return;
+    }
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       setError(text.invalidEmail);
       return;
     }
@@ -91,33 +95,28 @@ export function UserManager() {
       setError(text.weakPassword);
       return;
     }
-    if (cleanUsername && !USERNAME_PATTERN.test(cleanUsername)) {
-      setError(text.usernameInvalid);
-      return;
-    }
-    if (cleanUsername && !(await isUsernameAvailable(cleanUsername))) {
+    if (!(await isUsernameAvailable(cleanUsername))) {
       setError(text.usernameTaken);
       return;
     }
 
+    const authEmail = staffAuthEmail({ username: cleanUsername, email: trimmedEmail, clientSlug });
     setSaving(true);
     try {
-      const uid = await createStaffAuthUser(trimmedEmail, password);
+      const uid = await createStaffAuthUser(authEmail, password);
       await saveAdminProfile({
         uid,
-        email: trimmedEmail,
-        username: cleanUsername || undefined,
+        email: authEmail,
+        username: cleanUsername,
         role,
         permissions,
         displayName: displayName.trim() || undefined
       });
       let mappingFailed = false;
-      if (cleanUsername) {
-        try {
-          await claimUsername(cleanUsername, trimmedEmail, uid);
-        } catch {
-          mappingFailed = true;
-        }
+      try {
+        await claimUsername(cleanUsername, authEmail, uid);
+      } catch {
+        mappingFailed = true;
       }
       await refresh();
       resetForm();
@@ -136,30 +135,30 @@ export function UserManager() {
     const next = rawUsername.trim().toLowerCase();
     const previous = profile.username || "";
     if (next === previous) return;
-    if (next && !USERNAME_PATTERN.test(next)) {
+    if (!USERNAME_PATTERN.test(next)) {
       setError(text.usernameInvalid);
       return;
     }
-    if (next && !(await isUsernameAvailable(next, profile.uid))) {
+    if (!(await isUsernameAvailable(next, profile.uid))) {
       setError(text.usernameTaken);
       return;
     }
 
-    setUsers((current) => current.map((entry) => (entry.uid === profile.uid ? { ...entry, username: next || undefined } : entry)));
+    setUsers((current) => current.map((entry) => (entry.uid === profile.uid ? { ...entry, username: next } : entry)));
     try {
       await saveAdminProfile({
         uid: profile.uid,
         email: profile.email,
         role: roleOf(profile),
         permissions: profile.permissions ?? emptyPermissions(),
-        username: next || undefined,
+        username: next,
         displayName: profile.displayName,
         disabled: profile.disabled
       });
       let mappingFailed = false;
       try {
         if (previous && previous !== next) await releaseUsername(previous);
-        if (next) await claimUsername(next, profile.email, profile.uid);
+        await claimUsername(next, profile.email, profile.uid);
       } catch {
         mappingFailed = true;
       }
@@ -308,12 +307,12 @@ export function UserManager() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={text.email}>
-              <Input type="email" autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} />
-            </Field>
-            <Field label={text.loginSlug}>
-              <Input autoComplete="off" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="e.g. sara" />
+            <Field label={text.username}>
+              <Input autoComplete="off" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="e.g. sara" required />
               <p dir={textDir} className="mt-1 text-xs text-muted-foreground">{text.usernameHint}</p>
+            </Field>
+            <Field label={text.emailOptional}>
+              <Input type="email" autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} />
             </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -424,7 +423,18 @@ export function UserManager() {
         variant="destructive"
         icon={<Trash2 className="h-5 w-5" aria-hidden />}
         title={text.removeAccess}
-        description={removeTarget ? formatAdminText(text.removeAccessConfirm, { email: removeTarget.email }) : ""}
+        description={
+          removeTarget
+            ? formatAdminText(text.removeAccessConfirm, {
+                email:
+                  removeTarget.username
+                    ? `@${removeTarget.username}`
+                    : isSyntheticStaffEmail(removeTarget.email)
+                      ? removeTarget.displayName || removeTarget.email
+                      : removeTarget.email
+              })
+            : ""
+        }
         confirmLabel={text.removeAccess}
         cancelLabel={text.cancel}
         loading={saving}
@@ -525,7 +535,9 @@ function UserRow({
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-sm font-semibold">{profile.displayName || profile.email}</span>
+            <span className="truncate text-sm font-semibold">
+              {profile.displayName || (profile.username ? `@${profile.username}` : profile.email)}
+            </span>
             <Badge className={role === "admin" ? "border-primary/30 bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}>
               {role === "admin" ? text.roleAdmin : text.roleEmployee}
             </Badge>
@@ -535,7 +547,11 @@ function UserRow({
             {profile.disabled ? <Badge className="border-destructive/30 bg-destructive/10 text-destructive">{text.accountDisabled}</Badge> : null}
           </span>
           <span className="block truncate text-xs text-muted-foreground">
-            {profile.email}
+            {profile.email && !isSyntheticStaffEmail(profile.email)
+              ? profile.email
+              : profile.username
+                ? `@${profile.username}`
+                : text.noUsername}
           </span>
         </span>
         <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
@@ -549,15 +565,15 @@ function UserRow({
             </p>
           ) : null}
 
-          <Field label={text.loginSlug}>
+          <Field label={text.username}>
             <div className="flex gap-2">
               <span className="flex h-10 items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground">@</span>
-              <Input value={usernameDraft} onChange={(event) => setUsernameDraft(event.target.value)} placeholder="sara" />
+              <Input value={usernameDraft} onChange={(event) => setUsernameDraft(event.target.value)} placeholder="sara" required />
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onSaveUsername(profile, usernameDraft)}
-                disabled={usernameDraft.trim().toLowerCase() === (profile.username || "")}
+                disabled={!usernameDraft.trim() || usernameDraft.trim().toLowerCase() === (profile.username || "")}
               >
                 {text.save}
               </Button>
