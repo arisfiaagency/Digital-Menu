@@ -38,6 +38,7 @@ export async function verifyApprovedAdmin(uid: string) {
   return Boolean(profile && profile.isAdmin && !profile.disabled);
 }
 
+/** Signs out only the current surface (platform supervisor OR cafe admin), not both. */
 export async function logoutAdmin() {
   const auth = getFirebaseAuth();
   if (auth) await signOut(auth);
