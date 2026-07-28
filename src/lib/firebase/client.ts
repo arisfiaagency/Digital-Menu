@@ -14,10 +14,11 @@ const firebaseConfig = {
 /**
  * Separate Auth persistence per surface:
  * - `platform` → supervisor `/admin`
- * - `client:{slug}` → that cafe's `/{slug}/admin` only
+ * - `client-{slug}` → that cafe's `/{slug}/admin` only
  * So logout on one cafe (or the supervisor) never clears another.
+ * App names stay alphanumeric/hyphen (Firebase-safe).
  */
-export type FirebaseAuthScope = "platform" | `client:${string}`;
+export type FirebaseAuthScope = "platform" | `client-${string}`;
 
 const authCache = new Map<FirebaseAuthScope, Auth>();
 
@@ -37,7 +38,7 @@ export function hasFirebaseClientConfig() {
 
 export function getFirebaseAuthScope(clientSlug?: string | null): FirebaseAuthScope {
   const slug = clientSlug === undefined ? getActiveClientSlug() : clientSlug;
-  return slug ? `client:${slug}` : "platform";
+  return slug ? `client-${slug}` : "platform";
 }
 
 export function getFirebaseApp(scope?: FirebaseAuthScope): FirebaseApp | null {
