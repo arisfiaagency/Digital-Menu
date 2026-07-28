@@ -9,7 +9,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import Image from "next/image";
 import {
   Armchair,
   ArrowRightLeft,
@@ -639,10 +638,6 @@ export function PosManager() {
       kind: "invoice",
       title: text.printInvoice,
       restaurantName,
-      logoUrl:
-        typeof window !== "undefined"
-          ? `${window.location.origin}/stone-cafe-receipt-logo.png`
-          : "/stone-cafe-receipt-logo.png",
       tableName: selectedTable.name,
       tableLabel: text.table,
       printerName,
@@ -2808,14 +2803,7 @@ function ReceiptPreview({
   return (
     <div className="pos-print-area pos-receipt no-print rounded-lg border bg-white p-5 font-mono text-black shadow-sm">
       <div className="text-center">
-        <Image
-          src="/stone-cafe-receipt-logo.png"
-          alt={`${restaurantName} logo`}
-          width={360}
-          height={159}
-          className="pos-receipt-logo mx-auto h-auto w-60 object-contain"
-        />
-        <h2 className="mt-2 text-2xl font-black uppercase tracking-[0.14em]">
+        <h2 className="text-2xl font-black uppercase tracking-[0.14em]">
           {restaurantName}
         </h2>
         {printerName ? (
