@@ -11,10 +11,15 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-/** Separate Auth persistence so supervisor `/admin` and cafe `/{slug}/admin` stay independent. */
-export type FirebaseAuthScope = "platform" | "tenant";
+/**
+ * Separate Auth persistence per surface:
+ * - `platform` → supervisor `/admin`
+ * - `client:{slug}` → that cafe's `/{slug}/admin` only
+ * So logout on one cafe (or the supervisor) never clears another.
+ */
+export type FirebaseAuthScope = "platform" | `client:${string}`;
 
-const authCache: Partial<Record<FirebaseAuthScope, Auth>> = {};
+const authCache = new Map<FirebaseAuthScope, Auth>();
 
 export function getFirebaseConfig() {
   return firebaseConfig;
@@ -30,8 +35,9 @@ export function hasFirebaseClientConfig() {
   );
 }
 
-export function getFirebaseAuthScope(): FirebaseAuthScope {
-  return getActiveClientSlug() ? "tenant" : "platform";
+export function getFirebaseAuthScope(clientSlug?: string | null): FirebaseAuthScope {
+  const slug = clientSlug === undefined ? getActiveClientSlug() : clientSlug;
+  return slug ? `client:${slug}` : "platform";
 }
 
 export function getFirebaseApp(scope?: FirebaseAuthScope): FirebaseApp | null {
@@ -44,12 +50,12 @@ export function getFirebaseApp(scope?: FirebaseAuthScope): FirebaseApp | null {
 
 export function getFirebaseAuth(scope?: FirebaseAuthScope) {
   const resolved = scope ?? getFirebaseAuthScope();
-  const cached = authCache[resolved];
+  const cached = authCache.get(resolved);
   if (cached) return cached;
   const app = getFirebaseApp(resolved);
   if (!app) return null;
   const auth = getAuth(app);
-  authCache[resolved] = auth;
+  authCache.set(resolved, auth);
   return auth;
 }
 

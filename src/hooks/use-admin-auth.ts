@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { getFirebaseAuth, hasFirebaseClientConfig } from "@/lib/firebase/client";
+import { getFirebaseAuth, getFirebaseAuthScope, hasFirebaseClientConfig } from "@/lib/firebase/client";
 import { getAdminProfile } from "@/lib/firebase/firestore";
 import { canAccessFeature, canManageUsers, roleOf } from "@/lib/admin/permissions";
 import { useTenant } from "@/components/tenant-provider";
@@ -10,8 +10,8 @@ import type { AdminFeature, AdminProfile } from "@/types/models";
 
 export function useAdminAuth() {
   const { clientSlug } = useTenant();
-  // Cafe admin (slug set) uses the "tenant" Auth app; supervisor uses "platform".
-  const authScope = clientSlug ? "tenant" : "platform";
+  // Supervisor → platform; each cafe → its own client:{slug} Auth session.
+  const authScope = getFirebaseAuthScope(clientSlug);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<AdminProfile | null>(null);
