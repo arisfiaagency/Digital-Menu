@@ -3,13 +3,38 @@
 import { Coffee, Contrast, Moon, Sparkles, Sun, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  adminThemeStorageKey,
+  adminThemeChangeEvent,
+  adminThemeStorageKeyFor,
+  adminThemeChangeEventFor
+} from "@/lib/admin-theme";
 import { cn } from "@/lib/utils/cn";
 import type { ThemeIconStyle, ThemeToggleStyle } from "@/types/models";
 
 export const publicThemeStorageKey = "stone-cafe-menu-theme";
 export const publicThemeChangeEvent = "stone-cafe-menu-theme-change";
-export const adminThemeStorageKey = "stone-cafe-admin-theme";
-export const adminThemeChangeEvent = "stone-cafe-admin-theme-change";
+export {
+  adminThemeStorageKey,
+  adminThemeChangeEvent,
+  adminThemeStorageKeyFor,
+  adminThemeChangeEventFor
+};
+
+function readStoredTheme(storageKey: string) {
+  const scoped = window.localStorage.getItem(storageKey);
+  if (scoped === "dark" || scoped === "light") return scoped;
+
+  // One-time inherit from the old shared admin key so existing preference isn’t lost.
+  if (storageKey.startsWith("stone-cafe-admin-theme:")) {
+    const legacy = window.localStorage.getItem(adminThemeStorageKey);
+    if (legacy === "dark" || legacy === "light") {
+      window.localStorage.setItem(storageKey, legacy);
+      return legacy;
+    }
+  }
+  return null;
+}
 
 export function ThemeToggle({
   className,
@@ -28,7 +53,7 @@ export function ThemeToggle({
   const [turns, setTurns] = useState(0);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey);
+    const stored = readStoredTheme(storageKey);
     const nextDark = stored === "dark";
     setDark(nextDark);
     document.documentElement.classList.toggle("dark", nextDark);

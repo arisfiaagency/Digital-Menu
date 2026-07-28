@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { TenantProvider } from "@/components/tenant-provider";
 import { isClientServiceActive } from "@/lib/client-access";
 import { getClientAccountRest } from "@/lib/firebase/rest";
+import { adminThemePrepaintScript } from "@/lib/admin-theme";
 
 export default async function ClientAdminLayout({
   children,
@@ -20,6 +21,7 @@ export default async function ClientAdminLayout({
       qrEnabled={client.qrEnabled !== false}
       ratingEnabled={client.ratingEnabled !== false}
     >
+      <script dangerouslySetInnerHTML={{ __html: adminThemePrepaintScript(client.slug) }} />
       <AdminShell>{children}</AdminShell>
     </TenantProvider>
   );

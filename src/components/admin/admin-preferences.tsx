@@ -1,9 +1,20 @@
 "use client";
 
 import { LanguageGlobe } from "@/components/menu/language-globe";
-import { adminThemeChangeEvent, adminThemeStorageKey, ThemeToggle } from "@/components/menu/theme-toggle";
+import { ThemeToggle } from "@/components/menu/theme-toggle";
+import { useTenant } from "@/components/tenant-provider";
 import { adminLocaleChangeEvent, adminLocaleStorageKey, useLocale } from "@/hooks/use-locale";
+import { adminThemeChangeEventFor, adminThemeStorageKeyFor } from "@/lib/admin-theme";
 import type { Locale } from "@/types/models";
+
+function useAdminThemeKeys() {
+  const { clientSlug } = useTenant();
+  const scope = clientSlug ?? "platform";
+  return {
+    storageKey: adminThemeStorageKeyFor(scope),
+    changeEvent: adminThemeChangeEventFor(scope)
+  };
+}
 
 type AdminText = Record<string, string>;
 
@@ -1428,11 +1439,12 @@ export function useAdminLocale() {
 
 export function AdminPreferences({ compact = false, showTheme = true }: { compact?: boolean; showTheme?: boolean }) {
   const { locale, setLocale } = useAdminLocale();
+  const { storageKey, changeEvent } = useAdminThemeKeys();
 
   return (
     <div dir="ltr" className={compact ? "flex shrink-0 items-center gap-2" : "flex items-center gap-2"}>
       <LanguageGlobe locale={locale} onChange={setLocale} menuAlign="left" />
-      {showTheme ? <ThemeToggle storageKey={adminThemeStorageKey} changeEvent={adminThemeChangeEvent} /> : null}
+      {showTheme ? <ThemeToggle storageKey={storageKey} changeEvent={changeEvent} /> : null}
     </div>
   );
 }
@@ -1440,7 +1452,8 @@ export function AdminPreferences({ compact = false, showTheme = true }: { compac
 // Standalone admin theme toggle for placing outside the profile menu. Being
 // always-mounted, its effect applies the saved theme on page load.
 export function AdminThemeToggle({ className }: { className?: string }) {
-  return <ThemeToggle storageKey={adminThemeStorageKey} changeEvent={adminThemeChangeEvent} className={className} />;
+  const { storageKey, changeEvent } = useAdminThemeKeys();
+  return <ThemeToggle storageKey={storageKey} changeEvent={changeEvent} className={className} />;
 }
 
 // Standalone admin language selector for placing on the page (e.g. in the header
