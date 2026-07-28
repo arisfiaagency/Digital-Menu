@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { isFullAdminProfile } from "@/lib/api/admin-authz";
+import { deleteAuthUserIfOrphaned } from "@/lib/api/auth-cleanup";
 import { normalizeClientSlug } from "@/lib/tenant";
 
-// Fully delete a staff account: the Firebase Auth login, the username -> email
-// mapping, and the adminProfiles document. The client SDK can only delete the
-// Firestore docs (not another user's Auth login), so this runs server-side with
-// the Admin SDK. Caller must present a valid admin ID token.
+// Fully delete a staff account: the Firebase Auth login (only if unused elsewhere),
+// the username -> email mapping, and the adminProfiles document.
 export async function DELETE(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : "";
@@ -17,8 +16,6 @@ export async function DELETE(request: NextRequest) {
   const auth = getAdminAuth();
   const db = getAdminDb();
   if (!auth || !db) {
-    // Admin SDK isn't configured (e.g. missing env vars) — let the client fall
-    // back to deleting just the Firestore records.
     return NextResponse.json({ ok: false, error: "Firebase Admin is not configured." }, { status: 503 });
   }
 
@@ -39,7 +36,6 @@ export async function DELETE(request: NextRequest) {
   try {
     const decoded = await auth.verifyIdToken(token);
 
-    // Only a full admin may delete accounts. Never trust JWT admin alone.
     const clientRoot = clientSlug ? db.collection("clients").doc(clientSlug) : null;
     const clientCallerProfile = clientRoot
       ? (await clientRoot.collection("adminProfiles").doc(decoded.uid).get()).data()
@@ -56,7 +52,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ ok: false, error: "You cannot delete your own account." }, { status: 400 });
     }
 
-    // Target must belong to the caller's scope — never delete an Auth user by UID alone.
     const profileRef = clientRoot
       ? clientRoot.collection("adminProfiles").doc(targetUid)
       : db.collection("adminProfiles").doc(targetUid);
@@ -76,13 +71,11 @@ export async function DELETE(request: NextRequest) {
       await usernameRef.delete().catch(() => {});
     }
 
-    await auth.deleteUser(targetUid).catch((err: { code?: string }) => {
-      if (err?.code !== "auth/user-not-found") throw err;
-    });
-
+    // Remove the profile first so orphan detection sees other cafes/platform.
     await profileRef.delete();
+    const authResult = await deleteAuthUserIfOrphaned(auth, db, targetUid);
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, auth: authResult });
   } catch (err) {
     if (err instanceof Error && err.message.includes("token")) {
       return NextResponse.json({ ok: false, error: "Invalid or expired token." }, { status: 401 });

@@ -1,5 +1,6 @@
 import type { ComponentType, SVGProps } from "react";
 import { FacebookIcon, InstagramIcon, SnapchatIcon, TiktokIcon } from "@/components/icons/social-icons";
+import { normalizeSocialUrl } from "@/lib/social-urls";
 import { cn } from "@/lib/utils/cn";
 
 // Visual variant for the social buttons. (Self-contained here now that the old
@@ -20,25 +21,28 @@ const SOCIALS: { key: keyof SocialLinksData; label: string; Icon: ComponentType<
   { key: "snapchat", label: "Snapchat", Icon: SnapchatIcon, anim: "social-anim-snapchat" }
 ];
 
-// Accept either a full URL or a bare handle/domain and always return a valid URL.
-function toHref(value: string) {
-  const trimmed = value.trim();
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-}
-
 // Compact icon-only social buttons for each configured link. Renders nothing when
 // no socials are set, so it's safe to drop in anywhere. Pinned LTR so the icon
 // order stays consistent in RTL languages.
 export function SocialLinks({ social, className, style = "icons" }: { social?: SocialLinksData; className?: string; style?: SocialLinkStyle }) {
-  const items = SOCIALS.filter(({ key }) => social?.[key]?.trim());
+  const items = SOCIALS.map(({ key, label, Icon, anim }) => {
+    const href = social?.[key]?.trim() ? normalizeSocialUrl(key, social[key]!) : null;
+    return href ? { key, label, Icon, anim, href } : null;
+  }).filter(Boolean) as Array<{
+    key: keyof SocialLinksData;
+    label: string;
+    Icon: ComponentType<SVGProps<SVGSVGElement>>;
+    anim: string;
+    href: string;
+  }>;
   if (!items.length) return null;
 
   return (
     <div dir="ltr" className={cn("flex flex-wrap items-center gap-2", className)}>
-      {items.map(({ key, label, Icon, anim }) => (
+      {items.map(({ key, label, Icon, anim, href }) => (
         <a
           key={key}
-          href={toHref(social![key]!)}
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={label}

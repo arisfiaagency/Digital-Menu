@@ -103,8 +103,9 @@ service cloud.firestore {
 
     // Username → email is not world-readable (login resolves via a rate-limited API).
     match /usernames/{username} {
-      allow get: if signedIn();
-      allow list, create, update, delete: if isPlatformFullAdmin();
+      // Username → email only via rate-limited Admin-SDK API (login / availability).
+      allow get, list: if false;
+      allow create, update, delete: if isPlatformFullAdmin();
     }
 
     match /platformPayments/{paymentId} {
@@ -150,16 +151,25 @@ service cloud.firestore {
 
       match /completedOrders/{orderId} {
         allow read: if isTenantAdmin(clientId);
-        // Staff may record a sale, but cannot invent cancelled rows or empty tickets.
+        // Staff may record a sale tied to themselves — not invent cancelled/empty
+        // tickets or attribute the close to another UID.
         allow create: if hasTenantFeature(clientId, 'pos')
           && request.resource.data.get('status', 'completed') == 'completed'
           && request.resource.data.total is number
           && request.resource.data.total >= 0
+          && request.resource.data.total <= 50000000
+          && request.resource.data.subtotal is number
+          && request.resource.data.subtotal >= 0
           && request.resource.data.lines is list
           && request.resource.data.lines.size() > 0
+          && request.resource.data.lines.size() <= 100
           && request.resource.data.completedAt is string
+          && request.resource.data.completedAt.size() >= 20
+          && request.resource.data.completedAt.size() <= 40
           && request.resource.data.tableId is string
-          && request.resource.data.tableName is string;
+          && request.resource.data.tableName is string
+          && request.resource.data.currency is string
+          && request.resource.data.completedByUid == request.auth.uid;
         allow update, delete: if isTenantFullAdmin(clientId);
       }
 
@@ -222,15 +232,26 @@ service cloud.firestore {
       }
 
       match /usernames/{username} {
-        allow get: if signedIn();
-        allow list, create, update, delete: if isTenantFullAdmin(clientId);
+        allow get, list: if false;
+        allow create, update, delete: if isTenantFullAdmin(clientId);
       }
 
       match /auditLogs/{logId} {
         // Every approved staff member's actions get logged (create), but only the
         // cafe's Main Admin can read the accountability trail. Append-only.
+        // actorUid must match the signed-in user — forged actors are rejected.
         allow read: if isTenantMainAdmin(clientId);
-        allow create: if isTenantAdmin(clientId);
+        allow create: if isTenantAdmin(clientId)
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.action is string
+          && request.resource.data.entity is string
+          && request.resource.data.action.size() <= 40
+          && request.resource.data.entity.size() <= 40
+          && request.resource.data.keys().hasAll(['action', 'entity', 'actorUid', 'at', 'createdAt'])
+          && request.resource.data.keys().hasOnly([
+            'action', 'entity', 'entityId', 'label', 'summary', 'changes',
+            'actorUid', 'actorName', 'actorEmail', 'at', 'createdAt'
+          ]);
         allow update, delete: if false;
       }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { CollectionReference, Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { isFullAdminProfile } from "@/lib/api/admin-authz";
+import { deleteAuthUserIfOrphaned } from "@/lib/api/auth-cleanup";
 import { deleteClientImageFolder } from "@/lib/storage/cloudflare-r2";
 import { isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 
@@ -61,15 +62,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ ok: false, error: "Client not found." }, { status: 404 });
     }
 
-    // Remove tenant staff Auth accounts before wiping profiles.
+    // Remove tenant staff Auth accounts only when they have no other profiles.
     const staffSnap = await clientRef.collection("adminProfiles").get();
     for (const profile of staffSnap.docs) {
-      await auth.deleteUser(profile.id).catch((err: { code?: string }) => {
-        if (err?.code !== "auth/user-not-found") throw err;
-      });
+      await profile.ref.delete();
+      await deleteAuthUserIfOrphaned(auth, db, profile.id);
     }
 
     // Prefer recursive delete when available; fall back to known subcollections.
+    // Profiles were already deleted above; recursiveDelete still cleans the rest.
     if (typeof db.recursiveDelete === "function") {
       await db.recursiveDelete(clientRef);
     } else {

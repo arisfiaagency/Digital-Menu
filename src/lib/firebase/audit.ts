@@ -8,8 +8,8 @@ import {
   serverTimestamp,
   type Firestore
 } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase/client";
-import { getActiveClientSlug } from "@/lib/tenant";
+import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase/client";
+import { getActiveClientSlug, runWithClientSlug } from "@/lib/tenant";
 import type { AuditChange, AuditLog } from "@/types/models";
 
 // The person currently signed into the admin. Set once from the admin shell
@@ -48,30 +48,35 @@ export type AuditInput = {
 // Append one entry to the append-only `auditLogs` collection. Fire-and-forget:
 // it never throws, so a logging hiccup (rules, offline…) can't break the actual
 // admin action it records. Runs AFTER the underlying write has succeeded.
+// actorUid always comes from the signed-in Auth user (rules enforce the match).
 export async function logAudit(input: AuditInput): Promise<void> {
-  const db = getFirebaseDb();
-  if (!db) return;
-  const actor = currentActor;
-  try {
-    await addDoc(
-      auditCollection(db),
-      omitUndefined({
-        action: input.action,
-        entity: input.entity,
-        entityId: input.entityId,
-        label: input.label,
-        summary: input.summary,
-        changes: input.changes && input.changes.length ? input.changes : undefined,
-        actorUid: actor?.uid,
-        actorName: actor?.name,
-        actorEmail: actor?.email,
-        at: new Date().toISOString(),
-        createdAt: serverTimestamp()
-      })
-    );
-  } catch (error) {
-    if (process.env.NODE_ENV !== "production") console.warn("Audit log write failed", error);
-  }
+  await runWithClientSlug(async () => {
+    const db = getFirebaseDb();
+    if (!db) return;
+    const authUid = getFirebaseAuth()?.currentUser?.uid;
+    if (!authUid) return;
+    const actor = currentActor;
+    try {
+      await addDoc(
+        auditCollection(db),
+        omitUndefined({
+          action: String(input.action).slice(0, 40),
+          entity: String(input.entity).slice(0, 40),
+          entityId: input.entityId,
+          label: input.label,
+          summary: input.summary,
+          changes: input.changes && input.changes.length ? input.changes : undefined,
+          actorUid: authUid,
+          actorName: actor?.uid === authUid ? actor?.name : undefined,
+          actorEmail: actor?.uid === authUid ? actor?.email : undefined,
+          at: new Date().toISOString(),
+          createdAt: serverTimestamp()
+        })
+      );
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") console.warn("Audit log write failed", error);
+    }
+  });
 }
 
 // Shallow drop of undefined keys — Firestore rejects nested undefined. The only
@@ -81,10 +86,12 @@ function omitUndefined<T extends Record<string, unknown>>(value: T): Partial<T> 
 }
 
 export async function listAuditLogs(max = 400): Promise<AuditLog[]> {
-  const db = getFirebaseDb();
-  if (!db) return [];
-  const snap = await getDocs(query(auditCollection(db), orderBy("createdAt", "desc"), limit(max)));
-  return snap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<AuditLog, "id">) }));
+  return runWithClientSlug(async () => {
+    const db = getFirebaseDb();
+    if (!db) return [];
+    const snap = await getDocs(query(auditCollection(db), orderBy("createdAt", "desc"), limit(max)));
+    return snap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<AuditLog, "id">) }));
+  });
 }
 
 // --- diffing ------------------------------------------------------------

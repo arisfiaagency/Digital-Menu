@@ -7,6 +7,7 @@ type ProfileData = {
   isAdmin?: boolean;
   disabled?: boolean;
   role?: string;
+  permissions?: Record<string, boolean>;
 } | null | undefined;
 
 export function isFullAdminProfile(data: ProfileData) {
@@ -15,6 +16,12 @@ export function isFullAdminProfile(data: ProfileData) {
 
 export function isApprovedStaffProfile(data: ProfileData) {
   return data?.isAdmin === true && data?.disabled !== true;
+}
+
+function hasFeature(data: ProfileData, feature: string) {
+  if (isFullAdminProfile(data)) return true;
+  if (!isApprovedStaffProfile(data)) return false;
+  return data?.permissions?.[feature] === true;
 }
 
 /** Platform full admin from Firestore profile — never JWT `admin` alone. */
@@ -40,19 +47,28 @@ export function clientSlugFromClientsPath(path: string): string | null {
   return slug;
 }
 
+/** Map upload folder under clients/{slug}/… to the feature that may write it. */
+export function storageFeatureForPath(folderOrPath: string): "menuItems" | "settings" | "categories" | null {
+  const cleaned = folderOrPath.replace(/^\/+|\/+$/g, "");
+  const match = cleaned.match(/^clients\/[^/]+\/([^/]+)/);
+  const folder = match?.[1] || "";
+  if (folder === "menu-items") return "menuItems";
+  if (folder === "branding" || folder === "settings" || folder === "invoice") return "settings";
+  if (folder === "categories") return "categories";
+  return null;
+}
+
 /**
  * Storage write access:
- * - platform full admins may write any clients/{slug}/… folder
- * - cafe staff may write only their own clients/{theirSlug}/… folder
+ * - platform full admins may write only under clients/{slug}/…
+ * - cafe full admins may write their cafe folder
+ * - cafe employees need the matching feature (menuItems / settings / categories)
  */
 export async function authorizeStorageWrite(
   db: Firestore,
   decoded: DecodedIdToken,
   folderOrPath: string
 ): Promise<{ uid: string } | { error: NextResponse }> {
-  const platform = await loadPlatformFullAdmin(db, decoded.uid);
-  if (platform) return { uid: decoded.uid };
-
   const slug = clientSlugFromClientsPath(folderOrPath);
   if (!slug) {
     return {
@@ -63,8 +79,22 @@ export async function authorizeStorageWrite(
     };
   }
 
+  const feature = storageFeatureForPath(folderOrPath);
+  if (!feature) {
+    return {
+      error: NextResponse.json(
+        { ok: false, error: "Upload folder is not allowed." },
+        { status: 400 }
+      )
+    };
+  }
+
+  const platform = await loadPlatformFullAdmin(db, decoded.uid);
+  if (platform) return { uid: decoded.uid };
+
   const profile = await db.collection("clients").doc(slug).collection("adminProfiles").doc(decoded.uid).get();
-  if (isApprovedStaffProfile(profile.data())) return { uid: decoded.uid };
+  const data = profile.data();
+  if (hasFeature(data, feature)) return { uid: decoded.uid };
 
   return { error: NextResponse.json({ ok: false, error: "Admin access denied." }, { status: 403 }) };
 }

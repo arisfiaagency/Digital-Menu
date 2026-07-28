@@ -12,7 +12,7 @@ const MAX_COMMENT = 500;
 const MAX_NAME = 60;
 
 export async function POST(request: NextRequest) {
-  const limited = rateLimit(request, "reviews", { limit: 8, windowMs: 15 * 60 * 1000 });
+  const limited = await rateLimit(request, "reviews", { limit: 8, windowMs: 15 * 60 * 1000 });
   if (limited) return limited;
 
   let body: { slug?: unknown; rating?: unknown; comment?: unknown; name?: unknown };

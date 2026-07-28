@@ -2,7 +2,7 @@ import { getFirebaseAuth } from "@/lib/firebase/client";
 import { compressImage, imageExtensionForFile, validateImageFile } from "@/lib/storage/image-utils";
 import { resolveUploadFolder } from "@/lib/storage/paths";
 import { isCloudflareR2Path } from "@/lib/storage/provider";
-import { getActiveClientSlug } from "@/lib/tenant";
+import { bindClientSlug, getActiveClientSlug } from "@/lib/tenant";
 
 export { compressImage, validateImageFile, imageExtensionForFile } from "@/lib/storage/image-utils";
 export { isCloudflareR2Path } from "@/lib/storage/provider";
@@ -26,7 +26,7 @@ async function authBearer() {
  * Paths are namespaced under `clients/{slug}/…` when a tenant is active.
  * When `fileName` is set (e.g. "espresso"), the object is stored as `espresso.webp` (not a UUID).
  */
-export async function uploadImage(
+export const uploadImage = bindClientSlug(async function uploadImage(
   path: string,
   file: File,
   onProgress?: (progress: number) => void,
@@ -74,10 +74,10 @@ export async function uploadImage(
   });
 
   return result;
-}
+});
 
 /** Deletes an R2 image (`r2/…`). Non-R2 legacy paths are skipped. */
-export async function removeImage(path?: string) {
+export const removeImage = bindClientSlug(async function removeImage(path?: string) {
   if (!path) return;
   if (!isCloudflareR2Path(path)) return;
 
@@ -94,4 +94,4 @@ export async function removeImage(path?: string) {
     const body = (await response.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error || "Image delete failed.");
   }
-}
+});

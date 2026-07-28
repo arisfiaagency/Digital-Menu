@@ -25,7 +25,8 @@ import { defaultAppData } from "@/data/default-data";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { buildChanges, logAudit } from "@/lib/firebase/audit";
 import { removeImage } from "@/lib/storage";
-import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
+import { sanitizeSocialLinks } from "@/lib/social-urls";
+import { bindClientSlug, getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { extendSubscriptionExpiry } from "@/lib/client-access";
 import { slugify } from "@/lib/utils/format";
 import type { AdminPermissions, AdminProfile, AdminRole, AppData, CashShift, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, Review } from "@/types/models";
@@ -100,34 +101,34 @@ function tenantDoc(db: Firestore, collectionName: string, id: string) {
   return clientSlug ? doc(db, "clients", clientSlug, collectionName, id) : doc(db, collectionName, id);
 }
 
-export async function listClients(): Promise<ClientAccount[]> {
+export const listClients = bindClientSlug(async function listClients(): Promise<ClientAccount[]> {
   const db = getFirebaseDb();
   if (!db) return [];
   // No server-side orderBy — supervisor UI sorts by created date / name.
   // Avoids dropping older docs that lack `createdAt` under an orderBy query.
   const snap = await getDocs(query(collection(db, "clients").withConverter(clientConverter), limit(500)));
   return snap.docs.map((entry) => entry.data());
-}
+});
 
 // Customer reviews for the active cafe (newest first). Tenant-scoped read; the
 // admin reads these, public submissions arrive via the /api/reviews route.
-export async function listReviews(max = 500): Promise<Review[]> {
+export const listReviews = bindClientSlug(async function listReviews(max: number = 500): Promise<Review[]> {
   const db = getFirebaseDb();
   if (!db) return [];
   const snap = await getDocs(query(tenantCollection(db, "reviews"), orderBy("createdAt", "desc"), limit(max)));
   return snap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<Review, "id">) }));
-}
+});
 
-export async function getClient(slug: string): Promise<ClientAccount | null> {
+export const getClient = bindClientSlug(async function getClient(slug: string): Promise<ClientAccount | null> {
   const db = getFirebaseDb();
   if (!db) return null;
   const normalized = normalizeClientSlug(slug);
   if (!normalized) return null;
   const snap = await getDoc(doc(db, "clients", normalized).withConverter(clientConverter));
   return snap.exists() ? snap.data() : null;
-}
+});
 
-export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: string }) {
+export const saveClient = bindClientSlug(async function saveClient(client: Omit<ClientAccount, "id"> & { id?: string }) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const slug = normalizeClientSlug(client.slug || client.id || client.name);
@@ -172,7 +173,7 @@ export async function saveClient(client: Omit<ClientAccount, "id"> & { id?: stri
     await ensureClientImageFolderRemote(slug);
   }
   return payload;
-}
+});
 
 async function ensureClientImageFolderRemote(slug: string) {
   try {
@@ -190,7 +191,7 @@ async function ensureClientImageFolderRemote(slug: string) {
 }
 
 /** Partial update for supervisor billing / block controls. */
-export async function patchClient(slugInput: string, patch: Partial<ClientAccount>) {
+export const patchClient = bindClientSlug(async function patchClient(slugInput: string, patch: Partial<ClientAccount>) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const slug = normalizeClientSlug(slugInput);
@@ -205,7 +206,7 @@ export async function patchClient(slugInput: string, patch: Partial<ClientAccoun
     { merge: true }
   );
   return { ...existing.data(), ...safe, slug, id: slug } as ClientAccount;
-}
+});
 
 const CLIENT_SUBCOLLECTIONS = [
   "categories",
@@ -219,7 +220,7 @@ const CLIENT_SUBCOLLECTIONS = [
 ] as const;
 
 /** Delete a cafe tenant and all nested data. Prefer the Admin API; fall back to client SDK. */
-export async function deleteClient(slugInput: string) {
+export const deleteClient = bindClientSlug(async function deleteClient(slugInput: string) {
   const slug = normalizeClientSlug(slugInput);
   if (!slug) throw new Error("Client slug is required.");
   if (isReservedClientSlug(slug)) throw new Error(`Slug "${slug}" is reserved.`);
@@ -250,7 +251,7 @@ export async function deleteClient(slugInput: string) {
     await deleteQueryBatch(db, collection(db, "clients", slug, name));
   }
   await deleteDoc(doc(db, "clients", slug));
-}
+});
 
 async function deleteQueryBatch(db: Firestore, colRef: ReturnType<typeof collection>) {
   const pageSize = 400;
@@ -285,7 +286,7 @@ async function seedClientDefaults(slug: string, client: ClientAccount) {
   await batch.commit();
 }
 
-export async function getAdminAppData(): Promise<AppData> {
+export const getAdminAppData = bindClientSlug(async function getAdminAppData(): Promise<AppData> {
   const db = getFirebaseDb();
   if (!db) return defaultAppData;
 
@@ -305,7 +306,7 @@ export async function getAdminAppData(): Promise<AppData> {
     general: generalSnap.exists() ? { ...defaultAppData.general, ...generalSnap.data() } : defaultAppData.general,
     menu: menuSnap.exists() ? { ...defaultAppData.menu, ...menuSnap.data() } : defaultAppData.menu
   };
-}
+});
 
 // --- Admin / employee user profiles ---
 
@@ -329,7 +330,7 @@ export function normalizeUsername(username: string) {
 
 // Username → email lookup for the login screen. Goes through a rate-limited
 // Admin-SDK API because Firestore username docs are no longer world-readable.
-export async function getUsernameEmail(username: string): Promise<string | null> {
+export const getUsernameEmail = bindClientSlug(async function getUsernameEmail(username: string): Promise<string | null> {
   const normalized = normalizeUsername(username);
   if (!normalized) return null;
   try {
@@ -347,33 +348,48 @@ export async function getUsernameEmail(username: string): Promise<string | null>
   } catch {
     return null;
   }
-}
+});
 
-export async function isUsernameAvailable(username: string, exceptUid?: string): Promise<boolean> {
-  const db = getFirebaseDb();
-  if (!db) return true;
+export const isUsernameAvailable = bindClientSlug(async function isUsernameAvailable(username: string, exceptUid?: string): Promise<boolean> {
+  const normalized = normalizeUsername(username);
+  if (!normalized) return false;
   try {
-    const snap = await getDoc(tenantDoc(db, "usernames", normalizeUsername(username)));
-    if (!snap.exists()) return true;
-    return snap.data().uid === exceptUid;
+    const { getFirebaseAuth } = await import("@/lib/firebase/client");
+    const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+    if (!token) return false;
+    const res = await fetch("/api/auth/username-available", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        username: normalized,
+        clientSlug: getActiveClientSlug() || undefined,
+        exceptUid: exceptUid || undefined
+      })
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { ok?: boolean; available?: boolean };
+    return Boolean(data.ok && data.available);
   } catch {
-    return true; // can't verify (rules not deployed yet) — don't block creation
+    return false;
   }
-}
+});
 
-export async function claimUsername(username: string, email: string, uid: string) {
+export const claimUsername = bindClientSlug(async function claimUsername(username: string, email: string, uid: string) {
   const db = getFirebaseDb();
   if (!db || !username) return;
   await setDoc(tenantDoc(db, "usernames", normalizeUsername(username)), { email, uid });
-}
+});
 
-export async function releaseUsername(username: string) {
+export const releaseUsername = bindClientSlug(async function releaseUsername(username: string) {
   const db = getFirebaseDb();
   if (!db || !username) return;
   await deleteDoc(tenantDoc(db, "usernames", normalizeUsername(username)));
-}
+});
 
-export async function getAdminProfile(uid: string): Promise<AdminProfile | null> {
+export const getAdminProfile = bindClientSlug(async function getAdminProfile(uid: string): Promise<AdminProfile | null> {
   const db = getFirebaseDb();
   if (!db) return null;
   const snap = await getDoc(tenantDoc(db, "adminProfiles", uid));
@@ -384,18 +400,18 @@ export async function getAdminProfile(uid: string): Promise<AdminProfile | null>
     return toAdminProfile(uid, platformSnap.data());
   }
   return toAdminProfile(uid, snap.data());
-}
+});
 
-export async function listAdminProfiles(): Promise<AdminProfile[]> {
+export const listAdminProfiles = bindClientSlug(async function listAdminProfiles(): Promise<AdminProfile[]> {
   const db = getFirebaseDb();
   if (!db) return [];
   const snap = await getDocs(tenantCollection(db, "adminProfiles"));
   return snap.docs
     .map((entry) => toAdminProfile(entry.id, entry.data()))
     .sort((a, b) => a.email.localeCompare(b.email));
-}
+});
 
-export async function saveAdminProfile(profile: {
+export const saveAdminProfile = bindClientSlug(async function saveAdminProfile(profile: {
   uid: string;
   email: string;
   role: AdminRole;
@@ -446,25 +462,25 @@ export async function saveAdminProfile(profile: {
   } else {
     await logAudit({ action: "create", entity: "user", entityId: profile.uid, label: userLabel, summary: `role: ${profile.role}` });
   }
-}
+});
 
-export async function setAdminProfileDisabled(uid: string, disabled: boolean, label?: string) {
+export const setAdminProfileDisabled = bindClientSlug(async function setAdminProfileDisabled(uid: string, disabled: boolean, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   await updateDoc(tenantDoc(db, "adminProfiles", uid), { disabled, updatedAt: serverTimestamp() });
   await logAudit({ action: disabled ? "deactivate" : "activate", entity: "user", entityId: uid, label });
-}
+});
 
-export async function deleteAdminProfile(uid: string, label?: string) {
+export const deleteAdminProfile = bindClientSlug(async function deleteAdminProfile(uid: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   await deleteDoc(tenantDoc(db, "adminProfiles", uid));
   await logAudit({ action: "delete", entity: "user", entityId: uid, label });
-}
+});
 
 // Grant or revoke the Main Admin flag for this cafe. Only a Main Admin can do
 // this (firestore.rules gates the isMainAdmin field to Main Admins).
-export async function setMainAdmin(uid: string, isMainAdmin: boolean, label?: string) {
+export const setMainAdmin = bindClientSlug(async function setMainAdmin(uid: string, isMainAdmin: boolean, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   await updateDoc(tenantDoc(db, "adminProfiles", uid), { isMainAdmin, updatedAt: serverTimestamp() });
@@ -475,9 +491,9 @@ export async function setMainAdmin(uid: string, isMainAdmin: boolean, label?: st
     label,
     summary: isMainAdmin ? "Granted Main Admin" : "Revoked Main Admin"
   });
-}
+});
 
-export async function saveCategory(category: Category) {
+export const saveCategory = bindClientSlug(async function saveCategory(category: Category) {
   const db = getFirebaseDb();
   if (!db) return;
   const payload = {
@@ -501,19 +517,19 @@ export async function saveCategory(category: Category) {
       ? { action: "update", entity: "category", entityId: savedId, label: categoryLabel(category), changes: buildChanges(before, category) }
       : { action: "create", entity: "category", entityId: savedId, label: categoryLabel(category) }
   );
-}
+});
 
-export async function deleteCategory(categoryId: string, label?: string) {
+export const deleteCategory = bindClientSlug(async function deleteCategory(categoryId: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) return;
   await deleteDoc(tenantDoc(db, "categories", categoryId));
   await logAudit({ action: "delete", entity: "category", entityId: categoryId, label });
-}
+});
 
 // Delete a category but KEEP its items. Each item is either moved to another
 // category or left uncategorized (empty categoryId) — uncategorized items show
 // under the "Others" group on the admin list.
-export async function deleteCategoryKeepItems(category: Category, items: MenuItem[], destination: Category | null) {
+export const deleteCategoryKeepItems = bindClientSlug(async function deleteCategoryKeepItems(category: Category, items: MenuItem[], destination: Category | null) {
   const db = getFirebaseDb();
   if (!db) return;
   const destinationId = destination?.id ?? "";
@@ -529,10 +545,10 @@ export async function deleteCategoryKeepItems(category: Category, items: MenuIte
       : `Kept ${items.length} item(s) as Others (no category)`
     : undefined;
   await logAudit({ action: "delete", entity: "category", entityId: category.id, label: categoryLabel(category), summary });
-}
+});
 
 // Delete a category AND permanently delete every item inside it.
-export async function deleteCategoryWithItems(category: Category, items: MenuItem[]) {
+export const deleteCategoryWithItems = bindClientSlug(async function deleteCategoryWithItems(category: Category, items: MenuItem[]) {
   const db = getFirebaseDb();
   if (!db) return;
   const batch = writeBatch(db);
@@ -546,16 +562,16 @@ export async function deleteCategoryWithItems(category: Category, items: MenuIte
     label: categoryLabel(category),
     summary: `Deleted with ${items.length} item(s)`
   });
-}
+});
 
-export async function updateCategoryActive(categoryId: string, isActive: boolean, label?: string) {
+export const updateCategoryActive = bindClientSlug(async function updateCategoryActive(categoryId: string, isActive: boolean, label?: string) {
   const db = getFirebaseDb();
   if (!db) return;
   await updateDoc(tenantDoc(db, "categories", categoryId), { isActive, updatedAt: serverTimestamp() });
   await logAudit({ action: isActive ? "activate" : "deactivate", entity: "category", entityId: categoryId, label });
-}
+});
 
-export async function reorderCategories(updates: { id: string; displayOrder: number }[]) {
+export const reorderCategories = bindClientSlug(async function reorderCategories(updates: { id: string; displayOrder: number }[]) {
   const db = getFirebaseDb();
   if (!db || !updates.length) return;
   const batch = writeBatch(db);
@@ -564,9 +580,9 @@ export async function reorderCategories(updates: { id: string; displayOrder: num
   }
   await batch.commit();
   await logAudit({ action: "reorder", entity: "category", summary: `Reordered ${updates.length} categor${updates.length === 1 ? "y" : "ies"}` });
-}
+});
 
-export async function saveMenuItem(item: MenuItem) {
+export const saveMenuItem = bindClientSlug(async function saveMenuItem(item: MenuItem) {
   const db = getFirebaseDb();
   if (!db) return;
   await pruneExpiredImageHistory(item, false);
@@ -591,9 +607,9 @@ export async function saveMenuItem(item: MenuItem) {
       ? { action: "update", entity: "menuItem", entityId: savedId, label: itemLabel(item), changes: buildChanges(before, nextItem) }
       : { action: "create", entity: "menuItem", entityId: savedId, label: itemLabel(item) }
   );
-}
+});
 
-export async function updateMenuItemAvailability(itemId: string, isAvailable: boolean, isSoldOut?: boolean, label?: string) {
+export const updateMenuItemAvailability = bindClientSlug(async function updateMenuItemAvailability(itemId: string, isAvailable: boolean, isSoldOut?: boolean, label?: string) {
   const db = getFirebaseDb();
   if (!db) return;
   const patch: Record<string, unknown> = { isAvailable, updatedAt: serverTimestamp() };
@@ -603,9 +619,9 @@ export async function updateMenuItemAvailability(itemId: string, isAvailable: bo
     ? `available: ${isAvailable}, sold out: ${isSoldOut}`
     : `available: ${isAvailable}`;
   await logAudit({ action: "availability", entity: "menuItem", entityId: itemId, label, summary });
-}
+});
 
-export async function reorderMenuItems(updates: { id: string; displayOrder: number }[]) {
+export const reorderMenuItems = bindClientSlug(async function reorderMenuItems(updates: { id: string; displayOrder: number }[]) {
   const db = getFirebaseDb();
   if (!db || !updates.length) return;
   const batch = writeBatch(db);
@@ -614,7 +630,7 @@ export async function reorderMenuItems(updates: { id: string; displayOrder: numb
   }
   await batch.commit();
   await logAudit({ action: "reorder", entity: "menuItem", summary: `Reordered ${updates.length} item(s)` });
-}
+});
 
 async function pruneExpiredImageHistory(item: MenuItem, persist: boolean) {
   const expired = (item.imageHistory || []).filter((entry) => isExpired(entry.expiresAt));
@@ -637,21 +653,21 @@ function isExpired(value: string) {
   return Number.isFinite(Date.parse(value)) && Date.parse(value) <= Date.now();
 }
 
-export async function deleteMenuItem(itemId: string, label?: string) {
+export const deleteMenuItem = bindClientSlug(async function deleteMenuItem(itemId: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) return;
   await deleteDoc(tenantDoc(db, "menuItems", itemId));
   await logAudit({ action: "delete", entity: "menuItem", entityId: itemId, label });
-}
+});
 
-export async function listExpenses(): Promise<Expense[]> {
+export const listExpenses = bindClientSlug(async function listExpenses(): Promise<Expense[]> {
   const db = getFirebaseDb();
   if (!db) return [];
   const snap = await getDocs(query(tenantCollection(db, "expenses").withConverter(expenseConverter), orderBy("date", "desc"), limit(500)));
   return snap.docs.map((entry) => entry.data());
-}
+});
 
-export async function saveExpense(expense: Expense) {
+export const saveExpense = bindClientSlug(async function saveExpense(expense: Expense) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const payload = {
@@ -674,16 +690,16 @@ export async function saveExpense(expense: Expense) {
       ? { action: "update", entity: "expense", entityId: savedId, label: expense.title, changes: buildChanges(before, expense) }
       : { action: "create", entity: "expense", entityId: savedId, label: expense.title, summary: `${expense.amount} ${expense.currency}` }
   );
-}
+});
 
-export async function deleteExpense(expenseId: string, label?: string) {
+export const deleteExpense = bindClientSlug(async function deleteExpense(expenseId: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   await deleteDoc(tenantDoc(db, "expenses", expenseId));
   await logAudit({ action: "delete", entity: "expense", entityId: expenseId, label });
-}
+});
 
-export async function cancelExpense(expenseId: string, cancelledByUid?: string, label?: string) {
+export const cancelExpense = bindClientSlug(async function cancelExpense(expenseId: string, cancelledByUid?: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   await updateDoc(tenantDoc(db, "expenses", expenseId), stripUndefined({
@@ -693,7 +709,7 @@ export async function cancelExpense(expenseId: string, cancelledByUid?: string, 
     updatedAt: serverTimestamp()
   }));
   await logAudit({ action: "cancel", entity: "expense", entityId: expenseId, label });
-}
+});
 
 /** Pointer doc so only one cashier shift can be open at a time. */
 const SHIFT_LOCK_DOC_ID = "shiftLock";
@@ -706,7 +722,7 @@ type ShiftLock = {
 const shiftLockConverter = converter<ShiftLock>();
 
 /** The single open cashier shift, if any. */
-export async function getOpenShift(): Promise<CashShift | null> {
+export const getOpenShift = bindClientSlug(async function getOpenShift(): Promise<CashShift | null> {
   const db = getFirebaseDb();
   if (!db) return null;
   const lockSnap = await getDoc(tenantDoc(db, "shifts", SHIFT_LOCK_DOC_ID).withConverter(shiftLockConverter));
@@ -716,9 +732,9 @@ export async function getOpenShift(): Promise<CashShift | null> {
   if (!snap.exists()) return null;
   const shift = snap.data();
   return shift.status === "open" ? shift : null;
-}
+});
 
-export async function listShifts(max = 100): Promise<CashShift[]> {
+export const listShifts = bindClientSlug(async function listShifts(max: number = 100): Promise<CashShift[]> {
   const db = getFirebaseDb();
   if (!db) return [];
   const snap = await getDocs(
@@ -726,9 +742,9 @@ export async function listShifts(max = 100): Promise<CashShift[]> {
   ).catch(() => null);
   const rows = snap?.docs.map((entry) => entry.data()) || [];
   return rows.filter((row) => row.id !== SHIFT_LOCK_DOC_ID && (row.status === "open" || row.status === "closed"));
-}
+});
 
-export async function openCashShift(input: {
+export const openCashShift = bindClientSlug(async function openCashShift(input: {
   openingCash: number;
   currency: CashShift["currency"];
   openedBy?: string;
@@ -775,9 +791,9 @@ export async function openCashShift(input: {
     summary: `Opening cash ${shift.openingCash} ${shift.currency}`
   });
   return shift;
-}
+});
 
-export async function closeCashShift(input: {
+export const closeCashShift = bindClientSlug(async function closeCashShift(input: {
   closingCashCounted: number;
   closedBy?: string;
   closedByUid?: string;
@@ -845,14 +861,26 @@ export async function closeCashShift(input: {
     summary: `Sales ${salesTotal} · counted ${closingCashCounted} · variance ${variance}`
   });
   return closed;
-}
+});
 
-export async function saveSettings(section: "general" | "menu", value: Record<string, unknown>) {
+export const saveSettings = bindClientSlug(async function saveSettings(section: "general" | "menu", value: Record<string, unknown>) {
   const db = getFirebaseDb();
   if (!db) return;
   const existing = await getDoc(tenantDoc(db, "settings", section));
   const before = existing.exists() ? existing.data() : null;
-  const payload = stripUndefined({ ...value, updatedAt: serverTimestamp() }) as Record<string, unknown>;
+  const sanitized =
+    section === "general" && value.socialLinks && typeof value.socialLinks === "object"
+      ? {
+          ...value,
+          socialLinks: sanitizeSocialLinks(value.socialLinks as {
+            facebook?: string;
+            instagram?: string;
+            tiktok?: string;
+            snapchat?: string;
+          })
+        }
+      : value;
+  const payload = stripUndefined({ ...sanitized, updatedAt: serverTimestamp() }) as Record<string, unknown>;
   await updateDoc(tenantDoc(db, "settings", section), payload).catch(async () => {
     await setDoc(tenantDoc(db, "settings", section), payload, { merge: true });
   });
@@ -861,14 +889,14 @@ export async function saveSettings(section: "general" | "menu", value: Record<st
     entity: "settings",
     entityId: section,
     label: section,
-    changes: before ? buildChanges(before, value) : undefined
+    changes: before ? buildChanges(before, sanitized) : undefined
   });
-}
+});
 
 const paymentConverter = converter<PlatformPayment>();
 
 /** Record a cafe subscription payment, extend expiry by months, and update billing totals. */
-export async function recordClientPayment(input: {
+export const recordClientPayment = bindClientSlug(async function recordClientPayment(input: {
   client: ClientAccount;
   amount: number;
   /** Months of access to add (default 1). */
@@ -927,19 +955,19 @@ export async function recordClientPayment(input: {
   );
   await batch.commit();
   return payment;
-}
+});
 
-export async function listPlatformPayments(max = 500): Promise<PlatformPayment[]> {
+export const listPlatformPayments = bindClientSlug(async function listPlatformPayments(max: number = 500): Promise<PlatformPayment[]> {
   const db = getFirebaseDb();
   if (!db) return [];
   const snap = await getDocs(
     query(collection(db, "platformPayments").withConverter(paymentConverter), orderBy("createdAt", "desc"), limit(max))
   );
   return snap.docs.map((entry) => entry.data());
-}
+});
 
 /** Delete payment ledger rows by id. Does not change cafe billing/subscription. */
-export async function deletePlatformPayments(ids: string[]) {
+export const deletePlatformPayments = bindClientSlug(async function deletePlatformPayments(ids: string[]) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
@@ -954,16 +982,16 @@ export async function deletePlatformPayments(ids: string[]) {
     await batch.commit();
   }
   return { deleted: unique.length };
-}
+});
 
 /** Delete every document in `platformPayments`. Does not change cafe billing/subscription. */
-export async function deleteAllPlatformPayments() {
+export const deleteAllPlatformPayments = bindClientSlug(async function deleteAllPlatformPayments() {
   const rows = await listPlatformPayments(2000);
   if (!rows.length) return { deleted: 0 };
   return deletePlatformPayments(rows.map((row) => row.id));
-}
+});
 
-export async function getPosState(): Promise<PosState> {
+export const getPosState = bindClientSlug(async function getPosState(): Promise<PosState> {
   const db = getFirebaseDb();
   if (!db) return defaultPosState;
   const [snap, completedSnap] = await Promise.all([
@@ -976,7 +1004,7 @@ export async function getPosState(): Promise<PosState> {
   for (const order of state.completedOrders || []) mergedOrders.set(order.id, order);
   for (const order of storedOrders) mergedOrders.set(order.id, order);
   return { ...state, completedOrders: [...mergedOrders.values()] };
-}
+});
 
 /**
  * Live open-table POS state (tables, floor shapes, open orders).
@@ -991,8 +1019,14 @@ export function subscribePosLiveState(
     onChange(defaultPosState);
     return () => undefined;
   }
+  // Freeze the cafe for this subscription so a mid-session navigation cannot
+  // retarget the live POS listener.
+  const slug = getActiveClientSlug();
+  const posRef = slug
+    ? doc(db, "clients", slug, "settings", "pos")
+    : doc(db, "settings", "pos");
   return onSnapshot(
-    tenantDoc(db, "settings", "pos"),
+    posRef,
     (snap) => {
       const state = snap.exists() ? normalizePosState(snap.data()) : defaultPosState;
       onChange({ ...state, completedOrders: [] });
@@ -1004,13 +1038,13 @@ export function subscribePosLiveState(
 }
 
 /** One-shot read of open POS state (no completedOrders collection). */
-export async function getPosLiveState(): Promise<PosState> {
+export const getPosLiveState = bindClientSlug(async function getPosLiveState(): Promise<PosState> {
   const db = getFirebaseDb();
   if (!db) return defaultPosState;
   const snap = await getDoc(tenantDoc(db, "settings", "pos"));
   const state = snap.exists() ? normalizePosState(snap.data()) : defaultPosState;
   return { ...state, completedOrders: [] };
-}
+});
 
 function orderUpdatedAtMs(order: PosState["orders"][string] | undefined) {
   if (!order?.updatedAt) return 0;
@@ -1050,7 +1084,7 @@ function posWritePayload(state: PosState) {
   };
 }
 
-export async function savePosState(state: PosState) {
+export const savePosState = bindClientSlug(async function savePosState(state: PosState) {
   const db = getFirebaseDb();
   if (!db) return;
   const ref = tenantDoc(db, "settings", "pos");
@@ -1066,9 +1100,9 @@ export async function savePosState(state: PosState) {
     };
     tx.set(ref, posWritePayload(merged), { merge: true });
   });
-}
+});
 
-export async function completePosOrder(state: PosState, completedOrder: PosCompletedOrder) {
+export const completePosOrder = bindClientSlug(async function completePosOrder(state: PosState, completedOrder: PosCompletedOrder) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const ref = tenantDoc(db, "settings", "pos");
@@ -1099,9 +1133,9 @@ export async function completePosOrder(state: PosState, completedOrder: PosCompl
     label: orderToStore.tableName,
     summary: `${orderToStore.total} ${orderToStore.currency}`
   });
-}
+});
 
-export async function cancelCompletedOrder(order: PosCompletedOrder, cancelledByUid?: string) {
+export const cancelCompletedOrder = bindClientSlug(async function cancelCompletedOrder(order: PosCompletedOrder, cancelledByUid?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const cancelledOrder: PosCompletedOrder = {
@@ -1122,9 +1156,9 @@ export async function cancelCompletedOrder(order: PosCompletedOrder, cancelledBy
     label: order.tableName,
     summary: `${order.total} ${order.currency}`
   });
-}
+});
 
-export async function deleteCompletedOrder(orderId: string, label?: string) {
+export const deleteCompletedOrder = bindClientSlug(async function deleteCompletedOrder(orderId: string, label?: string) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const batch = writeBatch(db);
@@ -1132,10 +1166,10 @@ export async function deleteCompletedOrder(orderId: string, label?: string) {
   batch.set(tenantDoc(db, "settings", "pos"), { completedOrders: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
   await batch.commit();
   await logAudit({ action: "delete", entity: "order", entityId: orderId, label });
-}
+});
 
 // Full-admin edit of a recorded sale (change lines/prices/discount).
-export async function updateCompletedOrder(order: PosCompletedOrder) {
+export const updateCompletedOrder = bindClientSlug(async function updateCompletedOrder(order: PosCompletedOrder) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const batch = writeBatch(db);
@@ -1149,7 +1183,7 @@ export async function updateCompletedOrder(order: PosCompletedOrder) {
     label: order.tableName,
     summary: `Edited · ${order.total} ${order.currency}`
   });
-}
+});
 
 function normalizePosState(value: unknown): PosState {
   const data = value && typeof value === "object" ? value as Partial<PosState> : {};

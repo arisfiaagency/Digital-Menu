@@ -9,7 +9,7 @@ import { normalizeClientSlug } from "@/lib/tenant";
  * Admin-SDK endpoint is the only anonymous path.
  */
 export async function POST(request: NextRequest) {
-  const limited = rateLimit(request, "resolve-username", { limit: 20, windowMs: 15 * 60 * 1000 });
+  const limited = await rateLimit(request, "resolve-username", { limit: 20, windowMs: 15 * 60 * 1000 });
   if (limited) return limited;
 
   let body: { username?: unknown; clientSlug?: unknown };
