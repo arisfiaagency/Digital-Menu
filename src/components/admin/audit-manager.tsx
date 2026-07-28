@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { History, RefreshCw, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, History, RefreshCw, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,13 +35,23 @@ const ENTITY_KEYS: Record<string, string> = {
   expense: "auditEntExpense",
   order: "auditEntOrder",
   settings: "auditEntSettings",
-  user: "auditEntUser"
+  user: "auditEntUser",
+  shift: "auditEntShift"
 };
 
 const DESTRUCTIVE_ACTIONS = new Set(["delete", "cancel"]);
 const POSITIVE_ACTIONS = new Set(["create", "complete", "activate"]);
 
-export function AuditLogManager() {
+export function AuditLogManager({
+  clientSlug,
+  cafeName,
+  viewer = "tenant"
+}: {
+  /** When set (supervisor view), load this cafe's `clients/{slug}/auditLogs`. */
+  clientSlug?: string;
+  cafeName?: string;
+  viewer?: "tenant" | "platform";
+} = {}) {
   const { locale, text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
   const [logs, setLogs] = useState<AuditLog[] | null>(null);
@@ -51,13 +62,15 @@ export function AuditLogManager() {
   const [actionFilter, setActionFilter] = useState("all");
   const [actorFilter, setActorFilter] = useState("all");
 
-  const isMainAdmin = !auth.loading && auth.isMainAdmin;
+  const canView =
+    !auth.loading &&
+    (viewer === "platform" ? Boolean(auth.isAdmin && auth.role !== "employee") : auth.isMainAdmin);
 
   async function load() {
     setRefreshing(true);
     setError("");
     try {
-      setLogs(await listAuditLogs(400));
+      setLogs(await listAuditLogs(400, clientSlug));
     } catch (err) {
       setError(err instanceof Error ? err.message : text.settingsSaveFailed);
     } finally {
@@ -66,9 +79,9 @@ export function AuditLogManager() {
   }
 
   useEffect(() => {
-    if (isMainAdmin) void load();
+    if (canView) void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMainAdmin]);
+  }, [canView, clientSlug]);
 
   const actors = useMemo(() => {
     const names = new Set<string>();
@@ -94,7 +107,7 @@ export function AuditLogManager() {
     });
   }, [logs, query, entityFilter, actionFilter, actorFilter]);
 
-  if (!auth.loading && !isMainAdmin) {
+  if (!auth.loading && !canView) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/15 p-10 text-center">
         <ShieldAlert className="h-8 w-8 text-muted-foreground" aria-hidden />
@@ -104,15 +117,39 @@ export function AuditLogManager() {
     );
   }
 
+  const title =
+    viewer === "platform" && (cafeName || clientSlug)
+      ? `${text.auditLog} · ${cafeName || `/${clientSlug}`}`
+      : text.auditLog;
+  const description =
+    viewer === "platform"
+      ? text.supervisorAuditDescription
+      : text.auditLogDescription;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-semibold">
-            <History className="h-7 w-7 text-primary" aria-hidden />
-            {text.auditLog}
-          </h1>
-          <p className="text-muted-foreground">{text.auditLogDescription}</p>
+        <div className="space-y-2">
+          {viewer === "platform" ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin">
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                {text.backToClients}
+              </Link>
+            </Button>
+          ) : null}
+          <div>
+            <h1 className="flex items-center gap-2 text-3xl font-semibold">
+              <History className="h-7 w-7 text-primary" aria-hidden />
+              {title}
+            </h1>
+            <p className="text-muted-foreground">{description}</p>
+            {viewer === "platform" && clientSlug ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">/{clientSlug}</span>
+              </p>
+            ) : null}
+          </div>
         </div>
         <Button type="button" variant="outline" onClick={load} disabled={refreshing}>
           <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} aria-hidden />

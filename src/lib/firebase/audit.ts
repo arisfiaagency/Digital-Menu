@@ -9,7 +9,7 @@ import {
   type Firestore
 } from "firebase/firestore";
 import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase/client";
-import { getActiveClientSlug, runWithClientSlug } from "@/lib/tenant";
+import { getActiveClientSlug, normalizeClientSlug, runWithClientSlug } from "@/lib/tenant";
 import type { AuditChange, AuditLog } from "@/types/models";
 
 // The person currently signed into the admin. Set once from the admin shell
@@ -85,8 +85,9 @@ function omitUndefined<T extends Record<string, unknown>>(value: T): Partial<T> 
   return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as Partial<T>;
 }
 
-export async function listAuditLogs(max = 400): Promise<AuditLog[]> {
-  return runWithClientSlug(async () => {
+export async function listAuditLogs(max = 400, forClientSlug?: string): Promise<AuditLog[]> {
+  const slug = forClientSlug ? normalizeClientSlug(forClientSlug) : getActiveClientSlug();
+  return runWithClientSlug(slug, async () => {
     const db = getFirebaseDb();
     if (!db) return [];
     const snap = await getDocs(query(auditCollection(db), orderBy("createdAt", "desc"), limit(max)));

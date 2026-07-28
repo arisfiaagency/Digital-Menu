@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ExternalLink,
+  History,
   Plus,
   QrCode,
   Save,
@@ -744,6 +745,12 @@ function ClientCard({
                 <UtensilsCrossed className="h-4 w-4" aria-hidden />
                 Menu
               </a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/admin/clients/${client.slug}/audit`}>
+                <History className="h-4 w-4" aria-hidden />
+                Activity log
+              </Link>
             </Button>
             <Button
               type="button"

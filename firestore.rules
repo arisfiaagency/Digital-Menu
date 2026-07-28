@@ -237,10 +237,9 @@ service cloud.firestore {
       }
 
       match /auditLogs/{logId} {
-        // Every approved staff member's actions get logged (create), but only the
-        // cafe's Main Admin can read the accountability trail. Append-only.
-        // actorUid must match the signed-in user — forged actors are rejected.
-        allow read: if isTenantMainAdmin(clientId);
+        // Cafe Main Admin + platform supervisors can read the trail. Staff
+        // create entries for their own actions only (append-only).
+        allow read: if isTenantMainAdmin(clientId) || isPlatformFullAdmin();
         allow create: if isTenantAdmin(clientId)
           && request.resource.data.actorUid == request.auth.uid
           && request.resource.data.action is string
