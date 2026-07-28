@@ -13,10 +13,10 @@ import { DesignBackdrop } from "@/components/menu/design-backdrop";
 import { MenuChromeProvider } from "@/components/menu/menu-chrome";
 import { BrandCredit } from "@/components/brand-credit";
 import { useLocale } from "@/hooks/use-locale";
-import { localized, locales } from "@/lib/i18n/config";
+import { localized, localeLabels, locales, dirForLocale } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils/cn";
 import { accentStyle, menuAccentCss } from "@/lib/utils/accent";
-import type { GeneralSettings, MenuDesign, MenuSettings } from "@/types/models";
+import type { GeneralSettings, Locale, MenuDesign, MenuSettings } from "@/types/models";
 
 const VIEW_MENU_LABEL = { en: "View Menu", ar: "عرض القائمة", ckb: "بینینی مێنیۆ" } as const;
 
@@ -283,7 +283,16 @@ function WelcomeScreen({
           <SocialLinks social={general.socialLinks} style={theme.socialStyle} />
         </div>
 
-        <Link href={`/${slug}/menu`} className={cn("mt-9", theme.ctaClassName)} dir={textDir}>
+        {enabledLocales.length > 1 ? (
+          <WelcomeLanguageButtons
+            locale={locale}
+            availableLocales={enabledLocales}
+            onChange={setLocale}
+            design={design}
+          />
+        ) : null}
+
+        <Link href={`/${slug}/menu`} className={cn("mt-6", theme.ctaClassName)} dir={textDir}>
           <UtensilsCrossed className="h-4 w-4" aria-hidden />
           <span>{VIEW_MENU_LABEL[locale] ?? VIEW_MENU_LABEL.en}</span>
         </Link>
@@ -293,6 +302,59 @@ function WelcomeScreen({
         <BrandCredit />
       </footer>
     </WelcomeRoot>
+  );
+}
+
+function WelcomeLanguageButtons({
+  locale,
+  availableLocales,
+  onChange,
+  design
+}: {
+  locale: Locale;
+  availableLocales: Locale[];
+  onChange: (locale: Locale) => void;
+  design: MenuDesign;
+}) {
+  // Compact pill row above "View Menu". Shared by every welcome theme so language
+  // is always visible without opening the top-right globe menu.
+  const rounded =
+    design === "classic" || design === "magazine" || design === "brutalist" || design === "elegant"
+      ? "rounded-none"
+      : design === "kraft" || design === "chalkboard"
+        ? "rounded-md"
+        : "rounded-full";
+
+  return (
+    <div
+      dir="ltr"
+      role="group"
+      aria-label="Language"
+      className="mt-8 flex flex-wrap items-center justify-center gap-2"
+    >
+      {availableLocales.map((entry) => {
+        const active = entry === locale;
+        return (
+          <button
+            key={entry}
+            type="button"
+            lang={entry}
+            dir={dirForLocale(entry)}
+            aria-pressed={active}
+            onClick={() => onChange(entry)}
+            className={cn(
+              "min-w-[5.5rem] border px-4 py-2 text-sm font-semibold transition-all active:scale-95",
+              rounded,
+              active
+                ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                : "border-border/80 bg-card/70 text-foreground backdrop-blur-sm hover:border-primary/50 hover:bg-muted/60"
+            )}
+          >
+            {localeLabels[entry]}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
