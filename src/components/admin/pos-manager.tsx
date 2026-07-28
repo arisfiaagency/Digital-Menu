@@ -47,8 +47,9 @@ import { useAdminAuth } from "@/hooks/use-admin-auth";
 import {
   completePosOrder,
   getAdminAppData,
-  getPosState,
+  getPosLiveState,
   savePosState,
+  subscribePosLiveState,
 } from "@/lib/firebase/firestore";
 import { localized } from "@/lib/i18n/config";
 import type { LocaleDirection } from "@/lib/i18n/config";
@@ -131,23 +132,34 @@ export function PosManager() {
   const [saving, setSaving] = useState(false);
   const menuPickerRef = useRef<HTMLDivElement | null>(null);
   const pendingPickerScroll = useRef(false);
+  // While a save is in flight, skip remote snapshots so optimistic UI doesn't flash back.
+  // Apply the latest remote payload once all local writes finish.
+  const inflightSaves = useRef(0);
+  const pendingRemotePos = useRef<PosState | null>(null);
 
   // Only admins can edit the floor plan; everyone can view it and take orders.
   const [planEditing, setPlanEditing] = useState(false);
 
   useEffect(() => {
-    Promise.all([getAdminAppData(), getPosState()])
-      .then(([appData, posState]) => {
-        const nextPos = normalizeTableOrder(posState);
-        setData(appData);
-        setPos(nextPos);
-        // Start with no table selected — the POS stays locked until the user
-        // taps a table (see the selected-table gate on the picker/summary).
-        setSelectedTableId("");
-      })
+    getAdminAppData()
+      .then(setData)
       .catch((err) =>
         setError(err instanceof Error ? err.message : text.settingsSaveFailed),
       );
+  }, [text.settingsSaveFailed]);
+
+  useEffect(() => {
+    const unsubscribe = subscribePosLiveState(
+      (remote) => {
+        if (inflightSaves.current > 0) {
+          pendingRemotePos.current = remote;
+          return;
+        }
+        setPos(normalizeTableOrder(remote));
+      },
+      (err) => setError(err.message || text.settingsSaveFailed),
+    );
+    return unsubscribe;
   }, [text.settingsSaveFailed]);
 
   const tables = useMemo(
@@ -251,8 +263,13 @@ export function PosManager() {
     setSaving(true);
     setMessage("");
     setError("");
+    inflightSaves.current += 1;
     try {
       await savePosState(nextPos);
+      // Pull the merged server state so concurrent captain edits on other tables appear.
+      const live = await getPosLiveState();
+      pendingRemotePos.current = null;
+      setPos(normalizeTableOrder(live));
       if (nextMessage) setMessage(nextMessage);
       return true;
     } catch (err) {
@@ -260,7 +277,13 @@ export function PosManager() {
       setError(err instanceof Error ? err.message : text.settingsSaveFailed);
       return false;
     } finally {
+      inflightSaves.current = Math.max(0, inflightSaves.current - 1);
       setSaving(false);
+      if (inflightSaves.current === 0 && pendingRemotePos.current) {
+        const remote = pendingRemotePos.current;
+        pendingRemotePos.current = null;
+        setPos(normalizeTableOrder(remote));
+      }
     }
   }
 
@@ -453,14 +476,24 @@ export function PosManager() {
     setSaving(true);
     setMessage("");
     setError("");
+    inflightSaves.current += 1;
     try {
       await completePosOrder(nextPos, completedOrder);
+      const live = await getPosLiveState();
+      pendingRemotePos.current = null;
+      setPos(normalizeTableOrder(live));
       setMessage(text.orderCompleted);
     } catch (err) {
       setPos(previousPos);
       setError(err instanceof Error ? err.message : text.settingsSaveFailed);
     } finally {
+      inflightSaves.current = Math.max(0, inflightSaves.current - 1);
       setSaving(false);
+      if (inflightSaves.current === 0 && pendingRemotePos.current) {
+        const remote = pendingRemotePos.current;
+        pendingRemotePos.current = null;
+        setPos(normalizeTableOrder(remote));
+      }
     }
   }
 
@@ -2814,6 +2847,8 @@ function emptyOrder(tableId: string): PosTableOrder {
     lines: [],
     discountType: "percent",
     discountValue: 0,
+    // Stamp clear/move so transactional merge prefers this over a stale remote order.
+    updatedAt: new Date().toISOString(),
   };
 }
 

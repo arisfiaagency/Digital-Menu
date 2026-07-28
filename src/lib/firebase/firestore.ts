@@ -7,8 +7,10 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -16,7 +18,8 @@ import {
   type FirestoreDataConverter,
   type Firestore,
   type QueryDocumentSnapshot,
-  type SnapshotOptions
+  type SnapshotOptions,
+  type Unsubscribe
 } from "firebase/firestore";
 import { defaultAppData } from "@/data/default-data";
 import { getFirebaseDb } from "@/lib/firebase/client";
@@ -812,36 +815,116 @@ export async function getPosState(): Promise<PosState> {
   return { ...state, completedOrders: [...mergedOrders.values()] };
 }
 
+/**
+ * Live open-table POS state (tables, floor shapes, open orders).
+ * Completed sales stay in the completedOrders collection and are not streamed here.
+ */
+export function subscribePosLiveState(
+  onChange: (state: PosState) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const db = getFirebaseDb();
+  if (!db) {
+    onChange(defaultPosState);
+    return () => undefined;
+  }
+  return onSnapshot(
+    tenantDoc(db, "settings", "pos"),
+    (snap) => {
+      const state = snap.exists() ? normalizePosState(snap.data()) : defaultPosState;
+      onChange({ ...state, completedOrders: [] });
+    },
+    (err) => {
+      onError?.(err instanceof Error ? err : new Error(String(err)));
+    }
+  );
+}
+
+/** One-shot read of open POS state (no completedOrders collection). */
+export async function getPosLiveState(): Promise<PosState> {
+  const db = getFirebaseDb();
+  if (!db) return defaultPosState;
+  const snap = await getDoc(tenantDoc(db, "settings", "pos"));
+  const state = snap.exists() ? normalizePosState(snap.data()) : defaultPosState;
+  return { ...state, completedOrders: [] };
+}
+
+function orderUpdatedAtMs(order: PosState["orders"][string] | undefined) {
+  if (!order?.updatedAt) return 0;
+  const ms = Date.parse(order.updatedAt);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+/** Prefer the newer open order per table so captain + cashier edits don't clobber each other. */
+function mergePosOrders(
+  remote: PosState["orders"],
+  local: PosState["orders"]
+): PosState["orders"] {
+  const ids = new Set([...Object.keys(remote), ...Object.keys(local)]);
+  const merged: PosState["orders"] = {};
+  for (const tableId of ids) {
+    const remoteOrder = remote[tableId];
+    const localOrder = local[tableId];
+    if (!localOrder) {
+      if (remoteOrder) merged[tableId] = remoteOrder;
+      continue;
+    }
+    if (!remoteOrder) {
+      merged[tableId] = localOrder;
+      continue;
+    }
+    merged[tableId] =
+      orderUpdatedAtMs(localOrder) >= orderUpdatedAtMs(remoteOrder) ? localOrder : remoteOrder;
+  }
+  return merged;
+}
+
+function posWritePayload(state: PosState) {
+  return {
+    ...serializePosState(state),
+    completedOrders: deleteField(),
+    updatedAt: serverTimestamp()
+  };
+}
+
 export async function savePosState(state: PosState) {
   const db = getFirebaseDb();
   if (!db) return;
-  await setDoc(
-    tenantDoc(db, "settings", "pos"),
-    {
-      ...serializePosState(state),
-      // Completed sales live in the completedOrders collection; drop any legacy array.
-      completedOrders: deleteField(),
-      updatedAt: serverTimestamp()
-    },
-    { merge: true }
-  );
+  const ref = tenantDoc(db, "settings", "pos");
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const remote = snap.exists() ? normalizePosState(snap.data()) : defaultPosState;
+    const local = normalizePosState(state);
+    const merged: PosState = {
+      tables: local.tables,
+      shapes: local.shapes ?? [],
+      orders: mergePosOrders(remote.orders, local.orders),
+      completedOrders: []
+    };
+    tx.set(ref, posWritePayload(merged), { merge: true });
+  });
 }
 
 export async function completePosOrder(state: PosState, completedOrder: PosCompletedOrder) {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
-  const batch = writeBatch(db);
-  batch.set(
-    tenantDoc(db, "settings", "pos"),
-    {
-      ...serializePosState(state),
-      completedOrders: deleteField(),
-      updatedAt: serverTimestamp()
-    },
-    { merge: true }
-  );
-  batch.set(tenantDoc(db, "completedOrders", completedOrder.id).withConverter(completedOrderConverter), completedOrder);
-  await batch.commit();
+  const ref = tenantDoc(db, "settings", "pos");
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const remote = snap.exists() ? normalizePosState(snap.data()) : defaultPosState;
+    const local = normalizePosState(state);
+    const merged: PosState = {
+      tables: local.tables,
+      shapes: local.shapes ?? [],
+      orders: mergePosOrders(remote.orders, local.orders),
+      completedOrders: []
+    };
+    tx.set(ref, posWritePayload(merged), { merge: true });
+    tx.set(
+      tenantDoc(db, "completedOrders", completedOrder.id).withConverter(completedOrderConverter),
+      completedOrder
+    );
+  });
   await logAudit({
     action: "complete",
     entity: "order",
