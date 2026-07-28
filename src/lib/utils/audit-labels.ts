@@ -54,6 +54,7 @@ const FIELD_LABELS: Record<Locale, Record<string, string>> = {
     // settings · general
     restaurantName: "restaurant name",
     logoUrl: "logo",
+    invoiceLogoUrl: "invoice logo",
     phone: "phone",
     whatsapp: "WhatsApp",
     email: "email",
@@ -132,6 +133,7 @@ const FIELD_LABELS: Record<Locale, Record<string, string>> = {
     status: "الحالة",
     restaurantName: "اسم المطعم",
     logoUrl: "الشعار",
+    invoiceLogoUrl: "شعار الفاتورة",
     phone: "الهاتف",
     whatsapp: "واتساب",
     email: "البريد الإلكتروني",
@@ -208,6 +210,7 @@ const FIELD_LABELS: Record<Locale, Record<string, string>> = {
     status: "دۆخ",
     restaurantName: "ناوی چێشتخانە",
     logoUrl: "لۆگۆ",
+    invoiceLogoUrl: "لۆگۆی پسووڵە",
     phone: "تەلەفۆن",
     whatsapp: "واتساپ",
     email: "ئیمەیڵ",

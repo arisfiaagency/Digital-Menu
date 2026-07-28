@@ -634,10 +634,12 @@ export function PosManager() {
       "Cafe",
     );
     const receiptLocale: "en" | "ckb" = locale === "ckb" ? "ckb" : "en";
+    const invoiceLogoUrl = data?.general.invoiceLogoUrl?.trim() || undefined;
     void printThermalTicket({
       kind: "invoice",
       title: text.printInvoice,
       restaurantName,
+      logoUrl: invoiceLogoUrl,
       tableName: selectedTable.name,
       tableLabel: text.table,
       printerName,
@@ -1202,6 +1204,7 @@ export function PosManager() {
                   locale={locale}
                   serviceFeePercent={serviceFeePercent}
                   restaurantName={localized(data?.general.restaurantName, locale, "Cafe")}
+                  logoUrl={data?.general.invoiceLogoUrl || undefined}
                   printerName={printerConfig.invoice || undefined}
                   printerLabel={text.printerLabel}
                 />
@@ -2785,6 +2788,7 @@ function ReceiptPreview({
   locale,
   serviceFeePercent,
   restaurantName,
+  logoUrl,
   printerName,
   printerLabel,
 }: {
@@ -2794,6 +2798,7 @@ function ReceiptPreview({
   locale: "en" | "ar" | "ckb";
   serviceFeePercent: number;
   restaurantName: string;
+  logoUrl?: string;
   printerName?: string;
   printerLabel?: string;
 }) {
@@ -2803,6 +2808,14 @@ function ReceiptPreview({
   return (
     <div className="pos-print-area pos-receipt no-print rounded-lg border bg-white p-5 font-mono text-black shadow-sm">
       <div className="text-center">
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt=""
+            className="pos-receipt-logo mx-auto mb-2 h-auto max-h-24 w-auto max-w-[12rem] object-contain"
+          />
+        ) : null}
         <h2 className="text-2xl font-black uppercase tracking-[0.14em]">
           {restaurantName}
         </h2>

@@ -68,6 +68,9 @@ export type GeneralSettings = {
   description: OptionalLocalizedText;
   logoUrl?: string;
   logoPath?: string;
+  /** Optional logo printed on POS invoices (preview + thermal print). */
+  invoiceLogoUrl?: string;
+  invoiceLogoPath?: string;
   // Optional announcement shown in the "promo" above-category strip.
   promoText?: OptionalLocalizedText;
   phone?: string;

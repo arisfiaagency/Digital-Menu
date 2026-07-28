@@ -278,7 +278,7 @@ export function SettingsManager() {
               </div>
             </SettingsFormSection>
             <SettingsFormSection title={text.media}>
-              <div className="max-w-sm">
+              <div className="grid gap-4 md:grid-cols-2">
                 <ImageUploadField
                   label={text.logo}
                   text={text}
@@ -287,6 +287,22 @@ export function SettingsManager() {
                   imageUrl={general.logoUrl}
                   onUploaded={(result) => setGeneral({ ...general, logoUrl: result.imageUrl, logoPath: result.imagePath })}
                   onRemoved={() => setGeneral({ ...general, logoUrl: "", logoPath: "" })}
+                />
+                <ImageUploadField
+                  label={text.invoiceLogo}
+                  text={text}
+                  path="branding"
+                  fileName="invoice-logo"
+                  imageUrl={general.invoiceLogoUrl}
+                  helpText={text.invoiceLogoHint}
+                  onUploaded={(result) =>
+                    setGeneral({
+                      ...general,
+                      invoiceLogoUrl: result.imageUrl,
+                      invoiceLogoPath: result.imagePath
+                    })
+                  }
+                  onRemoved={() => setGeneral({ ...general, invoiceLogoUrl: "", invoiceLogoPath: "" })}
                 />
               </div>
             </SettingsFormSection>
