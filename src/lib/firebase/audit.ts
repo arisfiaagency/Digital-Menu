@@ -8,7 +8,7 @@ import {
   serverTimestamp,
   type Firestore
 } from "firebase/firestore";
-import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase/client";
+import { getFirebaseAuth, getFirebaseAuthScope, getFirebaseDb } from "@/lib/firebase/client";
 import { getActiveClientSlug, normalizeClientSlug, runWithClientSlug } from "@/lib/tenant";
 import type { AuditChange, AuditLog } from "@/types/models";
 
@@ -87,9 +87,14 @@ function omitUndefined<T extends Record<string, unknown>>(value: T): Partial<T> 
 
 export async function listAuditLogs(max = 400, forClientSlug?: string): Promise<AuditLog[]> {
   const slug = forClientSlug ? normalizeClientSlug(forClientSlug) : getActiveClientSlug();
+  // Pin Auth/DB to the caller’s surface (platform on supervisor) BEFORE binding the
+  // cafe slug for the document path — otherwise getFirebaseDb() would open the
+  // cafe’s Auth app, where the supervisor is not signed in.
+  const authScope = getFirebaseAuthScope();
+  const db = getFirebaseDb(authScope);
+  if (!db || !slug) return [];
+
   return runWithClientSlug(slug, async () => {
-    const db = getFirebaseDb();
-    if (!db) return [];
     const snap = await getDocs(query(auditCollection(db), orderBy("createdAt", "desc"), limit(max)));
     return snap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<AuditLog, "id">) }));
   });
