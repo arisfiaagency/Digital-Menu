@@ -28,7 +28,7 @@ import { removeImage } from "@/lib/storage";
 import { getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 import { extendSubscriptionExpiry } from "@/lib/client-access";
 import { slugify } from "@/lib/utils/format";
-import type { AdminPermissions, AdminProfile, AdminRole, AppData, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, Review } from "@/types/models";
+import type { AdminPermissions, AdminProfile, AdminRole, AppData, CashShift, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, Review } from "@/types/models";
 
 function converter<T extends { id: string }>(): FirestoreDataConverter<T> {
   return {
@@ -75,6 +75,7 @@ const categoryConverter = converter<Category>();
 const itemConverter = converter<MenuItem>();
 const expenseConverter = converter<Expense>();
 const completedOrderConverter = converter<PosCompletedOrder>();
+const shiftConverter = converter<CashShift>();
 const clientConverter = converter<ClientAccount>();
 
 const defaultPosState: PosState = {
@@ -684,6 +685,158 @@ export async function cancelExpense(expenseId: string, cancelledByUid?: string, 
   await logAudit({ action: "cancel", entity: "expense", entityId: expenseId, label });
 }
 
+/** Pointer doc so only one cashier shift can be open at a time. */
+const SHIFT_LOCK_DOC_ID = "__lock__";
+
+type ShiftLock = {
+  id: string;
+  openShiftId?: string | null;
+};
+
+const shiftLockConverter = converter<ShiftLock>();
+
+/** The single open cashier shift, if any. */
+export async function getOpenShift(): Promise<CashShift | null> {
+  const db = getFirebaseDb();
+  if (!db) return null;
+  const lockSnap = await getDoc(tenantDoc(db, "shifts", SHIFT_LOCK_DOC_ID).withConverter(shiftLockConverter));
+  const openShiftId = lockSnap.exists() ? lockSnap.data().openShiftId : null;
+  if (!openShiftId) return null;
+  const snap = await getDoc(tenantDoc(db, "shifts", openShiftId).withConverter(shiftConverter));
+  if (!snap.exists()) return null;
+  const shift = snap.data();
+  return shift.status === "open" ? shift : null;
+}
+
+export async function listShifts(max = 100): Promise<CashShift[]> {
+  const db = getFirebaseDb();
+  if (!db) return [];
+  const snap = await getDocs(
+    query(tenantCollection(db, "shifts").withConverter(shiftConverter), orderBy("openedAt", "desc"), limit(max))
+  ).catch(() => null);
+  const rows = snap?.docs.map((entry) => entry.data()) || [];
+  return rows.filter((row) => row.id !== SHIFT_LOCK_DOC_ID && (row.status === "open" || row.status === "closed"));
+}
+
+export async function openCashShift(input: {
+  openingCash: number;
+  currency: CashShift["currency"];
+  openedBy?: string;
+  openedByUid?: string;
+  note?: string;
+}): Promise<CashShift> {
+  const db = getFirebaseDb();
+  if (!db) throw new Error("Firestore is not configured.");
+  if (!Number.isFinite(input.openingCash) || input.openingCash < 0) {
+    throw new Error("Opening cash must be zero or greater.");
+  }
+  const openedAt = new Date().toISOString();
+  const shiftId = crypto.randomUUID();
+  const shift: CashShift = {
+    id: shiftId,
+    status: "open",
+    openedAt,
+    openedBy: input.openedBy,
+    openedByUid: input.openedByUid,
+    openingCash: Math.round(input.openingCash),
+    currency: input.currency,
+    note: input.note
+  };
+  const lockRef = tenantDoc(db, "shifts", SHIFT_LOCK_DOC_ID).withConverter(shiftLockConverter);
+  const shiftRef = tenantDoc(db, "shifts", shiftId).withConverter(shiftConverter);
+  await runTransaction(db, async (tx) => {
+    const lockSnap = await tx.get(lockRef);
+    const existingOpenId = lockSnap.exists() ? lockSnap.data().openShiftId : null;
+    if (existingOpenId) {
+      throw new Error("A shift is already open.");
+    }
+    tx.set(shiftRef, {
+      ...shift,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    } as CashShift);
+    tx.set(lockRef, { id: SHIFT_LOCK_DOC_ID, openShiftId: shiftId });
+  });
+  await logAudit({
+    action: "create",
+    entity: "shift",
+    entityId: shiftId,
+    label: "Open shift",
+    summary: `Opening cash ${shift.openingCash} ${shift.currency}`
+  });
+  return shift;
+}
+
+export async function closeCashShift(input: {
+  closingCashCounted: number;
+  closedBy?: string;
+  closedByUid?: string;
+  closeNote?: string;
+}): Promise<CashShift> {
+  const db = getFirebaseDb();
+  if (!db) throw new Error("Firestore is not configured.");
+  if (!Number.isFinite(input.closingCashCounted) || input.closingCashCounted < 0) {
+    throw new Error("Closing cash must be zero or greater.");
+  }
+
+  const open = await getOpenShift();
+  if (!open) throw new Error("No open shift to close.");
+
+  const closedAt = new Date().toISOString();
+  const completedSnap = await getDocs(
+    query(tenantCollection(db, "completedOrders").withConverter(completedOrderConverter), orderBy("completedAt", "desc"), limit(2000))
+  ).catch(() => null);
+  const shiftOrders = (completedSnap?.docs.map((entry) => entry.data()) || []).filter((order) => {
+    if (order.status === "cancelled") return false;
+    if (order.shiftId === open.id) return true;
+    if (order.shiftId) return false;
+    return order.completedAt >= open.openedAt && order.completedAt <= closedAt;
+  });
+  const salesTotal = shiftOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+  const ordersCount = shiftOrders.length;
+  const expectedCash = open.openingCash + salesTotal;
+  const closingCashCounted = Math.round(input.closingCashCounted);
+  const variance = closingCashCounted - expectedCash;
+
+  const closed: CashShift = {
+    ...open,
+    status: "closed",
+    closedAt,
+    closedBy: input.closedBy,
+    closedByUid: input.closedByUid,
+    closingCashCounted,
+    expectedCash,
+    salesTotal,
+    ordersCount,
+    variance,
+    closeNote: input.closeNote
+  };
+
+  const lockRef = tenantDoc(db, "shifts", SHIFT_LOCK_DOC_ID).withConverter(shiftLockConverter);
+  const shiftRef = tenantDoc(db, "shifts", open.id).withConverter(shiftConverter);
+  await runTransaction(db, async (tx) => {
+    const lockSnap = await tx.get(lockRef);
+    const openShiftId = lockSnap.exists() ? lockSnap.data().openShiftId : null;
+    if (openShiftId !== open.id) {
+      throw new Error("No open shift to close.");
+    }
+    tx.set(shiftRef, {
+      ...closed,
+      updatedAt: serverTimestamp()
+    } as CashShift);
+    tx.set(lockRef, { id: SHIFT_LOCK_DOC_ID, openShiftId: null });
+  });
+
+  await logAudit({
+    action: "update",
+    entity: "shift",
+    entityId: open.id,
+    label: "Close shift",
+    summary: `Sales ${salesTotal} · counted ${closingCashCounted} · variance ${variance}`
+  });
+  return closed;
+}
+
 export async function saveSettings(section: "general" | "menu", value: Record<string, unknown>) {
   const db = getFirebaseDb();
   if (!db) return;
@@ -909,6 +1062,10 @@ export async function completePosOrder(state: PosState, completedOrder: PosCompl
   const db = getFirebaseDb();
   if (!db) throw new Error("Firestore is not configured.");
   const ref = tenantDoc(db, "settings", "pos");
+  const openShift = await getOpenShift();
+  const orderToStore: PosCompletedOrder = openShift
+    ? { ...completedOrder, shiftId: openShift.id }
+    : completedOrder;
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const remote = snap.exists() ? normalizePosState(snap.data()) : defaultPosState;
@@ -921,16 +1078,16 @@ export async function completePosOrder(state: PosState, completedOrder: PosCompl
     };
     tx.set(ref, posWritePayload(merged), { merge: true });
     tx.set(
-      tenantDoc(db, "completedOrders", completedOrder.id).withConverter(completedOrderConverter),
-      completedOrder
+      tenantDoc(db, "completedOrders", orderToStore.id).withConverter(completedOrderConverter),
+      orderToStore
     );
   });
   await logAudit({
     action: "complete",
     entity: "order",
-    entityId: completedOrder.id,
-    label: completedOrder.tableName,
-    summary: `${completedOrder.total} ${completedOrder.currency}`
+    entityId: orderToStore.id,
+    label: orderToStore.tableName,
+    summary: `${orderToStore.total} ${orderToStore.currency}`
   });
 }
 

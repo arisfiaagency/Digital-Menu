@@ -21,6 +21,7 @@ import {
   Settings,
   SlidersHorizontal,
   Table2,
+  Timer,
   type LucideIcon,
   UsersRound,
   X
@@ -41,6 +42,7 @@ const nav: { path: string; labelKey: string; icon: LucideIcon; feature: AdminFea
   { path: "/categories", labelKey: "categories", icon: ListTree, feature: "categories" },
   { path: "/menu-items", labelKey: "menuItems", icon: MenuSquare, feature: "menuItems" },
   { path: "/pos", labelKey: "pos", icon: Table2, feature: "pos" },
+  { path: "/shift", labelKey: "shift", icon: Timer, feature: "shift" },
   { path: "/reports", labelKey: "reports", icon: LineChart, feature: "reports" },
   { path: "/expenses", labelKey: "expenses", icon: ReceiptText, feature: "expenses" },
   { path: "/settings", labelKey: "settings", icon: Settings, feature: "settings" }
@@ -54,7 +56,7 @@ function AdminShellSkeleton() {
       <aside className="hidden w-64 shrink-0 flex-col gap-3 border-e bg-card p-4 sm:flex">
         <Skeleton className="h-10 w-40" />
         <div className="mt-4 space-y-2">
-          {Array.from({ length: 7 }).map((_, index) => (
+          {Array.from({ length: 8 }).map((_, index) => (
             <Skeleton key={index} className="h-9 w-full" />
           ))}
         </div>

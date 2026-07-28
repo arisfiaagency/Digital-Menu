@@ -7,6 +7,7 @@ export const ADMIN_FEATURES: AdminFeature[] = [
   "categories",
   "menuItems",
   "pos",
+  "shift",
   "reports",
   "expenses",
   "settings"

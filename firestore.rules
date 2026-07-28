@@ -164,6 +164,17 @@ service cloud.firestore {
         allow update, delete: if isTenantFullAdmin(clientId);
       }
 
+      match /shifts/{shiftId} {
+        allow read: if isTenantAdmin(clientId);
+        allow create: if hasTenantFeature(clientId, 'shift')
+          && (
+            shiftId == '__lock__'
+            || request.resource.data.status == 'open'
+          );
+        allow update: if hasTenantFeature(clientId, 'shift');
+        allow delete: if isTenantFullAdmin(clientId);
+      }
+
       match /expenses/{expenseId} {
         allow read: if isTenantAdmin(clientId);
         allow create: if hasTenantFeature(clientId, 'expenses')

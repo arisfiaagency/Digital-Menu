@@ -198,9 +198,34 @@ export type PosCompletedOrder = {
   takenByUid?: string;
   completedBy?: string;
   completedByUid?: string;
+  // Cashier shift this sale belongs to (set when an open shift exists at complete time).
+  shiftId?: string;
   status?: "completed" | "cancelled";
   cancelledAt?: string;
   cancelledByUid?: string;
+};
+
+// Cashier cash-drawer session: open with a float, close with a counted amount.
+export type CashShift = {
+  id: string;
+  status: "open" | "closed";
+  openedAt: string;
+  openedBy?: string;
+  openedByUid?: string;
+  openingCash: number;
+  currency: Currency;
+  note?: string;
+  closedAt?: string;
+  closedBy?: string;
+  closedByUid?: string;
+  closingCashCounted?: number;
+  expectedCash?: number;
+  salesTotal?: number;
+  ordersCount?: number;
+  variance?: number;
+  closeNote?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 };
 
 export type Expense = {
@@ -234,7 +259,7 @@ export type ThemeIconStyle = "sunMoon" | "coffeeMoon" | "sparkles" | "contrast";
 
 export type AdminRole = "admin" | "employee";
 
-export type AdminFeature = "dashboard" | "categories" | "menuItems" | "pos" | "reports" | "expenses" | "settings";
+export type AdminFeature = "dashboard" | "categories" | "menuItems" | "pos" | "shift" | "reports" | "expenses" | "settings";
 
 export type AdminPermissions = Partial<Record<AdminFeature, boolean>>;
 
