@@ -14,8 +14,12 @@ export function adminThemeChangeEventFor(scope: "platform" | string) {
     : `stone-cafe-admin-theme-change:client:${scope}`;
 }
 
-/** Inline script that applies the scoped admin theme before first paint. */
+/**
+ * Admin theme lives in sessionStorage so each browser tab/window keeps its own
+ * light/dark mode. localStorage is only a fallback default for a brand-new tab.
+ */
 export function adminThemePrepaintScript(scope: "platform" | string) {
   const key = adminThemeStorageKeyFor(scope);
-  return `try{var k=${JSON.stringify(key)};var t=localStorage.getItem(k);if(t!=='dark'&&t!=='light'){t=localStorage.getItem(${JSON.stringify(adminThemeStorageKey)});if(t==='dark'||t==='light')localStorage.setItem(k,t);}var d=document.documentElement.classList;if(t==='dark')d.add('dark');else if(t==='light')d.remove('dark');}catch(e){}`;
+  const legacy = adminThemeStorageKey;
+  return `try{var k=${JSON.stringify(key)};var t=sessionStorage.getItem(k);if(t!=='dark'&&t!=='light'){t=localStorage.getItem(k);if(t!=='dark'&&t!=='light'){t=localStorage.getItem(${JSON.stringify(legacy)});}if(t==='dark'||t==='light')sessionStorage.setItem(k,t);}var d=document.documentElement.classList;if(t==='dark')d.add('dark');else if(t==='light')d.remove('dark');}catch(e){}`;
 }

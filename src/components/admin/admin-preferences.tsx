@@ -1444,7 +1444,9 @@ export function AdminPreferences({ compact = false, showTheme = true }: { compac
   return (
     <div dir="ltr" className={compact ? "flex shrink-0 items-center gap-2" : "flex items-center gap-2"}>
       <LanguageGlobe locale={locale} onChange={setLocale} menuAlign="left" />
-      {showTheme ? <ThemeToggle storageKey={storageKey} changeEvent={changeEvent} /> : null}
+      {showTheme ? (
+        <ThemeToggle storageKey={storageKey} changeEvent={changeEvent} storageMode="session" />
+      ) : null}
     </div>
   );
 }
@@ -1453,7 +1455,14 @@ export function AdminPreferences({ compact = false, showTheme = true }: { compac
 // always-mounted, its effect applies the saved theme on page load.
 export function AdminThemeToggle({ className }: { className?: string }) {
   const { storageKey, changeEvent } = useAdminThemeKeys();
-  return <ThemeToggle storageKey={storageKey} changeEvent={changeEvent} className={className} />;
+  return (
+    <ThemeToggle
+      storageKey={storageKey}
+      changeEvent={changeEvent}
+      storageMode="session"
+      className={className}
+    />
+  );
 }
 
 // Standalone admin language selector for placing on the page (e.g. in the header

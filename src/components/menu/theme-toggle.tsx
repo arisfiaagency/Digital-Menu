@@ -21,14 +21,41 @@ export {
   adminThemeChangeEventFor
 };
 
-function readStoredTheme(storageKey: string) {
-  const scoped = window.localStorage.getItem(storageKey);
-  if (scoped === "dark" || scoped === "light") return scoped;
+type ThemeStorageMode = "local" | "session";
 
-  // One-time inherit from the old shared admin key so existing preference isn’t lost.
+function isTheme(value: string | null): value is "dark" | "light" {
+  return value === "dark" || value === "light";
+}
+
+function readStoredTheme(storageKey: string, storageMode: ThemeStorageMode) {
+  if (storageMode === "session") {
+    const sessionValue = window.sessionStorage.getItem(storageKey);
+    if (isTheme(sessionValue)) return sessionValue;
+
+    // New tab: seed from this device's last-used admin theme, then keep it
+    // isolated in sessionStorage so other open tabs/windows are not updated live.
+    const localValue = window.localStorage.getItem(storageKey);
+    if (isTheme(localValue)) {
+      window.sessionStorage.setItem(storageKey, localValue);
+      return localValue;
+    }
+
+    if (storageKey.startsWith("stone-cafe-admin-theme:")) {
+      const legacy = window.localStorage.getItem(adminThemeStorageKey);
+      if (isTheme(legacy)) {
+        window.sessionStorage.setItem(storageKey, legacy);
+        return legacy;
+      }
+    }
+    return null;
+  }
+
+  const scoped = window.localStorage.getItem(storageKey);
+  if (isTheme(scoped)) return scoped;
+
   if (storageKey.startsWith("stone-cafe-admin-theme:")) {
     const legacy = window.localStorage.getItem(adminThemeStorageKey);
-    if (legacy === "dark" || legacy === "light") {
+    if (isTheme(legacy)) {
       window.localStorage.setItem(storageKey, legacy);
       return legacy;
     }
@@ -36,16 +63,29 @@ function readStoredTheme(storageKey: string) {
   return null;
 }
 
+function writeStoredTheme(storageKey: string, storageMode: ThemeStorageMode, nextTheme: "dark" | "light") {
+  if (storageMode === "session") {
+    window.sessionStorage.setItem(storageKey, nextTheme);
+    // Remember as default for future new tabs on this device only — do not sync live.
+    window.localStorage.setItem(storageKey, nextTheme);
+    return;
+  }
+  window.localStorage.setItem(storageKey, nextTheme);
+}
+
 export function ThemeToggle({
   className,
   storageKey = publicThemeStorageKey,
   changeEvent = publicThemeChangeEvent,
+  storageMode = "local",
   presentation = "circle",
   iconStyle = "sunMoon"
 }: {
   className?: string;
   storageKey?: string;
   changeEvent?: string;
+  /** `session` = per tab/window (admin). `local` = shared across tabs (public menu). */
+  storageMode?: ThemeStorageMode;
   presentation?: ThemeToggleStyle;
   iconStyle?: ThemeIconStyle;
 }) {
@@ -53,7 +93,7 @@ export function ThemeToggle({
   const [turns, setTurns] = useState(0);
 
   useEffect(() => {
-    const stored = readStoredTheme(storageKey);
+    const stored = readStoredTheme(storageKey, storageMode);
     const nextDark = stored === "dark";
     setDark(nextDark);
     document.documentElement.classList.toggle("dark", nextDark);
@@ -69,6 +109,9 @@ export function ThemeToggle({
     }
 
     function handleStorage(event: StorageEvent) {
+      // Only public (localStorage) theme syncs across tabs. Admin uses sessionStorage
+      // so two computers / windows of the same cafe admin stay independent.
+      if (storageMode !== "local") return;
       if (event.key === storageKey) applyTheme(event.newValue);
     }
 
@@ -79,14 +122,14 @@ export function ThemeToggle({
       window.removeEventListener(changeEvent, handleThemeChange);
       window.removeEventListener("storage", handleStorage);
     };
-  }, [changeEvent, storageKey]);
+  }, [changeEvent, storageKey, storageMode]);
 
   function toggle() {
     const next = !dark;
     setDark(next);
     setTurns((value) => value + 1);
     const nextTheme = next ? "dark" : "light";
-    window.localStorage.setItem(storageKey, nextTheme);
+    writeStoredTheme(storageKey, storageMode, nextTheme);
     document.documentElement.classList.toggle("dark", next);
     window.dispatchEvent(new CustomEvent(changeEvent, { detail: nextTheme }));
   }
