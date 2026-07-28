@@ -320,13 +320,11 @@ export function CategoryManager() {
           <CardHeader>
             <CardTitle>{text.category}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <CardContent>
             <CategoryEditorForm
               form={form}
               saving={saving}
               text={text}
-              locale={locale}
-              itemCount={0}
               onSubmit={onSubmit}
               onCancel={() => setFormOpen(false)}
             />
@@ -403,34 +401,27 @@ export function CategoryManager() {
                 {expanded ? (
                   <CardContent className="settings-panel border-t pt-5">
                     {editingCategoryId === category.id ? (
-                      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-                        <CategoryEditorForm
-                          form={form}
-                          saving={saving}
-                          text={text}
-                          locale={locale}
-                          itemCount={itemCount}
-                          onSubmit={onSubmit}
-                          onCancel={cancelEdit}
-                        />
-                      </div>
+                      <CategoryEditorForm
+                        form={form}
+                        saving={saving}
+                        text={text}
+                        onSubmit={onSubmit}
+                        onCancel={cancelEdit}
+                      />
                     ) : (
-                      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-                        <CategoryAdminPreview category={category} itemCount={itemCount} locale={locale} text={text} />
-                        <div className="flex flex-wrap content-start gap-2">
-                          <Button type="button" variant="secondary" asChild>
-                            <Link href={`${adminBasePath}/menu-items?category=${encodeURIComponent(category.id)}`}>
-                              <PlusCircle className="h-4 w-4" aria-hidden />
-                              {text.addItemToCategory}
-                            </Link>
-                          </Button>
-                          <Button type="button" variant="outline" size="icon" aria-label={text.edit} title={text.edit} onClick={() => edit(category)}>
-                            <Pencil className="h-4 w-4" aria-hidden />
-                          </Button>
-                          <Button type="button" variant="destructive" size="icon" aria-label={text.delete} title={text.delete} onClick={() => { setMoveTarget(""); setDeleteMode("keep"); setDeleteTarget(category); }}>
-                            <Trash2 className="h-4 w-4" aria-hidden />
-                          </Button>
-                        </div>
+                      <div className="flex flex-wrap content-start gap-2">
+                        <Button type="button" variant="secondary" asChild>
+                          <Link href={`${adminBasePath}/menu-items?category=${encodeURIComponent(category.id)}`}>
+                            <PlusCircle className="h-4 w-4" aria-hidden />
+                            {text.addItemToCategory}
+                          </Link>
+                        </Button>
+                        <Button type="button" variant="outline" size="icon" aria-label={text.edit} title={text.edit} onClick={() => edit(category)}>
+                          <Pencil className="h-4 w-4" aria-hidden />
+                        </Button>
+                        <Button type="button" variant="destructive" size="icon" aria-label={text.delete} title={text.delete} onClick={() => { setMoveTarget(""); setDeleteMode("keep"); setDeleteTarget(category); }}>
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </Button>
                       </div>
                     )}
                   </CardContent>
@@ -544,89 +535,76 @@ function CategoryEditorForm({
   form,
   saving,
   text,
-  locale,
-  itemCount,
   onSubmit,
   onCancel
 }: {
   form: UseFormReturn<CategoryFormData>;
   saving: boolean;
   text: Record<string, string>;
-  locale: Locale;
-  itemCount: number;
   onSubmit: (values: CategoryFormData) => Promise<void>;
   onCancel: () => void;
 }) {
-  const watchedCategory = form.watch();
   const englishName = form.register("name.en");
 
   return (
-    <>
-      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit, focusFirstInvalidField)}>
-        <FormSection title={text.names}>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Field label={text.englishName} error={adminErrorText(form.formState.errors.name?.en?.message, text)}>
-              <Input
-                lang="en"
-                onFocus={selectAllOnFocus}
-                onMouseDown={selectAllOnMouseDown}
-                {...englishName}
-                onChange={(event) => {
-                  englishName.onChange(event);
-                  if (!form.getValues("slug")) form.setValue("slug", slugify(event.target.value), { shouldValidate: true });
-                }}
-              />
-            </Field>
-            <Field label={text.arabicName} error={adminErrorText(form.formState.errors.name?.ar?.message, text)}>
-              <Input dir="rtl" lang="ar" onFocus={selectAllOnFocus} onMouseDown={selectAllOnMouseDown} {...form.register("name.ar")} />
-            </Field>
-            <Field label={text.kurdishName} error={adminErrorText(form.formState.errors.name?.ckb?.message, text)}>
-              <Input dir="rtl" lang="ckb" onFocus={selectAllOnFocus} onMouseDown={selectAllOnMouseDown} {...form.register("name.ckb")} />
-            </Field>
-          </div>
-        </FormSection>
-        <FormSection title={text.descriptions}>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Field label={text.englishDescription}>
-              <Textarea lang="en" {...form.register("description.en")} />
-            </Field>
-            <Field label={text.arabicDescription}>
-              <Textarea dir="rtl" lang="ar" {...form.register("description.ar")} />
-            </Field>
-            <Field label={text.kurdishDescription}>
-              <Textarea dir="rtl" lang="ckb" {...form.register("description.ckb")} />
-            </Field>
-          </div>
-        </FormSection>
-        <FormSection title={text.categoryIcon}>
-          {text.categoryIconHint ? <p className="text-xs text-muted-foreground">{text.categoryIconHint}</p> : null}
-          <IconPicker value={form.watch("icon") || ""} onChange={(key) => form.setValue("icon", key, { shouldDirty: true })} />
-        </FormSection>
-        <FormSection title={text.publishing}>
-          <Field label={text.slug} error={adminErrorText(form.formState.errors.slug?.message, text)}>
-            <Input {...form.register("slug")} />
-          </Field>
-          <div className="flex items-center justify-between rounded-md border bg-background p-3">
-            <span className="text-sm font-medium">{text.active}</span>
-            <Switch
-              label={text.active}
-              checked={Boolean(form.watch("isActive"))}
-              onCheckedChange={(checked) => form.setValue("isActive", checked, { shouldDirty: true })}
+    <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit, focusFirstInvalidField)}>
+      <FormSection title={text.names}>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label={text.englishName} error={adminErrorText(form.formState.errors.name?.en?.message, text)}>
+            <Input
+              lang="en"
+              onFocus={selectAllOnFocus}
+              onMouseDown={selectAllOnMouseDown}
+              {...englishName}
+              onChange={(event) => {
+                englishName.onChange(event);
+                if (!form.getValues("slug")) form.setValue("slug", slugify(event.target.value), { shouldValidate: true });
+              }}
             />
-          </div>
-        </FormSection>
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={saving}>{saving ? text.saving : text.saveCategory}</Button>
-          <Button type="button" variant="outline" onClick={onCancel}>{text.cancel}</Button>
+          </Field>
+          <Field label={text.arabicName} error={adminErrorText(form.formState.errors.name?.ar?.message, text)}>
+            <Input dir="rtl" lang="ar" onFocus={selectAllOnFocus} onMouseDown={selectAllOnMouseDown} {...form.register("name.ar")} />
+          </Field>
+          <Field label={text.kurdishName} error={adminErrorText(form.formState.errors.name?.ckb?.message, text)}>
+            <Input dir="rtl" lang="ckb" onFocus={selectAllOnFocus} onMouseDown={selectAllOnMouseDown} {...form.register("name.ckb")} />
+          </Field>
         </div>
-      </form>
-      <CategoryAdminPreview
-        category={watchedCategory}
-        itemCount={itemCount}
-        locale={locale}
-        text={text}
-      />
-    </>
+      </FormSection>
+      <FormSection title={text.descriptions}>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label={text.englishDescription}>
+            <Textarea lang="en" {...form.register("description.en")} />
+          </Field>
+          <Field label={text.arabicDescription}>
+            <Textarea dir="rtl" lang="ar" {...form.register("description.ar")} />
+          </Field>
+          <Field label={text.kurdishDescription}>
+            <Textarea dir="rtl" lang="ckb" {...form.register("description.ckb")} />
+          </Field>
+        </div>
+      </FormSection>
+      <FormSection title={text.categoryIcon}>
+        {text.categoryIconHint ? <p className="text-xs text-muted-foreground">{text.categoryIconHint}</p> : null}
+        <IconPicker value={form.watch("icon") || ""} onChange={(key) => form.setValue("icon", key, { shouldDirty: true })} />
+      </FormSection>
+      <FormSection title={text.publishing}>
+        <Field label={text.slug} error={adminErrorText(form.formState.errors.slug?.message, text)}>
+          <Input {...form.register("slug")} />
+        </Field>
+        <div className="flex items-center justify-between rounded-md border bg-background p-3">
+          <span className="text-sm font-medium">{text.active}</span>
+          <Switch
+            label={text.active}
+            checked={Boolean(form.watch("isActive"))}
+            onCheckedChange={(checked) => form.setValue("isActive", checked, { shouldDirty: true })}
+          />
+        </div>
+      </FormSection>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={saving}>{saving ? text.saving : text.saveCategory}</Button>
+        <Button type="button" variant="outline" onClick={onCancel}>{text.cancel}</Button>
+      </div>
+    </form>
   );
 }
 
@@ -652,63 +630,6 @@ function IconPicker({ value, onChange }: { value: string; onChange: (key: string
           </button>
         );
       })}
-    </div>
-  );
-}
-
-function CategoryAdminPreview({
-  category,
-  itemCount,
-  locale,
-  text
-}: {
-  category: CategoryFormData | Category;
-  itemCount: number;
-  locale: Locale;
-  text: Record<string, string>;
-}) {
-  const title = localized(category.name, locale, category.name.en || text.category);
-  const description = localized(category.description, locale);
-  const slug = category.slug || slugify(category.name.en);
-
-  return (
-    <div className="rounded-lg border bg-muted/25 p-3">
-      <p className="mb-3 text-sm font-medium">{text.preview}</p>
-      <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
-        <div className="bg-gradient-to-br from-accent via-primary/10 to-secondary/10 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <CategoryIcon slug={slug} icon={category.icon} className="h-5 w-5" />
-              </span>
-              <div className="min-w-0">
-                <h3 className="text-xl font-semibold leading-tight">{title}</h3>
-                {description ? <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{description}</p> : null}
-              </div>
-            </div>
-            <span className={cn("shrink-0 rounded-full px-3 py-1 text-xs font-semibold", category.isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-              {category.isActive ? text.active : text.inactive}
-            </span>
-          </div>
-        </div>
-        <div className="space-y-3 p-4">
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full border bg-background px-2.5 py-1">{text.slug}: {slug || "-"}</span>
-            <span className="rounded-full border bg-background px-2.5 py-1">{itemCount} {text.menuItems}</span>
-          </div>
-          <div className="grid gap-2">
-            {[0, 1].map((index) => (
-              <div key={index} className="flex items-center justify-between rounded-md border bg-background p-3">
-                <div className="space-y-1">
-                  <div className="h-2.5 w-24 rounded-full bg-primary/20" />
-                  <div className="h-2 w-32 rounded-full bg-muted" />
-                </div>
-                <div className="h-7 w-16 rounded-full bg-secondary/15" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
