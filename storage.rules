@@ -10,16 +10,13 @@ service firebase.storage {
       return /databases/(default)/documents/adminProfiles/$(request.auth.uid);
     }
 
+    // Platform full admin only — never JWT admin alone, never platform employees.
     function isApprovedAdmin() {
       return signedIn()
-        && (
-          request.auth.token.admin == true
-          || (
-            firestore.exists(adminProfile())
-            && firestore.get(adminProfile()).data.isAdmin == true
-            && firestore.get(adminProfile()).data.disabled != true
-          )
-        );
+        && firestore.exists(adminProfile())
+        && firestore.get(adminProfile()).data.isAdmin == true
+        && firestore.get(adminProfile()).data.disabled != true
+        && firestore.get(adminProfile()).data.role != 'employee';
     }
 
     function validImage() {

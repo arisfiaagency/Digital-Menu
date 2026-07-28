@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { isFullAdminProfile } from "@/lib/api/admin-authz";
 import { normalizeClientSlug } from "@/lib/tenant";
 
 // Fully delete a staff account: the Firebase Auth login, the username -> email
@@ -38,16 +39,16 @@ export async function DELETE(request: NextRequest) {
   try {
     const decoded = await auth.verifyIdToken(token);
 
-    // Only a full admin may delete accounts. Employees are stored with
-    // isAdmin:true for data access, so we check the role explicitly.
+    // Only a full admin may delete accounts. Never trust JWT admin alone.
     const clientRoot = clientSlug ? db.collection("clients").doc(clientSlug) : null;
-    const clientCallerProfile = clientRoot ? (await clientRoot.collection("adminProfiles").doc(decoded.uid).get()).data() : null;
+    const clientCallerProfile = clientRoot
+      ? (await clientRoot.collection("adminProfiles").doc(decoded.uid).get()).data()
+      : null;
     const platformCallerProfile = (await db.collection("adminProfiles").doc(decoded.uid).get()).data();
-    const callerProfile = clientCallerProfile || platformCallerProfile;
-    const isFullAdmin =
-      decoded.admin === true ||
-      (callerProfile?.isAdmin === true && callerProfile?.disabled !== true && callerProfile?.role !== "employee");
-    if (!isFullAdmin) {
+
+    const callerIsCafeFullAdmin = Boolean(clientSlug) && isFullAdminProfile(clientCallerProfile);
+    const callerIsPlatformFullAdmin = !clientSlug && isFullAdminProfile(platformCallerProfile);
+    if (!callerIsCafeFullAdmin && !callerIsPlatformFullAdmin) {
       return NextResponse.json({ ok: false, error: "Admin access denied." }, { status: 403 });
     }
 
@@ -55,16 +56,26 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ ok: false, error: "You cannot delete your own account." }, { status: 400 });
     }
 
-    // Free the username mapping (best effort) before removing the profile.
-    const profileRef = clientRoot ? clientRoot.collection("adminProfiles").doc(targetUid) : db.collection("adminProfiles").doc(targetUid);
-    const username = (await profileRef.get()).data()?.username;
+    // Target must belong to the caller's scope — never delete an Auth user by UID alone.
+    const profileRef = clientRoot
+      ? clientRoot.collection("adminProfiles").doc(targetUid)
+      : db.collection("adminProfiles").doc(targetUid);
+    const targetSnap = await profileRef.get();
+    if (!targetSnap.exists) {
+      return NextResponse.json(
+        { ok: false, error: "User is not a member of this cafe." },
+        { status: 404 }
+      );
+    }
+
+    const username = targetSnap.data()?.username;
     if (typeof username === "string" && username) {
-      const usernameRef = clientRoot ? clientRoot.collection("usernames").doc(username) : db.collection("usernames").doc(username);
+      const usernameRef = clientRoot
+        ? clientRoot.collection("usernames").doc(username)
+        : db.collection("usernames").doc(username);
       await usernameRef.delete().catch(() => {});
     }
 
-    // Delete the Firebase Auth login. Ignore "user not found" so a missing login
-    // doesn't block cleaning up the Firestore records.
     await auth.deleteUser(targetUid).catch((err: { code?: string }) => {
       if (err?.code !== "auth/user-not-found") throw err;
     });

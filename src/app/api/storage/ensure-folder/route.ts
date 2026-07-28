@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { isFullAdminProfile, isApprovedStaffProfile } from "@/lib/api/admin-authz";
 import { ensureClientImageFolder, hasCloudflareR2ServerConfig } from "@/lib/storage/cloudflare-r2";
 import { isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 
@@ -16,21 +17,13 @@ async function requirePlatformOrTenantAdmin(request: NextRequest, slug: string) 
 
   try {
     const decoded = await auth.verifyIdToken(token);
-    if (decoded.admin === true) return { uid: decoded.uid };
 
     const platform = await db.collection("adminProfiles").doc(decoded.uid).get();
-    const platformData = platform.data();
-    if (
-      platformData?.isAdmin === true &&
-      platformData?.disabled !== true &&
-      platformData?.role !== "employee"
-    ) {
-      return { uid: decoded.uid };
-    }
+    if (isFullAdminProfile(platform.data())) return { uid: decoded.uid };
 
     const profile = await db.collection("clients").doc(slug).collection("adminProfiles").doc(decoded.uid).get();
     const data = profile.data();
-    if (data && data.disabled !== true && (data.role === "admin" || data.isAdmin === true)) {
+    if (isApprovedStaffProfile(data) && data?.role !== "employee") {
       return { uid: decoded.uid };
     }
 

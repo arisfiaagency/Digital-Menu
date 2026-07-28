@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { CollectionReference, Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { isFullAdminProfile } from "@/lib/api/admin-authz";
 import { deleteClientImageFolder } from "@/lib/storage/cloudflare-r2";
 import { isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
 
@@ -12,7 +13,9 @@ const CLIENT_SUBCOLLECTIONS = [
   "usernames",
   "completedOrders",
   "expenses",
-  "auditLogs"
+  "auditLogs",
+  "shifts",
+  "reviews"
 ] as const;
 
 // Fully delete a cafe tenant: staff Auth logins under the client, then every
@@ -48,12 +51,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const decoded = await auth.verifyIdToken(token);
     const platformCallerProfile = (await db.collection("adminProfiles").doc(decoded.uid).get()).data();
-    const isPlatformFullAdmin =
-      decoded.admin === true ||
-      (platformCallerProfile?.isAdmin === true &&
-        platformCallerProfile?.disabled !== true &&
-        platformCallerProfile?.role !== "employee");
-    if (!isPlatformFullAdmin) {
+    if (!isFullAdminProfile(platformCallerProfile)) {
       return NextResponse.json({ ok: false, error: "Platform admin access denied." }, { status: 403 });
     }
 

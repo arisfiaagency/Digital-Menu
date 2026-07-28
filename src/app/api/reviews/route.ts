@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { rateLimit } from "@/lib/api/rate-limit";
 import { normalizeClientSlug } from "@/lib/tenant";
 
 // Public endpoint: a customer submits a rating (+ optional comment/name) from the
@@ -11,6 +12,9 @@ const MAX_COMMENT = 500;
 const MAX_NAME = 60;
 
 export async function POST(request: NextRequest) {
+  const limited = rateLimit(request, "reviews", { limit: 8, windowMs: 15 * 60 * 1000 });
+  if (limited) return limited;
+
   let body: { slug?: unknown; rating?: unknown; comment?: unknown; name?: unknown };
   try {
     body = (await request.json()) as typeof body;
@@ -44,6 +48,7 @@ export async function POST(request: NextRequest) {
       if (!snap.exists) return { status: 404 as const };
       const data = snap.data() || {};
       if (data.status !== "active" || data.blocked === true) return { status: 403 as const };
+      if (data.ratingEnabled === false) return { status: 403 as const };
 
       const count = (typeof data.ratingCount === "number" ? data.ratingCount : 0) + 1;
       const sum = (typeof data.ratingSum === "number" ? data.ratingSum : 0) + rating;

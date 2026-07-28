@@ -118,9 +118,13 @@ async function main() {
       );
     console.log(`Wrote clients/${client}/adminProfiles/${uid} (role: ${role}).`);
   } else {
-    // Platform supervisor: root adminProfiles doc + admin custom claim so they
-    // can sign in at /admin immediately.
-    await auth.setCustomUserClaims(uid, { admin: true });
+    // Platform supervisor profile. The `admin` claim is only set for full
+    // admins (legacy convenience) — rules/APIs always check profile role too.
+    if (role === "admin") {
+      await auth.setCustomUserClaims(uid, { admin: true });
+    } else {
+      await auth.setCustomUserClaims(uid, { admin: false });
+    }
     await db
       .collection("adminProfiles")
       .doc(uid)
@@ -136,7 +140,9 @@ async function main() {
         },
         { merge: true }
       );
-    console.log(`Wrote adminProfiles/${uid} and set { admin: true } claim (platform ${role}).`);
+    console.log(
+      `Wrote adminProfiles/${uid} (platform ${role})${role === "admin" ? " and set { admin: true } claim" : " without elevated claim"}.`
+    );
   }
 
   console.log("\n✅ Done.");

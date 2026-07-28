@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { isApprovedStaffProfile } from "@/lib/api/admin-authz";
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -18,10 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     const decoded = await auth.verifyIdToken(token);
     const profile = await db.collection("adminProfiles").doc(decoded.uid).get();
-    const data = profile.data();
-    const isAdmin = decoded.admin === true || (data?.isAdmin === true && data?.disabled !== true);
-
-    if (!isAdmin) {
+    if (!isApprovedStaffProfile(profile.data())) {
       return NextResponse.json({ ok: false, error: "Admin access denied." }, { status: 403 });
     }
 

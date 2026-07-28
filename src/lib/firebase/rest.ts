@@ -1,11 +1,15 @@
 import { unstable_cache } from "next/cache";
 import { defaultAppData } from "@/data/default-data";
 import { isClientServiceActive } from "@/lib/client-access";
+import { toPublicClientAccount } from "@/lib/client-public";
+import { getAdminDb } from "@/lib/firebase/admin";
 import { normalizeClientSlug } from "@/lib/tenant";
 import type { AppData, Category, ClientAccount, GeneralSettings, MenuItem, MenuSettings } from "@/types/models";
 
 // Tenant admin layouts read the client account on the server so blocked or
 // disabled cafes return not found before the authenticated admin UI renders.
+// Client account docs are NOT world-readable in Firestore — server reads use
+// the Admin SDK, and public callers only receive a stripped field set.
 
 const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -67,15 +71,31 @@ async function getRestDocument(path: string): Promise<Record<string, unknown> | 
   return { id: docIdFromName(document.name), ...decodeFields(document.fields) };
 }
 
-async function fetchClientAccount(clientSlug: string): Promise<ClientAccount | null> {
-  if (!DOCUMENTS_BASE || !API_KEY) return null;
+async function fetchClientAccountAdmin(clientSlug: string): Promise<ClientAccount | null> {
   const slug = normalizeClientSlug(clientSlug);
   if (!slug) return null;
+  const db = getAdminDb();
+  if (!db) {
+    // Fallback for local/dev without Admin SDK — only works while rules still
+    // allow the read (production rules require Admin SDK).
+    if (!DOCUMENTS_BASE || !API_KEY) return null;
+    try {
+      return (await getRestDocument(`clients/${slug}`)) as ClientAccount | null;
+    } catch {
+      return null;
+    }
+  }
   try {
-    return await getRestDocument(`clients/${slug}`) as ClientAccount | null;
+    const snap = await db.collection("clients").doc(slug).get();
+    if (!snap.exists) return null;
+    return { id: snap.id, ...(snap.data() as Omit<ClientAccount, "id">) };
   } catch {
     return null;
   }
+}
+
+async function fetchClientAccount(clientSlug: string): Promise<ClientAccount | null> {
+  return fetchClientAccountAdmin(clientSlug);
 }
 
 export const getClientAccountRest = unstable_cache(fetchClientAccount, ["client-account"], {
@@ -179,7 +199,7 @@ async function fetchPublicAppData(clientSlug: string): Promise<AppData> {
   // (empty) menu with its real name — never the built-in Stone Cafe demo.
   let client: ClientAccount | null = null;
   try {
-    client = (await getRestDocument(`clients/${slug}`)) as ClientAccount | null;
+    client = await fetchClientAccountAdmin(slug);
   } catch {
     client = null;
   }
@@ -216,12 +236,12 @@ async function fetchPublicAppData(clientSlug: string): Promise<AppData> {
 }
 
 async function fetchPublicClient(clientSlug: string): Promise<ClientAccount | null> {
-  if (!DOCUMENTS_BASE || !API_KEY) return null;
   const slug = normalizeClientSlug(clientSlug);
   if (!slug) return null;
   try {
-    const client = (await getRestDocument(`clients/${slug}`)) as ClientAccount | null;
-    return isClientServiceActive(client) ? client : null;
+    const client = await fetchClientAccountAdmin(slug);
+    if (!isClientServiceActive(client) || !client) return null;
+    return toPublicClientAccount(client);
   } catch {
     return null;
   }

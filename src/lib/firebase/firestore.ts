@@ -327,16 +327,26 @@ export function normalizeUsername(username: string) {
   return username.trim().toLowerCase();
 }
 
-// Public username -> email lookup so the login screen can resolve a username to
-// an email before the user is authenticated. Requires the `usernames` rule in
-// firestore.rules to be deployed.
+// Username → email lookup for the login screen. Goes through a rate-limited
+// Admin-SDK API because Firestore username docs are no longer world-readable.
 export async function getUsernameEmail(username: string): Promise<string | null> {
-  const db = getFirebaseDb();
-  if (!db) return null;
-  const snap = await getDoc(tenantDoc(db, "usernames", normalizeUsername(username)));
-  if (!snap.exists()) return null;
-  const email = snap.data().email;
-  return typeof email === "string" ? email : null;
+  const normalized = normalizeUsername(username);
+  if (!normalized) return null;
+  try {
+    const res = await fetch("/api/auth/resolve-username", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: normalized,
+        clientSlug: getActiveClientSlug() || undefined
+      })
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { ok?: boolean; email?: string };
+    return data.ok && typeof data.email === "string" ? data.email : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function isUsernameAvailable(username: string, exceptUid?: string): Promise<boolean> {

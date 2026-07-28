@@ -18,29 +18,18 @@ service cloud.firestore {
       return get(platformProfileRef()).data;
     }
 
+    // Approved platform staff (admin or employee). Never trust JWT admin alone.
     function isPlatformAdmin() {
       return signedIn()
-        && (
-          request.auth.token.admin == true
-          || (
-            hasPlatformProfile()
-            && platformData().isAdmin == true
-            && platformData().disabled != true
-          )
-        );
+        && hasPlatformProfile()
+        && platformData().isAdmin == true
+        && platformData().disabled != true;
     }
 
+    // Platform full admin (supervisor). Role must not be employee.
     function isPlatformFullAdmin() {
-      return signedIn()
-        && (
-          request.auth.token.admin == true
-          || (
-            hasPlatformProfile()
-            && platformData().isAdmin == true
-            && platformData().disabled != true
-            && platformData().role != 'employee'
-          )
-        );
+      return isPlatformAdmin()
+        && platformData().role != 'employee';
     }
 
     function tenantProfileRef(clientId) {
@@ -112,8 +101,9 @@ service cloud.firestore {
       allow list, create, update, delete: if isPlatformFullAdmin();
     }
 
+    // Username → email is not world-readable (login resolves via a rate-limited API).
     match /usernames/{username} {
-      allow get: if true;
+      allow get: if signedIn();
       allow list, create, update, delete: if isPlatformFullAdmin();
     }
 
@@ -123,7 +113,8 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      allow get: if (resource.data.status == 'active' && resource.data.get('blocked', false) != true) || isPlatformAdmin();
+      // Full cafe account (billing, owner email, …) is never anonymous-public.
+      allow get: if isPlatformAdmin() || isTenantAdmin(clientId);
       allow list: if isPlatformAdmin();
       allow create, update, delete: if isPlatformFullAdmin();
 
@@ -159,8 +150,16 @@ service cloud.firestore {
 
       match /completedOrders/{orderId} {
         allow read: if isTenantAdmin(clientId);
+        // Staff may record a sale, but cannot invent cancelled rows or empty tickets.
         allow create: if hasTenantFeature(clientId, 'pos')
-          && request.resource.data.get('status', 'completed') == 'completed';
+          && request.resource.data.get('status', 'completed') == 'completed'
+          && request.resource.data.total is number
+          && request.resource.data.total >= 0
+          && request.resource.data.lines is list
+          && request.resource.data.lines.size() > 0
+          && request.resource.data.completedAt is string
+          && request.resource.data.tableId is string
+          && request.resource.data.tableName is string;
         allow update, delete: if isTenantFullAdmin(clientId);
       }
 
@@ -168,10 +167,38 @@ service cloud.firestore {
         allow read: if isTenantAdmin(clientId);
         allow create: if hasTenantFeature(clientId, 'shift')
           && (
-            shiftId == 'shiftLock'
-            || request.resource.data.status == 'open'
+            (
+              shiftId == 'shiftLock'
+              && (
+                request.resource.data.keys().hasOnly(['openShiftId'])
+                || request.resource.data.keys().hasOnly(['id', 'openShiftId'])
+              )
+            )
+            || (
+              request.resource.data.status == 'open'
+              && request.resource.data.openingCash is number
+              && request.resource.data.openingCash >= 0
+              && request.resource.data.openedAt is string
+              && !('closedAt' in request.resource.data)
+              && !('closingCashCounted' in request.resource.data)
+              && !('variance' in request.resource.data)
+            )
           );
-        allow update: if hasTenantFeature(clientId, 'shift');
+        // Open → closed (or clear/set the single open-shift pointer). No rewriting closed history.
+        allow update: if hasTenantFeature(clientId, 'shift')
+          && (
+            (
+              shiftId == 'shiftLock'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['openShiftId'])
+            )
+            || (
+              resource.data.status == 'open'
+              && request.resource.data.status == 'closed'
+              && request.resource.data.openedAt == resource.data.openedAt
+              && request.resource.data.openingCash == resource.data.openingCash
+              && request.resource.data.currency == resource.data.currency
+            )
+          );
         allow delete: if isTenantFullAdmin(clientId);
       }
 
@@ -195,7 +222,7 @@ service cloud.firestore {
       }
 
       match /usernames/{username} {
-        allow get: if true;
+        allow get: if signedIn();
         allow list, create, update, delete: if isTenantFullAdmin(clientId);
       }
 

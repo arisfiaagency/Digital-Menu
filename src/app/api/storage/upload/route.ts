@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { authorizeStorageWrite } from "@/lib/api/admin-authz";
 import { hasCloudflareR2ServerConfig, putR2Object } from "@/lib/storage/cloudflare-r2";
 import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES } from "@/lib/storage/image-utils";
 import { slugifyImageFileBase } from "@/lib/storage/paths";
-import { normalizeClientSlug } from "@/lib/tenant";
 
 export const runtime = "nodejs";
 
@@ -20,27 +20,7 @@ async function requireUploader(request: NextRequest, folder: string) {
 
   try {
     const decoded = await auth.verifyIdToken(token);
-    if (decoded.admin === true) return { uid: decoded.uid };
-
-    const platform = await db.collection("adminProfiles").doc(decoded.uid).get();
-    const platformData = platform.data();
-    if (platformData?.isAdmin === true && platformData?.disabled !== true) {
-      return { uid: decoded.uid };
-    }
-
-    const match = folder.match(/^clients\/([^/]+)/);
-    const slug = match ? normalizeClientSlug(match[1]) : "";
-    if (!slug || slug !== match?.[1]) {
-      return {
-        error: NextResponse.json({ ok: false, error: "Uploads must use a clients/{slug}/ folder." }, { status: 400 })
-      };
-    }
-
-    const profile = await db.collection("clients").doc(slug).collection("adminProfiles").doc(decoded.uid).get();
-    const data = profile.data();
-    if (data && data.disabled !== true) return { uid: decoded.uid };
-
-    return { error: NextResponse.json({ ok: false, error: "Admin access denied." }, { status: 403 }) };
+    return authorizeStorageWrite(db, decoded, folder);
   } catch {
     return { error: NextResponse.json({ ok: false, error: "Invalid or expired token." }, { status: 401 }) };
   }
