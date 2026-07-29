@@ -11,6 +11,7 @@ import { LanguageGlobe } from "@/components/menu/language-globe";
 import { ThemeToggle } from "@/components/menu/theme-toggle";
 import { SocialLinks } from "@/components/menu/social-links";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { isAnimatedMediaUrl } from "@/lib/storage/media-url";
 import { BrandCredit } from "@/components/brand-credit";
 import { MenuItemDetailModal } from "@/components/menu/menu-item-detail-modal";
 import { useMenuBrowse } from "@/components/menu/use-menu-browse";
@@ -342,6 +343,7 @@ function LuxuryItemRow({
   const description = localized(item.description, locale);
   const price = effectiveItemPrice(item);
   const hasDiscount = Boolean(item.discountPrice);
+  const animatedMedia = isAnimatedMediaUrl(item.imageUrl);
 
   return (
     <Reveal delay={Math.min(index, 6) * 60} className="group py-6 first:pt-0">
@@ -351,7 +353,11 @@ function LuxuryItemRow({
             type="button"
             onClick={onOpen}
             aria-label={name}
-            className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-border transition-transform duration-500 group-hover:scale-[1.03] sm:h-24 sm:w-24"
+            className={
+              animatedMedia
+                ? "relative h-20 w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-border sm:h-24 sm:w-24"
+                : "relative h-20 w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-border transition-transform duration-500 group-hover:scale-[1.03] sm:h-24 sm:w-24"
+            }
           >
             <FallbackMenuImage src={item.imageUrl} alt={name} fallbackSrc={logoUrl} />
           </button>

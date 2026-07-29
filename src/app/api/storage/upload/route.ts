@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { authorizeStorageWrite } from "@/lib/api/admin-authz";
 import { hasCloudflareR2ServerConfig, putR2Object } from "@/lib/storage/cloudflare-r2";
-import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES } from "@/lib/storage/image-utils";
+import {
+  ALLOWED_IMAGE_CONTENT_TYPES,
+  isVideoContentType,
+  maxBytesForContentType
+} from "@/lib/storage/image-utils";
 import { slugifyImageFileBase } from "@/lib/storage/paths";
 
 export const runtime = "nodejs";
@@ -65,8 +69,16 @@ export async function POST(request: NextRequest) {
   if (!ALLOWED_IMAGE_CONTENT_TYPES.includes(contentType)) {
     return NextResponse.json({ ok: false, error: "Unsupported image type." }, { status: 400 });
   }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return NextResponse.json({ ok: false, error: "Images must be 10 MB or smaller." }, { status: 400 });
+  if (file.size > maxBytesForContentType(contentType)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: isVideoContentType(contentType)
+          ? "Videos must be 30 MB or smaller."
+          : "Images must be 10 MB or smaller."
+      },
+      { status: 400 }
+    );
   }
 
   const auth = await requireUploader(request, folder);

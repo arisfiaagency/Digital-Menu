@@ -30,6 +30,7 @@ const securityHeaders = [
       "object-src 'none'",
       "form-action 'self'",
       "img-src 'self' data: blob: https:",
+      "media-src 'self' blob: https:",
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",

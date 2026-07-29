@@ -539,7 +539,7 @@ export const adminText: Record<Locale, AdminText> = {
     popular: "Popular",
     isNew: "New",
     itemImage: "Item image",
-    menuItemImageHint: "Supports JPG, PNG, WebP, and animated GIF up to 10 MB.",
+    menuItemImageHint: "Supports JPG, PNG, WebP, animated GIF (10 MB), and MP4/WebM (30 MB).",
     variants: "Variants",
     addVariant: "Add variant",
     noVariants: "No variants.",
@@ -664,7 +664,7 @@ export const adminText: Record<Locale, AdminText> = {
     configureStorage: "Configure Cloudflare R2 to enable uploads.",
     imageUploadFailed: "Image upload failed.",
     gifBucketNotAllowed: "GIF upload was rejected by storage. Check R2 CORS and content-type settings, then try again.",
-    invalidImageType: "Use a JPG, PNG, WebP, or GIF image.",
+    invalidImageType: "Use a JPG, PNG, WebP, GIF, or MP4 file.",
     imageTooLarge: "Images must be 10 MB or smaller.",
     englishRequired: "English is required.",
     arabicRequired: "Arabic is required.",
@@ -1101,7 +1101,7 @@ export const adminText: Record<Locale, AdminText> = {
     popular: "شائع",
     isNew: "جديد",
     itemImage: "صورة العنصر",
-    menuItemImageHint: "يدعم JPG وPNG وWebP وGIF متحرك حتى 10 MB.",
+    menuItemImageHint: "يدعم JPG وPNG وWebP وGIF متحرك (10 MB) وMP4/WebM (30 MB).",
     variants: "الخيارات",
     addVariant: "إضافة خيار",
     noVariants: "لا توجد خيارات.",
@@ -1226,7 +1226,7 @@ export const adminText: Record<Locale, AdminText> = {
     configureStorage: "قم بإعداد Cloudflare R2 لتفعيل الرفع.",
     imageUploadFailed: "فشل رفع الصورة.",
     gifBucketNotAllowed: "تم رفض رفع GIF. تحقق من إعدادات Cloudflare R2 ثم حاول مرة أخرى.",
-    invalidImageType: "استخدم صورة JPG أو PNG أو WebP أو GIF.",
+    invalidImageType: "استخدم صورة JPG أو PNG أو WebP أو GIF أو ملف MP4.",
     imageTooLarge: "يجب أن تكون الصور 10 MB أو أقل.",
     englishRequired: "الإنجليزية مطلوبة.",
     arabicRequired: "العربية مطلوبة.",
@@ -1663,7 +1663,7 @@ export const adminText: Record<Locale, AdminText> = {
     popular: "بەناوبانگ",
     isNew: "نوێ",
     itemImage: "وێنەی بابەت",
-    menuItemImageHint: "JPG، PNG، WebP و GIF ی جوڵاو تا ١٠ MB پشتگیری دەکات.",
+    menuItemImageHint: "JPG، PNG، WebP، GIF ی جوڵاو (١٠ MB) و MP4/WebM (٣٠ MB) پشتگیری دەکات.",
     variants: "جۆرەکان",
     addVariant: "زیادکردنی جۆر",
     noVariants: "هیچ جۆرێک نییە.",
@@ -1788,7 +1788,7 @@ export const adminText: Record<Locale, AdminText> = {
     configureStorage: "Cloudflare R2 ڕێکبخە بۆ چالاککردنی بارکردن.",
     imageUploadFailed: "بارکردنی وێنە سەرکەوتوو نەبوو.",
     gifBucketNotAllowed: "بارکردنی GIF ڕەتکرایەوە. ڕێکخستنەکانی Cloudflare R2 بپشکنە و دووبارە هەوڵبدەرەوە.",
-    invalidImageType: "وێنەی JPG، PNG، WebP یان GIF بەکاربهێنە.",
+    invalidImageType: "وێنەی JPG، PNG، WebP، GIF یان فایلی MP4 بەکاربهێنە.",
     imageTooLarge: "وێنەکان دەبێت ١٠ MB یان بچووکتر بن.",
     englishRequired: "ئینگلیزی پێویستە.",
     arabicRequired: "عەرەبی پێویستە.",
@@ -1811,7 +1811,8 @@ export function adminErrorText(message: string | undefined, text: AdminText) {
   if (message.includes("Slug is required")) return text.slugRequired;
   if (message.includes("Category is required")) return text.categoryRequired;
   if (message.includes("Use a JPG")) return text.invalidImageType;
-  if (message.includes("10 MB")) return text.imageTooLarge;
+  if (message.includes("Videos must be") || message.includes("10 MB") || message.includes("30 MB"))
+    return text.imageTooLarge;
   if (message.includes("Storage is not configured")) return text.configureStorage;
   return message;
 }

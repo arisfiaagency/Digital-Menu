@@ -7,6 +7,7 @@ import { adminErrorText } from "@/components/admin/admin-preferences";
 import { cn } from "@/lib/utils/cn";
 import { hasStorageConfig } from "@/lib/storage";
 import { compressImage, uploadImage, validateImageFile } from "@/lib/storage";
+import { isVideoMediaUrl } from "@/lib/storage/media-url";
 import type { ImageHistoryEntry } from "@/types/models";
 
 type UploadResult = { imageUrl: string; imagePath: string };
@@ -20,7 +21,7 @@ export function ImageUploadField({
   imageHistory = [],
   helpText,
   inputHint,
-  accept = "image/jpeg,image/png,image/webp,image/gif",
+  accept = "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm",
   onUploaded,
   onRemoved,
   onRollback,
@@ -42,6 +43,7 @@ export function ImageUploadField({
   onUploadingChange?: (uploading: boolean) => void;
 }) {
   const [preview, setPreview] = useState(imageUrl || "");
+  const [previewIsVideo, setPreviewIsVideo] = useState(() => isVideoMediaUrl(imageUrl));
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
@@ -51,6 +53,7 @@ export function ImageUploadField({
 
   useEffect(() => {
     setPreview(imageUrl || "");
+    setPreviewIsVideo(isVideoMediaUrl(imageUrl));
   }, [imageUrl]);
 
   // Shared by the file input and drag-and-drop. Reverts the preview if the upload fails.
@@ -66,16 +69,19 @@ export function ImageUploadField({
       return;
     }
     setPreview(URL.createObjectURL(file));
+    setPreviewIsVideo(file.type.startsWith("video/"));
     setProgress(0);
     onUploadingChange?.(true);
     try {
       const uploadFile = await compressImage(file);
       const result = await uploadImage(path, uploadFile, setProgress, fileName);
       setPreview(result.imageUrl);
+      setPreviewIsVideo(isVideoMediaUrl(result.imageUrl));
       onUploaded(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : text?.imageUploadFailed || "File upload failed.");
       setPreview(imageUrl || "");
+      setPreviewIsVideo(isVideoMediaUrl(imageUrl));
     } finally {
       onUploadingChange?.(false);
       setProgress(0);
@@ -99,12 +105,14 @@ export function ImageUploadField({
   function removeCurrentImage() {
     setError("");
     setPreview("");
+    setPreviewIsVideo(false);
     onRemoved?.();
   }
 
   function rollbackImage(entry: ImageHistoryEntry) {
     setError("");
     setPreview(entry.imageUrl);
+    setPreviewIsVideo(isVideoMediaUrl(entry.imageUrl));
     onRollback?.(entry);
   }
 
@@ -132,8 +140,19 @@ export function ImageUploadField({
           )}
         >
           {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="" className="h-full w-full object-cover" />
+            previewIsVideo ? (
+              <video
+                src={preview}
+                muted
+                autoPlay
+                loop
+                playsInline
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="" className="h-full w-full object-cover" />
+            )
           ) : (
             <span className="flex flex-col items-center gap-1.5 px-4 text-muted-foreground">
               <ImagePlus className="h-6 w-6" aria-hidden />
@@ -173,8 +192,12 @@ export function ImageUploadField({
         <div className="flex flex-wrap gap-2">
           {imageHistory.map((entry) => (
             <div key={entry.id} className="relative h-16 w-16 overflow-hidden rounded-md border bg-muted">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={entry.imageUrl} alt="" className="h-full w-full object-cover" />
+              {isVideoMediaUrl(entry.imageUrl) ? (
+                <video src={entry.imageUrl} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={entry.imageUrl} alt="" className="h-full w-full object-cover" />
+              )}
               <Button
                 type="button"
                 variant="secondary"

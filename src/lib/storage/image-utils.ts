@@ -2,14 +2,23 @@ const allowedImageTypes: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
-  "image/gif": "gif"
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+  "video/webm": "webm"
 };
 
+const videoTypes = new Set(["video/mp4", "video/webm"]);
 const maxImageBytes = 10 * 1024 * 1024;
+const maxVideoBytes = 30 * 1024 * 1024;
 
 export function validateImageFile(file: File) {
-  if (!allowedImageTypes[file.type]) return "Use a JPG, PNG, WebP, or GIF image.";
-  if (file.size > maxImageBytes) return "Images must be 10 MB or smaller.";
+  if (!allowedImageTypes[file.type]) return "Use a JPG, PNG, WebP, GIF, or MP4 file.";
+  const max = videoTypes.has(file.type) ? maxVideoBytes : maxImageBytes;
+  if (file.size > max) {
+    return videoTypes.has(file.type)
+      ? "Videos must be 30 MB or smaller."
+      : "Images must be 10 MB or smaller.";
+  }
   return null;
 }
 
@@ -19,6 +28,15 @@ export function imageExtensionForFile(file: File) {
 
 export const ALLOWED_IMAGE_CONTENT_TYPES = Object.keys(allowedImageTypes);
 export const MAX_IMAGE_BYTES = maxImageBytes;
+export const MAX_VIDEO_BYTES = maxVideoBytes;
+
+export function maxBytesForContentType(contentType: string) {
+  return videoTypes.has(contentType) ? maxVideoBytes : maxImageBytes;
+}
+
+export function isVideoContentType(contentType: string) {
+  return videoTypes.has(contentType);
+}
 
 // Longest edge we keep for menu photos. Cards render well under this; anything larger is wasted bytes
 // on a phone. 1600 keeps it crisp on retina while cutting big camera photos down hard.
@@ -27,8 +45,8 @@ const RECOMPRESSIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 /**
  * Downscales oversized photos and re-encodes them to WebP before upload so menu images load fast on
- * mobile. Animated GIFs are left untouched (a canvas would flatten them to one frame). Falls back to
- * the original file if anything goes wrong or compression wouldn't actually save bytes.
+ * mobile. Animated GIFs and videos are left untouched (a canvas would flatten GIFs to one frame).
+ * Falls back to the original file if anything goes wrong or compression wouldn't actually save bytes.
  */
 export async function compressImage(file: File): Promise<File> {
   if (!RECOMPRESSIBLE_TYPES.has(file.type)) return file;

@@ -67,6 +67,7 @@ import { printThermalTicket } from "@/lib/thermal-print";
 import { localized } from "@/lib/i18n/config";
 import type { LocaleDirection } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils/cn";
+import { isVideoMediaUrl } from "@/lib/storage/media-url";
 import { formatMoney, normalizeSearch, roundCashTotal } from "@/lib/utils/format";
 import { useTenant } from "@/components/tenant-provider";
 import type {
@@ -2974,30 +2975,50 @@ function mergeOrderLines(
 
 // Square thumbnail for the menu picker. Real uploaded photos fill the tile
 // (object-cover); items without an image fall back to the default cafe logo,
-// matching the catalog cards. Plain <img> so animated GIFs still play.
+// matching the catalog cards. Video uses <video>; GIFs stay on <img>.
 const POS_THUMB_FALLBACK = "/site-icon.png";
 
 function MenuPickerThumb({ src, alt }: { src?: string; alt: string }) {
   const [imageSrc, setImageSrc] = useState(src || POS_THUMB_FALLBACK);
+  const [useVideo, setUseVideo] = useState(() => isVideoMediaUrl(src));
   const isFallback = imageSrc === POS_THUMB_FALLBACK;
 
   useEffect(() => {
     setImageSrc(src || POS_THUMB_FALLBACK);
+    setUseVideo(isVideoMediaUrl(src));
   }, [src]);
 
   return (
     <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-gradient-to-br from-accent via-primary/5 to-secondary/10">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={imageSrc}
-        alt={alt}
-        loading="lazy"
-        className={cn(
-          "h-full w-full object-cover",
-          isFallback && "scale-90 rounded-full p-1.5",
-        )}
-        onError={() => setImageSrc(POS_THUMB_FALLBACK)}
-      />
+      {useVideo && !isFallback ? (
+        <video
+          src={imageSrc}
+          muted
+          autoPlay
+          loop
+          playsInline
+          preload="metadata"
+          aria-label={alt}
+          className="h-full w-full object-cover"
+          onError={() => {
+            setUseVideo(false);
+            setImageSrc(POS_THUMB_FALLBACK);
+          }}
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageSrc}
+          alt={alt}
+          loading="eager"
+          decoding="sync"
+          className={cn(
+            "h-full w-full object-cover",
+            isFallback && "scale-90 rounded-full p-1.5",
+          )}
+          onError={() => setImageSrc(POS_THUMB_FALLBACK)}
+        />
+      )}
     </span>
   );
 }
