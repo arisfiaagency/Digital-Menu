@@ -2,8 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, LogOut, ShieldCheck } from "lucide-react";
-import { AdminPreferences, AdminLanguageToggle, AdminThemeToggle, useAdminLocale } from "@/components/admin/admin-preferences";
+import { usePathname } from "next/navigation";
+import {
+  Building2,
+  ChevronDown,
+  CreditCard,
+  LogOut,
+  Menu,
+  ShieldCheck,
+  X,
+  type LucideIcon
+} from "lucide-react";
+import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-preferences";
 import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from "@/components/admin/clients-panel";
 import { PaymentReports } from "@/components/admin/payment-reports";
 import { Button } from "@/components/ui/button";
@@ -30,8 +40,14 @@ import type {
 
 type SupervisorTab = "clients" | "payments";
 
+const supervisorNav: { id: SupervisorTab; href: string; labelKey: string; icon: LucideIcon }[] = [
+  { id: "clients", href: "/admin", labelKey: "supervisorClients", icon: Building2 },
+  { id: "payments", href: "/admin/payments", labelKey: "supervisorPayments", icon: CreditCard }
+];
+
 export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: SupervisorTab }) {
   const auth = useAdminAuth();
+  const pathname = usePathname();
   const { text, dir: textDir } = useAdminLocale();
   const [clients, setClients] = useState<ClientAccount[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
@@ -42,7 +58,13 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
   const [updatingSlug, setUpdatingSlug] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<SupervisorTab>(initialTab);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const tab: SupervisorTab = pathname.startsWith("/admin/payments")
+    ? "payments"
+    : pathname === "/admin" || pathname === "/admin/"
+      ? "clients"
+      : initialTab;
 
   async function refresh() {
     setLoadingClients(true);
@@ -274,7 +296,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           <CardContent className="space-y-4 pt-5 text-center">
             <AdminPreferences />
             <ShieldCheck className="mx-auto h-10 w-10 text-primary" aria-hidden />
-            <h1 className="text-2xl font-semibold">Supervisor Admin</h1>
+            <h1 className="text-2xl font-semibold">{text.supervisorTitle}</h1>
             <p className="text-muted-foreground">Sign in with a platform supervisor account to manage client menus.</p>
             <Button asChild>
               <Link href="/admin/login">Sign in</Link>
@@ -285,67 +307,110 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
     );
   }
 
+  const profileName = auth.profile?.displayName || auth.profile?.username || "Supervisor";
+  const profileHandle = auth.profile?.username ? `@${auth.profile.username}` : auth.user.email || "";
+  const roleLabel = auth.role === "employee" ? text.roleEmployee : text.roleAdmin;
+
   return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 sm:px-6">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-semibold">Digital Menu Supervisor</h1>
-            <p className="text-muted-foreground">Clients and billing.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <AdminLanguageToggle />
-            <AdminThemeToggle />
-            <SupervisorProfileMenu
-              profileName={auth.profile?.displayName || auth.profile?.username || "Supervisor"}
-              profileHandle={auth.profile?.username ? `@${auth.profile.username}` : auth.user.email || ""}
-              roleLabel={auth.role === "employee" ? text.roleEmployee : text.roleAdmin}
-              text={text}
-              textDir={textDir}
-              onLogout={signOut}
+    <div dir="ltr" className="min-h-screen bg-background">
+      <Button
+        type="button"
+        size="icon"
+        variant="outline"
+        className="fixed left-3 top-3 z-40 rounded-full bg-card shadow-sm sm:hidden"
+        aria-label="Open supervisor navigation"
+        aria-expanded={mobileNavOpen}
+        onClick={() => setMobileNavOpen(true)}
+      >
+        <Menu className="h-4 w-4" aria-hidden />
+      </Button>
+
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-card p-4 sm:block">
+        <SupervisorNavigation
+          pathname={pathname}
+          text={text}
+          textDir={textDir}
+          profileName={profileName}
+          profileHandle={profileHandle}
+          roleLabel={roleLabel}
+          onLogout={signOut}
+        />
+      </aside>
+
+      <div
+        className={cn(
+          "fixed inset-0 z-50 bg-background/70 backdrop-blur-sm transition-opacity sm:hidden",
+          mobileNavOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+        aria-hidden={!mobileNavOpen}
+        onClick={() => setMobileNavOpen(false)}
+      />
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 border-r bg-card p-4 shadow-xl transition-transform duration-300 sm:hidden",
+          mobileNavOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="absolute right-3 top-3 rounded-full"
+          aria-label="Close supervisor navigation"
+          onClick={() => setMobileNavOpen(false)}
+        >
+          <X className="h-4 w-4" aria-hidden />
+        </Button>
+        <SupervisorNavigation
+          pathname={pathname}
+          text={text}
+          textDir={textDir}
+          profileName={profileName}
+          profileHandle={profileHandle}
+          roleLabel={roleLabel}
+          onNavigate={() => setMobileNavOpen(false)}
+          onLogout={signOut}
+        />
+      </aside>
+
+      <main className="pt-14 sm:ml-64 sm:pt-0">
+        <div className="mx-auto grid w-full max-w-[1600px] gap-6 px-4 py-6 sm:px-6">
+          <header>
+            <h1 dir={textDir} className="text-3xl font-semibold">
+              {tab === "payments" ? text.supervisorPayments : text.supervisorClients}
+            </h1>
+            <p dir={textDir} className="text-muted-foreground">
+              {text.supervisorDesc}
+            </p>
+          </header>
+
+          {message ? (
+            <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm text-primary">{message}</p>
+          ) : null}
+          {error ? (
+            <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>
+          ) : null}
+
+          {tab === "payments" ? <PaymentReports /> : null}
+
+          {tab === "clients" ? (
+            <ClientsPanel
+              clients={clients}
+              loading={loadingClients}
+              saving={saving}
+              deletingSlug={deletingSlug}
+              updatingSlug={updatingSlug}
+              onCreate={createClient}
+              onBlock={(client) => void toggleBlock(client)}
+              onDelete={(client) => void removeClient(client)}
+              onSaveBilling={(client, next) => void saveBilling(client, next)}
+              onRecordPayment={(client, amount, months) => void recordPayment(client, amount, months)}
+              onSaveDesign={(client, next) => void changeDesign(client, next)}
             />
-          </div>
-        </header>
-
-        {message ? <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm text-primary">{message}</p> : null}
-        {error ? <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p> : null}
-
-        <div className="inline-flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1">
-          {(
-            [
-              ["clients", "Clients"],
-              ["payments", "Payments"]
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${tab === id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {label}
-            </button>
-          ))}
+          ) : null}
         </div>
-
-        {tab === "payments" ? <PaymentReports /> : null}
-
-        {tab === "clients" ? (
-          <ClientsPanel
-            clients={clients}
-            loading={loadingClients}
-            saving={saving}
-            deletingSlug={deletingSlug}
-            updatingSlug={updatingSlug}
-            onCreate={createClient}
-            onBlock={(client) => void toggleBlock(client)}
-            onDelete={(client) => void removeClient(client)}
-            onSaveBilling={(client, next) => void saveBilling(client, next)}
-            onRecordPayment={(client, amount, months) => void recordPayment(client, amount, months)}
-            onSaveDesign={(client, next) => void changeDesign(client, next)}
-          />
-        ) : null}
-      </div>
+      </main>
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}
@@ -387,7 +452,77 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           setDeleteConfirmText("");
         }}
       />
-    </main>
+    </div>
+  );
+}
+
+function SupervisorNavigation({
+  pathname,
+  text,
+  textDir,
+  profileName,
+  profileHandle,
+  roleLabel,
+  onNavigate,
+  onLogout
+}: {
+  pathname: string;
+  text: Record<string, string>;
+  textDir: "ltr" | "rtl";
+  profileName: string;
+  profileHandle: string;
+  roleLabel: string;
+  onNavigate?: () => void;
+  onLogout: () => void | Promise<void>;
+}) {
+  return (
+    <div className="flex h-full flex-col">
+      <Link href="/admin" dir={textDir} className="mb-6 block pr-10" onClick={onNavigate}>
+        <span className="block text-xl font-semibold">{text.supervisorBrand}</span>
+        <span className="mt-0.5 block text-xs font-medium text-muted-foreground">{text.supervisorTitle}</span>
+      </Link>
+
+      <nav className="grid gap-1">
+        {supervisorNav.map((entry) => {
+          const Icon = entry.icon;
+          const active =
+            entry.id === "payments"
+              ? pathname.startsWith("/admin/payments")
+              : pathname === "/admin" || pathname === "/admin/";
+          return (
+            <Link
+              key={entry.href}
+              href={entry.href}
+              onClick={onNavigate}
+              className={cn(
+                "focus-ring flex items-center gap-3 rounded-md px-3 py-2 text-sm",
+                active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden />
+              <span dir={textDir}>{text[entry.labelKey]}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="mt-6 rounded-md border p-3">
+        <p dir={textDir} className="mb-2 text-xs font-medium text-muted-foreground">
+          {text.profilePreferences}
+        </p>
+        <AdminPreferences />
+      </div>
+
+      <SupervisorProfileMenu
+        profileName={profileName}
+        profileHandle={profileHandle}
+        roleLabel={roleLabel}
+        text={text}
+        textDir={textDir}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+      />
+    </div>
   );
 }
 
@@ -397,7 +532,8 @@ function SupervisorProfileMenu({
   roleLabel,
   text,
   textDir,
-  onLogout
+  onLogout,
+  onNavigate
 }: {
   profileName: string;
   profileHandle: string;
@@ -405,6 +541,7 @@ function SupervisorProfileMenu({
   text: Record<string, string>;
   textDir: "ltr" | "rtl";
   onLogout: () => void | Promise<void>;
+  onNavigate?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -435,15 +572,16 @@ function SupervisorProfileMenu({
 
   async function handleLogout() {
     setOpen(false);
+    onNavigate?.();
     await onLogout();
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative mt-auto pt-4">
       {open ? (
         <div
           role="menu"
-          className="pop-in absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-2xl border bg-card p-1.5 shadow-xl"
+          className="pop-in absolute bottom-full left-0 z-20 mb-2 w-full overflow-hidden rounded-2xl border bg-card p-1.5 shadow-xl"
         >
           <div className="rounded-xl bg-muted/40 p-3">
             <div className="flex items-center gap-3">
@@ -458,7 +596,9 @@ function SupervisorProfileMenu({
               </span>
             </div>
             <div className="mt-2">
-              <span dir={textDir} className="block truncate text-xs text-muted-foreground">{roleLabel}</span>
+              <span dir={textDir} className="block truncate text-xs text-muted-foreground">
+                {roleLabel}
+              </span>
             </div>
           </div>
           <button
@@ -475,23 +615,22 @@ function SupervisorProfileMenu({
 
       <button
         type="button"
-        className="focus-ring group relative flex h-12 w-12 items-center justify-center rounded-full border bg-background/70 text-primary shadow-sm transition-colors hover:bg-muted"
+        className="focus-ring flex w-full items-center gap-3 rounded-2xl border bg-background/60 p-2.5 text-start transition-colors hover:bg-muted"
         aria-label={text.adminProfile}
         aria-haspopup="menu"
         aria-expanded={open}
-        title={`${profileName} - ${secondaryProfileText}`}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-xs font-bold">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
           {avatarText}
         </span>
-        <ChevronDown
-          className={cn(
-            "absolute -right-1 bottom-3 h-3.5 w-3.5 rounded-full bg-card text-muted-foreground shadow-sm transition-transform group-hover:text-foreground",
-            open && "rotate-180"
-          )}
-          aria-hidden
-        />
+        <span className="min-w-0 flex-1">
+          <span dir={textDir} className="block truncate text-sm font-semibold">
+            {profileName}
+          </span>
+          <span className="block truncate text-xs text-muted-foreground">{secondaryProfileText}</span>
+        </span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
       </button>
     </div>
   );
@@ -507,12 +646,25 @@ function getProfileInitials(value: string) {
 
 function SupervisorSkeleton() {
   return (
-    <main className="mx-auto grid min-h-screen w-full max-w-7xl gap-6 px-4 py-6 sm:px-6">
-      <Skeleton className="h-10 w-72" />
-      <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
-        <Skeleton className="h-96 w-full" />
-        <Skeleton className="h-96 w-full" />
-      </div>
-    </main>
+    <div dir="ltr" className="min-h-screen bg-background">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-card p-4 sm:block">
+        <Skeleton className="mb-6 h-10 w-40" />
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+        <Skeleton className="mt-6 h-16 w-full" />
+        <Skeleton className="mt-auto h-14 w-full" />
+      </aside>
+      <main className="pt-14 sm:ml-64 sm:pt-0">
+        <div className="mx-auto grid w-full max-w-[1600px] gap-6 px-4 py-6 sm:px-6">
+          <Skeleton className="h-10 w-72" />
+          <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+            <Skeleton className="h-96 w-full" />
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }
