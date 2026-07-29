@@ -80,7 +80,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const auth = useAdminAuth();
   const { text, dir: textDir } = useAdminLocale();
-  const { adminBasePath, qrEnabled, ratingEnabled } = useTenant();
+  const { adminBasePath, qrEnabled, ratingEnabled, auditEnabled } = useTenant();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const loginPath = `${adminBasePath}/login`;
   const usersHref = `${adminBasePath}/users`;
@@ -142,7 +142,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const onReviewsRoute = pathname.startsWith(reviewsHref);
   const currentNav = navItems.find((entry) => pathname.startsWith(entry.href));
   const routeAllowed = onAuditRoute
-    ? auth.isMainAdmin
+    ? auditEnabled && auth.can("audit")
     : onUsersRoute
       ? auth.canManageUsers
       : onQrRoute
@@ -204,10 +204,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           navItems={allowedNav}
           canManageUsers={auth.canManageUsers}
           canSettings={auth.can("settings")}
-          isMainAdmin={auth.isMainAdmin}
           usersHref={usersHref}
           settingsHref={settingsHref}
           auditHref={auditHref}
+          auditEnabled={auditEnabled && auth.can("audit")}
           qrHref={qrHref}
           qrEnabled={qrEnabled && auth.can("qrCode")}
           reviewsHref={reviewsHref}
@@ -250,10 +250,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           navItems={allowedNav}
           canManageUsers={auth.canManageUsers}
           canSettings={auth.can("settings")}
-          isMainAdmin={auth.isMainAdmin}
           usersHref={usersHref}
           settingsHref={settingsHref}
           auditHref={auditHref}
+          auditEnabled={auditEnabled && auth.can("audit")}
           qrHref={qrHref}
           qrEnabled={qrEnabled && auth.can("qrCode")}
           reviewsHref={reviewsHref}
@@ -281,10 +281,10 @@ function AdminNavigation({
   navItems,
   canManageUsers,
   canSettings,
-  isMainAdmin,
   usersHref,
   settingsHref,
   auditHref,
+  auditEnabled,
   qrHref,
   qrEnabled,
   reviewsHref,
@@ -300,10 +300,10 @@ function AdminNavigation({
   navItems: { href: string; labelKey: string; icon: LucideIcon; feature: AdminFeature }[];
   canManageUsers: boolean;
   canSettings: boolean;
-  isMainAdmin: boolean;
   usersHref: string;
   settingsHref: string;
   auditHref: string;
+  auditEnabled: boolean;
   qrHref: string;
   qrEnabled: boolean;
   reviewsHref: string;
@@ -320,9 +320,9 @@ function AdminNavigation({
     // The public menu QR — a printable link to /{slug}. The platform admin can
     // hide it per cafe from the supervisor Clients tab.
     ...(qrEnabled ? [{ href: qrHref, labelKey: "qrCode", icon: QrCode }] : []),
-    ...(canManageUsers ? [{ href: usersHref, labelKey: "users", icon: UsersRound }] : []),
-    // The Activity Log is the Main Admin's oversight view — only they see the nav item.
-    ...(isMainAdmin ? [{ href: auditHref, labelKey: "auditLog", icon: History }] : [])
+    // Activity log — platform toggle + feature permission (admins always; employees if granted).
+    ...(auditEnabled ? [{ href: auditHref, labelKey: "auditLog", icon: History }] : []),
+    ...(canManageUsers ? [{ href: usersHref, labelKey: "users", icon: UsersRound }] : [])
   ];
 
   return (

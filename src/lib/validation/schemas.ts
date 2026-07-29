@@ -63,6 +63,7 @@ export const menuItemSchema = z.object({
   isFeatured: z.boolean().default(false),
   isPopular: z.boolean().default(false),
   isNew: z.boolean().default(false),
+  isPosPinned: z.boolean().default(false),
   displayOrder: z.coerce.number().int().min(0)
 });
 

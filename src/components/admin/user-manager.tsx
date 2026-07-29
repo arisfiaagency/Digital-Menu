@@ -35,10 +35,10 @@ const USERNAME_PATTERN = /^[a-z0-9._-]{3,20}$/;
 export function UserManager() {
   const { text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
-  const { clientSlug, qrEnabled, ratingEnabled } = useTenant();
+  const { clientSlug, qrEnabled, ratingEnabled, auditEnabled } = useTenant();
   const accessFeatures = useMemo(
-    () => employeeAccessFeatures({ qrEnabled, ratingEnabled }),
-    [qrEnabled, ratingEnabled]
+    () => employeeAccessFeatures({ qrEnabled, ratingEnabled, auditEnabled }),
+    [qrEnabled, ratingEnabled, auditEnabled]
   );
   const [users, setUsers] = useState<AdminProfile[]>([]);
   const [loading, setLoading] = useState(true);

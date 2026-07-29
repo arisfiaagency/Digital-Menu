@@ -19,6 +19,8 @@ import {
   Merge,
   Minus,
   Pencil,
+  Pin,
+  PinOff,
   Plus,
   Printer,
   ReceiptText,
@@ -51,6 +53,7 @@ import {
   getAdminAppData,
   getPosLiveState,
   savePosState,
+  setMenuItemPosPinned,
   subscribePosLiveState,
 } from "@/lib/firebase/firestore";
 import {
@@ -240,8 +243,19 @@ export function PosManager() {
           .join(" ")
           .includes(normalized);
       })
-      .sort((a, b) => a.displayOrder - b.displayOrder);
+      .sort((a, b) => {
+        const pin = Number(Boolean(b.isPosPinned)) - Number(Boolean(a.isPosPinned));
+        if (pin !== 0) return pin;
+        return a.displayOrder - b.displayOrder;
+      });
   }, [categoryFilter, data?.categories, data?.menuItems, locale, query]);
+  const pinnedItems = useMemo(
+    () =>
+      (data?.menuItems || [])
+        .filter((item) => item.isPosPinned && item.isAvailable && !item.isSoldOut)
+        .sort((a, b) => a.displayOrder - b.displayOrder),
+    [data?.menuItems],
+  );
   const waterItems = useMemo(
     () =>
       (data?.menuItems || [])
@@ -406,6 +420,31 @@ export function PosManager() {
           ];
       return { ...order, lines };
     });
+  }
+
+  async function togglePosPin(item: MenuItem, event: { stopPropagation: () => void; preventDefault: () => void }) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!data) return;
+    const nextPinned = !item.isPosPinned;
+    const title = localized(item.name, locale, item.name.en);
+    setData({
+      ...data,
+      menuItems: data.menuItems.map((entry) =>
+        entry.id === item.id ? { ...entry, isPosPinned: nextPinned } : entry
+      )
+    });
+    try {
+      await setMenuItemPosPinned(item.id, nextPinned, title);
+    } catch (err) {
+      setData({
+        ...data,
+        menuItems: data.menuItems.map((entry) =>
+          entry.id === item.id ? { ...entry, isPosPinned: item.isPosPinned } : entry
+        )
+      });
+      setError(err instanceof Error ? err.message : text.settingsSaveFailed);
+    }
   }
 
   function setLineFlavor(lineId: string, flavor: string) {
@@ -852,6 +891,56 @@ export function PosManager() {
               <p dir={textDir} className="text-sm text-muted-foreground">
                 {text.tapItemsToAdd}
               </p>
+              {pinnedItems.length ? (
+                <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary">
+                    <Pin className="h-3.5 w-3.5" aria-hidden />
+                    {text.posPinnedSection}
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {pinnedItems.map((item) => {
+                      const title = localized(item.name, locale, item.name.en);
+                      const price =
+                        item.discountPrice && item.discountPrice > 0
+                          ? item.discountPrice
+                          : item.basePrice;
+                      const firstVariant = item.variants.find((variant) => variant.isAvailable);
+                      return (
+                        <button
+                          key={`pinned-${item.id}`}
+                          type="button"
+                          onClick={() => addMenuItem(item, firstVariant)}
+                          className="focus-ring flex min-w-[9.5rem] max-w-[11rem] shrink-0 flex-col gap-2 rounded-lg border bg-card p-2.5 text-start transition-[transform,border-color] hover:border-primary/40 active:scale-[0.98]"
+                        >
+                          <span className="flex items-start justify-between gap-1">
+                            <span dir={textDir} className="line-clamp-2 text-sm font-semibold">{title}</span>
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              aria-label={text.unpinOnPos}
+                              title={text.unpinOnPos}
+                              className="focus-ring -m-1 rounded-md p-1 text-primary hover:bg-primary/10"
+                              onClick={(event) => void togglePosPin(item, event)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  void togglePosPin(item, event);
+                                }
+                              }}
+                            >
+                              <Pin className="h-3.5 w-3.5 fill-current" aria-hidden />
+                            </span>
+                          </span>
+                          <span className="text-xs font-semibold text-primary">
+                            {firstVariant
+                              ? formatMoney(firstVariant.price, item.currency, locale)
+                              : formatMoney(price, item.currency, locale)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
               <div className="grid gap-3 md:grid-cols-[1fr_220px]">
                 <label className="relative block">
                   <Search
@@ -886,15 +975,42 @@ export function PosManager() {
                       item.discountPrice && item.discountPrice > 0
                         ? item.discountPrice
                         : item.basePrice;
+                    const pinControl = (
+                      <button
+                        type="button"
+                        aria-label={item.isPosPinned ? text.unpinOnPos : text.pinOnPos}
+                        title={item.isPosPinned ? text.unpinOnPos : text.pinOnPos}
+                        onClick={(event) => void togglePosPin(item, event)}
+                        className={cn(
+                          "focus-ring -m-1 shrink-0 rounded-md p-1.5 transition-colors",
+                          item.isPosPinned
+                            ? "text-primary hover:bg-primary/10"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        {item.isPosPinned ? (
+                          <Pin className="h-4 w-4 fill-current" aria-hidden />
+                        ) : (
+                          <PinOff className="h-4 w-4" aria-hidden />
+                        )}
+                      </button>
+                    );
                     const header = (
                       <div className="flex items-start gap-3">
                         <MenuPickerThumb src={item.imageUrl} alt={title} />
                         <span className="flex min-w-0 flex-1 items-start justify-between gap-2">
                           <span className="min-w-0">
+                          <span className="flex items-center gap-1.5">
+                            {item.isPosPinned ? (
+                              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">
+                                {text.posPinnedSection}
+                              </span>
+                            ) : null}
                           <span
                             dir={textDir}
                             className="line-clamp-2 block font-semibold">
                             {title}
+                          </span>
                           </span>
                           <span
                             dir={textDir}
@@ -908,8 +1024,11 @@ export function PosManager() {
                             )}
                           </span>
                           </span>
-                          <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                            {variants.length ? `${variants.length} ${text.variants}` : formatMoney(price, item.currency, locale)}
+                          <span className="flex shrink-0 flex-col items-end gap-1">
+                            {pinControl}
+                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                              {variants.length ? `${variants.length} ${text.variants}` : formatMoney(price, item.currency, locale)}
+                            </span>
                           </span>
                         </span>
                       </div>
@@ -918,19 +1037,33 @@ export function PosManager() {
                     // button (each variant is its own button inside), so those stay tap-per-variant.
                     if (!variants.length) {
                       return (
-                        <button
+                        <div
                           key={item.id}
-                          type="button"
-                          onClick={() => addMenuItem(item)}
-                          className="focus-ring flex min-h-24 w-full flex-col gap-3 rounded-lg border bg-card p-3 text-start transition-[transform,background-color,border-color] duration-200 hover:border-primary/40 hover:bg-muted/50 active:scale-[0.98]">
-                          {header}
-                        </button>
+                          className={cn(
+                            "relative flex min-h-24 w-full flex-col gap-3 rounded-lg border bg-card p-3 text-start transition-[transform,background-color,border-color] duration-200 hover:border-primary/40 hover:bg-muted/50",
+                            item.isPosPinned && "border-primary/30"
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => addMenuItem(item)}
+                            className="focus-ring absolute inset-0 rounded-lg"
+                            aria-label={title}
+                          />
+                          <div className="relative z-[1] pointer-events-none [&_button]:pointer-events-auto">
+                            {header}
+                          </div>
+                        </div>
                       );
                     }
                     return (
                       <div
                         key={item.id}
-                        className="flex min-h-24 flex-col gap-3 rounded-lg border bg-card p-3 text-start transition-colors hover:border-primary/40">
+                        className={cn(
+                          "flex min-h-24 flex-col gap-3 rounded-lg border bg-card p-3 text-start transition-colors hover:border-primary/40",
+                          item.isPosPinned && "border-primary/30"
+                        )}
+                      >
                         {header}
                         <div className="grid gap-1.5">
                           {variants.map((variant) => (

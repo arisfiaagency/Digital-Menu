@@ -156,6 +156,7 @@ export const saveClient = bindClientSlug(async function saveClient(client: Omit<
     menuMascotSpeed: client.menuMascotSpeed ?? prev?.menuMascotSpeed ?? 1,
     qrEnabled: client.qrEnabled ?? prev?.qrEnabled ?? true,
     ratingEnabled: client.ratingEnabled ?? prev?.ratingEnabled ?? true,
+    auditEnabled: client.auditEnabled ?? prev?.auditEnabled ?? true,
     demoMenuEnabled: client.demoMenuEnabled ?? prev?.demoMenuEnabled ?? true,
     blocked: client.blocked ?? prev?.blocked ?? false,
     blockedReason: client.blockedReason ?? prev?.blockedReason,
@@ -619,6 +620,27 @@ export const updateMenuItemAvailability = bindClientSlug(async function updateMe
     ? `available: ${isAvailable}, sold out: ${isSoldOut}`
     : `available: ${isAvailable}`;
   await logAudit({ action: "availability", entity: "menuItem", entityId: itemId, label, summary });
+});
+
+/** Pin/unpin an item for the POS menu picker (POS staff may toggle this field only). */
+export const setMenuItemPosPinned = bindClientSlug(async function setMenuItemPosPinned(
+  itemId: string,
+  isPosPinned: boolean,
+  label?: string
+) {
+  const db = getFirebaseDb();
+  if (!db) return;
+  await updateDoc(tenantDoc(db, "menuItems", itemId), {
+    isPosPinned,
+    updatedAt: serverTimestamp()
+  });
+  await logAudit({
+    action: "update",
+    entity: "menuItem",
+    entityId: itemId,
+    label,
+    summary: isPosPinned ? "Pinned on POS" : "Unpinned from POS"
+  });
 });
 
 export const reorderMenuItems = bindClientSlug(async function reorderMenuItems(updates: { id: string; displayOrder: number }[]) {

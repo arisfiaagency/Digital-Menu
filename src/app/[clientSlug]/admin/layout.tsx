@@ -20,6 +20,7 @@ export default async function ClientAdminLayout({
       clientSlug={client.slug}
       qrEnabled={client.qrEnabled !== false}
       ratingEnabled={client.ratingEnabled !== false}
+      auditEnabled={client.auditEnabled !== false}
     >
       <script dangerouslySetInnerHTML={{ __html: adminThemePrepaintScript(client.slug) }} />
       <AdminShell>{children}</AdminShell>

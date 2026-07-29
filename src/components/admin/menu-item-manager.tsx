@@ -57,6 +57,7 @@ const emptyItem: MenuItemFormData = {
   isFeatured: false,
   isPopular: false,
   isNew: false,
+  isPosPinned: false,
   displayOrder: 0
 };
 
@@ -501,6 +502,7 @@ export function MenuItemManager() {
                             {item.isSoldOut ? text.soldOut : item.isAvailable ? text.available : text.inactive}
                           </Badge>
                           {item.isFeatured ? <Badge>{text.featured}</Badge> : null}
+                          {item.isPosPinned ? <Badge>{text.posPinned}</Badge> : null}
                           {item.isPopular ? <Badge>{text.popular}</Badge> : null}
                           {item.isNew ? <Badge>{text.isNew}</Badge> : null}
                           {missingTranslationCount ? (
@@ -777,6 +779,11 @@ function MenuItemEditorForm({
             <ToggleRow text={text.featured} checked={Boolean(form.watch("isFeatured"))} onCheckedChange={(checked) => form.setValue("isFeatured", checked, { shouldDirty: true })} />
             <ToggleRow text={text.popular} checked={Boolean(form.watch("isPopular"))} onCheckedChange={(checked) => form.setValue("isPopular", checked, { shouldDirty: true })} />
             <ToggleRow text={text.isNew} checked={Boolean(form.watch("isNew"))} onCheckedChange={(checked) => form.setValue("isNew", checked, { shouldDirty: true })} />
+            <ToggleRow
+              text={text.posPinned}
+              checked={Boolean(form.watch("isPosPinned"))}
+              onCheckedChange={(checked) => form.setValue("isPosPinned", checked, { shouldDirty: true })}
+            />
           </div>
         </FormSection>
         <FormSection title={text.media}>
@@ -921,6 +928,7 @@ function MenuItemAdminPreview({
               {item.isSoldOut ? text.soldOut : item.isAvailable ? text.available : text.inactive}
             </Badge>
             {item.isFeatured ? <Badge>{text.featured}</Badge> : null}
+            {item.isPosPinned ? <Badge>{text.posPinned}</Badge> : null}
             {item.isPopular ? <Badge>{text.popular}</Badge> : null}
             {item.isNew ? <Badge>{text.isNew}</Badge> : null}
           </div>

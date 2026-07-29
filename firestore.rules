@@ -128,7 +128,13 @@ service cloud.firestore {
       match /menuItems/{menuItemId} {
         // Public menu: anyone may read available items of an active cafe.
         allow get, list: if (clientActive(clientId) && resource.data.isAvailable == true) || isTenantAdmin(clientId);
-        allow create, update, delete: if hasTenantFeature(clientId, 'menuItems');
+        allow create, delete: if hasTenantFeature(clientId, 'menuItems');
+        // POS staff may only flip the POS pin flag; full edits need menuItems.
+        allow update: if hasTenantFeature(clientId, 'menuItems')
+          || (
+            hasTenantFeature(clientId, 'pos')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPosPinned', 'updatedAt'])
+          );
       }
 
       match /settings/{settingsId} {
@@ -237,9 +243,14 @@ service cloud.firestore {
       }
 
       match /auditLogs/{logId} {
-        // Cafe Main Admin + platform supervisors can read the trail. Staff
-        // create entries for their own actions only (append-only).
-        allow read: if isTenantMainAdmin(clientId) || isPlatformFullAdmin();
+        // Platform supervisors always read. Cafe staff read only when the
+        // platform toggle is on and they have the audit feature (admins always).
+        // Creates stay append-only and must match the signed-in actor.
+        allow read: if isPlatformFullAdmin()
+          || (
+            get(clientRef(clientId)).data.get('auditEnabled', true) != false
+            && hasTenantFeature(clientId, 'audit')
+          );
         allow create: if isTenantAdmin(clientId)
           && request.resource.data.actorUid == request.auth.uid
           && request.resource.data.action is string

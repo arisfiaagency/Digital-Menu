@@ -2,15 +2,18 @@
 
 import { useEffect, useMemo, useState, Fragment, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock3, DoorOpen, History, Receipt, Scale, Wallet } from "lucide-react";
+import { ArrowLeft, Clock3, DoorOpen, FileText, History, Printer, Receipt, Scale, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { adminErrorText, useAdminLocale } from "@/components/admin/admin-preferences";
+import { adminErrorText, formatAdminText, useAdminLocale } from "@/components/admin/admin-preferences";
 import { useTenant } from "@/components/tenant-provider";
-import { getPosState, listShifts } from "@/lib/firebase/firestore";
+import { getAdminAppData, getPosState, listShifts } from "@/lib/firebase/firestore";
+import { localized } from "@/lib/i18n/config";
+import { loadPosPrinterConfig, printerForRole } from "@/lib/pos-printers";
+import { printThermalReport } from "@/lib/thermal-print";
 import { formatMoney } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import type { CashShift, Currency, Locale, PosCompletedOrder } from "@/types/models";
@@ -19,25 +22,28 @@ type Mode = "daily" | "monthly" | "all";
 
 export function ShiftReportsManager() {
   const { locale, text, dir: textDir } = useAdminLocale();
-  const { adminBasePath } = useTenant();
+  const { adminBasePath, clientSlug } = useTenant();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [shifts, setShifts] = useState<CashShift[]>([]);
   const [orders, setOrders] = useState<PosCompletedOrder[]>([]);
+  const [restaurantName, setRestaurantName] = useState("Cafe");
   const [mode, setMode] = useState<Mode>("daily");
   const [day, setDay] = useState(() => todayKey());
   const [month, setMonth] = useState(() => todayKey().slice(0, 7));
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([listShifts(200), getPosState()])
-      .then(([nextShifts, pos]) => {
+    Promise.all([listShifts(200), getPosState(), getAdminAppData()])
+      .then(([nextShifts, pos, app]) => {
         setShifts(nextShifts);
         setOrders(pos.completedOrders || []);
+        setRestaurantName(localized(app.general.restaurantName, locale, "Cafe"));
       })
       .catch((err) => setError(err instanceof Error ? err.message : text.settingsSaveFailed))
       .finally(() => setLoading(false));
-  }, [text.settingsSaveFailed]);
+  }, [locale, text.settingsSaveFailed]);
 
   const filtered = useMemo(() => {
     return shifts
@@ -69,11 +75,72 @@ export function ShiftReportsManager() {
     );
   }, [filtered, orders]);
 
+  const periodLabel =
+    mode === "all" ? text.allTime : mode === "monthly" ? formatMonthLabel(month, locale) : formatDayLabel(day, locale);
+
   const modes: { key: Mode; label: string }[] = [
     { key: "daily", label: text.daily },
     { key: "monthly", label: text.monthly },
     { key: "all", label: text.allTime }
   ];
+
+  function printPdf() {
+    document.body.classList.add("shift-report-pdf-printing");
+    const cleanup = () => document.body.classList.remove("shift-report-pdf-printing");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+    window.setTimeout(cleanup, 1000);
+  }
+
+  function printThermal() {
+    setMessage("");
+    const printerConfig = loadPosPrinterConfig(clientSlug);
+    const printerName = printerForRole(printerConfig, "invoice") || undefined;
+    if (printerName) {
+      setMessage(formatAdminText(text.selectAssignedPrinter, { name: printerName }));
+    }
+
+    const receiptLocale: Locale = locale === "ckb" || locale === "ar" ? locale : "en";
+    const shiftLines = filtered.map((shift) => {
+      const sales = shiftSales(shift, orders);
+      const expected = shift.expectedCash ?? shift.openingCash + sales.salesTotal;
+      const variance =
+        shift.status === "closed" ? (shift.variance ?? (shift.closingCashCounted || 0) - expected) : null;
+      return {
+        left: formatDateTime(shift.openedAt, locale),
+        right: formatMoney(sales.salesTotal, shift.currency, receiptLocale),
+        note: [
+          shift.status === "open" ? text.shiftStatusOpen : text.shiftStatusClosed,
+          `${sales.ordersCount} ${text.ordersCount}`,
+          variance == null ? null : `${text.shiftVariance}: ${formatMoney(variance, shift.currency, receiptLocale)}`
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      };
+    });
+
+    void printThermalReport({
+      title: text.shiftReports,
+      subtitle: `${periodLabel} · ${filtered.length} ${text.shiftsCount}`,
+      restaurantName,
+      printerName,
+      printerLabel: text.printerLabel,
+      paperWidth: printerConfig.paperWidth,
+      rows: [
+        { label: text.shiftsCount, value: String(filtered.length) },
+        { label: text.shiftSales, value: formatMoney(totals.sales, currency, receiptLocale), strong: true },
+        { label: text.ordersCount, value: String(totals.orders) },
+        { label: text.shiftTotalVariance, value: formatMoney(totals.variance, currency, receiptLocale) },
+        {
+          label: text.shiftAvgSales,
+          value: formatMoney(filtered.length ? Math.round(totals.sales / filtered.length) : 0, currency, receiptLocale)
+        }
+      ],
+      blocks: shiftLines.length
+        ? [{ title: text.shiftReports, lines: shiftLines }]
+        : undefined
+    });
+  }
 
   if (loading) {
     return (
@@ -105,7 +172,7 @@ export function ShiftReportsManager() {
             <p className="text-muted-foreground">{text.shiftReportsDesc}</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           <div className="flex gap-1.5">
             {modes.map((entry) => (
               <button
@@ -127,147 +194,166 @@ export function ShiftReportsManager() {
           {mode === "monthly" ? (
             <Input type="month" value={month} max={todayKey().slice(0, 7)} onChange={(event) => setMonth(event.target.value)} className="h-9 w-auto" aria-label={text.monthly} />
           ) : null}
+          <Button variant="outline" size="sm" onClick={printPdf} disabled={!filtered.length}>
+            <FileText className="me-1.5 h-4 w-4" aria-hidden />
+            {text.printPdf}
+          </Button>
+          <Button variant="outline" size="sm" onClick={printThermal} disabled={!filtered.length}>
+            <Printer className="me-1.5 h-4 w-4" aria-hidden />
+            {text.printThermal}
+          </Button>
         </div>
       </div>
 
       {error ? <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{adminErrorText(error, text)}</p> : null}
+      {message ? <p className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm text-primary print:hidden">{message}</p> : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={<History className="h-5 w-5" aria-hidden />} label={text.shiftsCount} value={String(filtered.length)} />
-        <StatCard icon={<Receipt className="h-5 w-5" aria-hidden />} label={text.shiftSales} value={formatMoney(totals.sales, currency, locale)} hint={`${totals.orders} ${text.ordersCount}`} />
-        <StatCard icon={<Scale className="h-5 w-5" aria-hidden />} label={text.shiftTotalVariance} value={formatMoney(totals.variance, currency, locale)} tone={totals.variance === 0 ? "neutral" : "warn"} />
-        <StatCard
-          icon={<Wallet className="h-5 w-5" aria-hidden />}
-          label={text.shiftAvgSales}
-          value={formatMoney(filtered.length ? Math.round(totals.sales / filtered.length) : 0, currency, locale)}
-        />
-      </div>
+      <div className="shift-report-pdf-area space-y-6">
+        <div className="hidden shift-report-pdf-only mb-4">
+          <p className="text-lg font-semibold">{restaurantName}</p>
+          <p className="text-base font-semibold">{text.shiftReports}</p>
+          <p className="text-sm text-muted-foreground">
+            {periodLabel} · {filtered.length} {text.shiftsCount}
+          </p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <DoorOpen className="h-5 w-5" aria-hidden />
-            {text.shiftReports}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!filtered.length ? (
-            <p className="text-sm text-muted-foreground">{text.shiftNoReports}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead>
-                  <tr className="border-b text-start text-muted-foreground">
-                    <th className="px-2 py-2 font-medium">{text.shiftOpenedAt}</th>
-                    <th className="px-2 py-2 font-medium">{text.shiftClosedAt}</th>
-                    <th className="px-2 py-2 font-medium">{text.shiftOpeningCash}</th>
-                    <th className="px-2 py-2 font-medium">{text.shiftSales}</th>
-                    <th className="px-2 py-2 font-medium">{text.shiftExpectedCash}</th>
-                    <th className="px-2 py-2 font-medium">{text.shiftClosingCash}</th>
-                    <th className="px-2 py-2 font-medium">{text.shiftVariance}</th>
-                    <th className="px-2 py-2 font-medium">{text.byWho}</th>
-                    <th className="px-2 py-2 font-medium">{text.status}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((shift) => {
-                    const sales = shiftSales(shift, orders);
-                    const expected = shift.expectedCash ?? shift.openingCash + sales.salesTotal;
-                    const variance =
-                      shift.status === "closed"
-                        ? (shift.variance ?? (shift.closingCashCounted || 0) - expected)
-                        : null;
-                    const open = expandedId === shift.id;
-                    const shiftOrders = ordersForShift(shift, orders);
-                    return (
-                      <Fragment key={shift.id}>
-                        <tr
-                          className="cursor-pointer border-b last:border-0 hover:bg-muted/40"
-                          onClick={() => setExpandedId(open ? null : shift.id)}
-                        >
-                          <td className="px-2 py-2.5">{formatDateTime(shift.openedAt, locale)}</td>
-                          <td className="px-2 py-2.5">{shift.closedAt ? formatDateTime(shift.closedAt, locale) : "—"}</td>
-                          <td className="px-2 py-2.5">{formatMoney(shift.openingCash, shift.currency, locale)}</td>
-                          <td className="px-2 py-2.5">
-                            {formatMoney(sales.salesTotal, shift.currency, locale)}
-                            <span className="ms-1 text-muted-foreground">({sales.ordersCount})</span>
-                          </td>
-                          <td className="px-2 py-2.5">{formatMoney(expected, shift.currency, locale)}</td>
-                          <td className="px-2 py-2.5">
-                            {shift.status === "closed" ? formatMoney(shift.closingCashCounted || 0, shift.currency, locale) : "—"}
-                          </td>
-                          <td
-                            className={cn(
-                              "px-2 py-2.5 font-medium",
-                              variance == null ? "text-muted-foreground" : variance === 0 ? "text-primary" : "text-amber-700 dark:text-amber-400"
-                            )}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard icon={<History className="h-5 w-5" aria-hidden />} label={text.shiftsCount} value={String(filtered.length)} />
+          <StatCard icon={<Receipt className="h-5 w-5" aria-hidden />} label={text.shiftSales} value={formatMoney(totals.sales, currency, locale)} hint={`${totals.orders} ${text.ordersCount}`} />
+          <StatCard icon={<Scale className="h-5 w-5" aria-hidden />} label={text.shiftTotalVariance} value={formatMoney(totals.variance, currency, locale)} tone={totals.variance === 0 ? "neutral" : "warn"} />
+          <StatCard
+            icon={<Wallet className="h-5 w-5" aria-hidden />}
+            label={text.shiftAvgSales}
+            value={formatMoney(filtered.length ? Math.round(totals.sales / filtered.length) : 0, currency, locale)}
+          />
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <DoorOpen className="h-5 w-5" aria-hidden />
+              {text.shiftReports}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!filtered.length ? (
+              <p className="text-sm text-muted-foreground">{text.shiftNoReports}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-sm">
+                  <thead>
+                    <tr className="border-b text-start text-muted-foreground">
+                      <th className="px-2 py-2 font-medium">{text.shiftOpenedAt}</th>
+                      <th className="px-2 py-2 font-medium">{text.shiftClosedAt}</th>
+                      <th className="px-2 py-2 font-medium">{text.shiftOpeningCash}</th>
+                      <th className="px-2 py-2 font-medium">{text.shiftSales}</th>
+                      <th className="px-2 py-2 font-medium">{text.shiftExpectedCash}</th>
+                      <th className="px-2 py-2 font-medium">{text.shiftClosingCash}</th>
+                      <th className="px-2 py-2 font-medium">{text.shiftVariance}</th>
+                      <th className="px-2 py-2 font-medium">{text.byWho}</th>
+                      <th className="px-2 py-2 font-medium">{text.status}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((shift) => {
+                      const sales = shiftSales(shift, orders);
+                      const expected = shift.expectedCash ?? shift.openingCash + sales.salesTotal;
+                      const variance =
+                        shift.status === "closed"
+                          ? (shift.variance ?? (shift.closingCashCounted || 0) - expected)
+                          : null;
+                      const open = expandedId === shift.id;
+                      const shiftOrders = ordersForShift(shift, orders);
+                      return (
+                        <Fragment key={shift.id}>
+                          <tr
+                            className="cursor-pointer border-b last:border-0 hover:bg-muted/40"
+                            onClick={() => setExpandedId(open ? null : shift.id)}
                           >
-                            {variance == null ? "—" : formatMoney(variance, shift.currency, locale)}
-                          </td>
-                          <td className="px-2 py-2.5 text-muted-foreground">
-                            {[shift.openedBy, shift.closedBy].filter(Boolean).join(" → ") || "—"}
-                          </td>
-                          <td className="px-2 py-2.5">
-                            {shift.status === "open" ? (
-                              <Badge className="bg-primary/15 text-primary">{text.shiftStatusOpen}</Badge>
-                            ) : (
-                              <Badge className="bg-muted text-muted-foreground">{text.shiftStatusClosed}</Badge>
-                            )}
-                          </td>
-                        </tr>
-                        {open ? (
-                          <tr className="border-b bg-muted/20 last:border-0">
-                            <td colSpan={9} className="px-3 py-3">
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                  <span className="inline-flex items-center gap-1">
-                                    <Clock3 className="h-3.5 w-3.5" aria-hidden />
-                                    {text.shiftDuration}: {formatDuration(shift.openedAt, shift.closedAt, text)}
-                                  </span>
-                                  {shift.note ? <span>{text.note}: {shift.note}</span> : null}
-                                  {shift.closeNote ? <span>{text.closeNote}: {shift.closeNote}</span> : null}
-                                </div>
-                                {!shiftOrders.length ? (
-                                  <p className="text-sm text-muted-foreground">{text.noOrdersInShift}</p>
-                                ) : (
-                                  <div className="overflow-x-auto rounded-lg border bg-card">
-                                    <table className="w-full min-w-[480px] text-sm">
-                                      <thead>
-                                        <tr className="border-b text-start text-muted-foreground">
-                                          <th className="px-2 py-2 font-medium">{text.time}</th>
-                                          <th className="px-2 py-2 font-medium">{text.table}</th>
-                                          <th className="px-2 py-2 font-medium">{text.ordersCount}</th>
-                                          <th className="px-2 py-2 font-medium">{text.total}</th>
-                                          <th className="px-2 py-2 font-medium">{text.byWho}</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {shiftOrders.map((order) => (
-                                          <tr key={order.id} className="border-b last:border-0">
-                                            <td className="px-2 py-2">{formatDateTime(order.completedAt, locale)}</td>
-                                            <td className="px-2 py-2">{order.tableName}</td>
-                                            <td className="px-2 py-2">{order.lines.reduce((sum, line) => sum + line.quantity, 0)}</td>
-                                            <td className="px-2 py-2 font-medium">{formatMoney(order.total, order.currency, locale)}</td>
-                                            <td className="px-2 py-2 text-muted-foreground">{order.completedBy || order.takenBy || "—"}</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                )}
-                              </div>
+                            <td className="px-2 py-2.5">{formatDateTime(shift.openedAt, locale)}</td>
+                            <td className="px-2 py-2.5">{shift.closedAt ? formatDateTime(shift.closedAt, locale) : "—"}</td>
+                            <td className="px-2 py-2.5">{formatMoney(shift.openingCash, shift.currency, locale)}</td>
+                            <td className="px-2 py-2.5">
+                              {formatMoney(sales.salesTotal, shift.currency, locale)}
+                              <span className="ms-1 text-muted-foreground">({sales.ordersCount})</span>
+                            </td>
+                            <td className="px-2 py-2.5">{formatMoney(expected, shift.currency, locale)}</td>
+                            <td className="px-2 py-2.5">
+                              {shift.status === "closed" ? formatMoney(shift.closingCashCounted || 0, shift.currency, locale) : "—"}
+                            </td>
+                            <td
+                              className={cn(
+                                "px-2 py-2.5 font-medium",
+                                variance == null ? "text-muted-foreground" : variance === 0 ? "text-primary" : "text-amber-700 dark:text-amber-400"
+                              )}
+                            >
+                              {variance == null ? "—" : formatMoney(variance, shift.currency, locale)}
+                            </td>
+                            <td className="px-2 py-2.5 text-muted-foreground">
+                              {[shift.openedBy, shift.closedBy].filter(Boolean).join(" → ") || "—"}
+                            </td>
+                            <td className="px-2 py-2.5">
+                              {shift.status === "open" ? (
+                                <Badge className="bg-primary/15 text-primary">{text.shiftStatusOpen}</Badge>
+                              ) : (
+                                <Badge className="bg-muted text-muted-foreground">{text.shiftStatusClosed}</Badge>
+                              )}
                             </td>
                           </tr>
-                        ) : null}
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                          {open ? (
+                            <tr className="border-b bg-muted/20 last:border-0 print:hidden">
+                              <td colSpan={9} className="px-3 py-3">
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Clock3 className="h-3.5 w-3.5" aria-hidden />
+                                      {text.shiftDuration}: {formatDuration(shift.openedAt, shift.closedAt, text)}
+                                    </span>
+                                    {shift.note ? <span>{text.note}: {shift.note}</span> : null}
+                                    {shift.closeNote ? <span>{text.closeNote}: {shift.closeNote}</span> : null}
+                                  </div>
+                                  {!shiftOrders.length ? (
+                                    <p className="text-sm text-muted-foreground">{text.noOrdersInShift}</p>
+                                  ) : (
+                                    <div className="overflow-x-auto rounded-lg border bg-card">
+                                      <table className="w-full min-w-[480px] text-sm">
+                                        <thead>
+                                          <tr className="border-b text-start text-muted-foreground">
+                                            <th className="px-2 py-2 font-medium">{text.time}</th>
+                                            <th className="px-2 py-2 font-medium">{text.table}</th>
+                                            <th className="px-2 py-2 font-medium">{text.ordersCount}</th>
+                                            <th className="px-2 py-2 font-medium">{text.total}</th>
+                                            <th className="px-2 py-2 font-medium">{text.byWho}</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {shiftOrders.map((order) => (
+                                            <tr key={order.id} className="border-b last:border-0">
+                                              <td className="px-2 py-2">{formatDateTime(order.completedAt, locale)}</td>
+                                              <td className="px-2 py-2">{order.tableName}</td>
+                                              <td className="px-2 py-2">{order.lines.reduce((sum, line) => sum + line.quantity, 0)}</td>
+                                              <td className="px-2 py-2 font-medium">{formatMoney(order.total, order.currency, locale)}</td>
+                                              <td className="px-2 py-2 text-muted-foreground">{order.completedBy || order.takenBy || "—"}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -334,6 +420,25 @@ function localDateKey(iso?: string): string {
 
 function todayKey(): string {
   return localDateKey(new Date().toISOString());
+}
+
+function formatDayLabel(key: string, locale: Locale): string {
+  const [y, m, d] = key.split("-").map(Number);
+  if (!y || !m || !d) return key;
+  return new Date(y, m - 1, d).toLocaleDateString(locale === "ckb" ? "ar-IQ" : locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
+
+function formatMonthLabel(key: string, locale: Locale): string {
+  const [y, m] = key.split("-").map(Number);
+  if (!y || !m) return key;
+  return new Date(y, m - 1, 1).toLocaleDateString(locale === "ckb" ? "ar-IQ" : locale, {
+    year: "numeric",
+    month: "long"
+  });
 }
 
 function formatDateTime(iso: string, locale: Locale | string) {

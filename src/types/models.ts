@@ -58,6 +58,8 @@ export type MenuItem = {
   isFeatured: boolean;
   isPopular: boolean;
   isNew: boolean;
+  /** When true, item stays at the top of the POS menu picker for quick access. */
+  isPosPinned?: boolean;
   displayOrder: number;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -269,7 +271,8 @@ export type AdminFeature =
   | "expenses"
   | "settings"
   | "reviews"
-  | "qrCode";
+  | "qrCode"
+  | "audit";
 
 export type AdminPermissions = Partial<Record<AdminFeature, boolean>>;
 
@@ -425,6 +428,8 @@ export type ClientAccount = {
   qrEnabled?: boolean;
   /** Show the "Rate us" button on the public menu. Platform-controlled. Default on. */
   ratingEnabled?: boolean;
+  /** Show the Activity log page in this cafe's own admin. Platform-controlled. Default on. */
+  auditEnabled?: boolean;
   /**
    * When on (default) and the cafe has no real menu items yet, the public menu
    * shows an in-memory sample catalog (~4 categories / ~20 items) so the locked

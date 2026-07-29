@@ -43,6 +43,7 @@ const FIELD_LABELS: Record<Locale, Record<string, string>> = {
     isFeatured: "featured",
     isPopular: "popular",
     isNew: "new",
+    isPosPinned: "POS pinned",
     // expense
     title: "title",
     category: "category",
@@ -124,6 +125,7 @@ const FIELD_LABELS: Record<Locale, Record<string, string>> = {
     isFeatured: "مميّز",
     isPopular: "شائع",
     isNew: "جديد",
+    isPosPinned: "مثبّت في نقطة البيع",
     title: "العنوان",
     category: "الفئة",
     amount: "المبلغ",
@@ -201,6 +203,7 @@ const FIELD_LABELS: Record<Locale, Record<string, string>> = {
     isFeatured: "تایبەت",
     isPopular: "بەناوبانگ",
     isNew: "نوێ",
+    isPosPinned: "هەڵواسراو لە POS",
     title: "ناونیشان",
     category: "پۆل",
     amount: "بڕ",

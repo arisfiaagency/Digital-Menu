@@ -193,6 +193,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
       menuMascotSpeed: number;
       qrEnabled: boolean;
       ratingEnabled: boolean;
+      auditEnabled: boolean;
       demoMenuEnabled: boolean;
     }
   ) {
@@ -208,6 +209,7 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         menuMascotSpeed: next.menuMascotSpeed,
         qrEnabled: next.qrEnabled,
         ratingEnabled: next.ratingEnabled,
+        auditEnabled: next.auditEnabled,
         demoMenuEnabled: next.demoMenuEnabled
       });
       setMessage(`Updated menu design for /${client.slug}.`);

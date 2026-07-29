@@ -89,6 +89,7 @@ type DesignChoice = {
   menuMascotSpeed: number;
   qrEnabled: boolean;
   ratingEnabled: boolean;
+  auditEnabled: boolean;
   demoMenuEnabled: boolean;
 };
 
@@ -643,6 +644,7 @@ function ClientCard({
   const [designSpeed, setDesignSpeed] = useState(client.menuMascotSpeed ?? 1);
   const [designQrEnabled, setDesignQrEnabled] = useState(client.qrEnabled !== false);
   const [designRatingEnabled, setDesignRatingEnabled] = useState(client.ratingEnabled !== false);
+  const [designAuditEnabled, setDesignAuditEnabled] = useState(client.auditEnabled !== false);
   const [designDemoMenuEnabled, setDesignDemoMenuEnabled] = useState(client.demoMenuEnabled !== false);
   const [origin, setOrigin] = useState("");
 
@@ -671,6 +673,7 @@ function ClientCard({
     setDesignSpeed(client.menuMascotSpeed ?? 1);
     setDesignQrEnabled(client.qrEnabled !== false);
     setDesignRatingEnabled(client.ratingEnabled !== false);
+    setDesignAuditEnabled(client.auditEnabled !== false);
     setDesignDemoMenuEnabled(client.demoMenuEnabled !== false);
   }, [client]);
 
@@ -926,6 +929,7 @@ function ClientCard({
                     designMascot === (client.menuMascot !== false) &&
                     designSpeed === (client.menuMascotSpeed ?? 1) &&
                     designRatingEnabled === (client.ratingEnabled !== false) &&
+                    designAuditEnabled === (client.auditEnabled !== false) &&
                     designDemoMenuEnabled === (client.demoMenuEnabled !== false))
                 }
                 onClick={() =>
@@ -937,6 +941,7 @@ function ClientCard({
                     menuMascotSpeed: designSpeed,
                     qrEnabled: designQrEnabled,
                     ratingEnabled: designRatingEnabled,
+                    auditEnabled: designAuditEnabled,
                     demoMenuEnabled: designDemoMenuEnabled
                   })
                 }
@@ -996,12 +1001,58 @@ function ClientCard({
                     menuMascotSpeed: designSpeed,
                     qrEnabled: designQrEnabled,
                     ratingEnabled: designRatingEnabled,
+                    auditEnabled: designAuditEnabled,
                     demoMenuEnabled: designDemoMenuEnabled
                   })
                 }
               >
                 <Save className="h-4 w-4" aria-hidden />
                 {updating ? "Saving…" : "Save QR setting"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-background p-4">
+            <div className="mb-3 flex items-start gap-2">
+              <History className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              <div>
+                <p className="font-medium">Activity log</p>
+                <p className="text-sm text-muted-foreground">
+                  Staff change history for /{client.slug} — who edited menu, POS, users, and settings.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border bg-muted/20 p-3">
+              <DesignSwitch
+                label="Show Activity log in the cafe's admin"
+                desc="When off, this cafe won't see the Activity log page in its own admin. Supervisors can still open it from here."
+                checked={designAuditEnabled}
+                onChange={setDesignAuditEnabled}
+              />
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                disabled={updating || designAuditEnabled === (client.auditEnabled !== false)}
+                onClick={() =>
+                  onSaveDesign({
+                    menuDesign: designId,
+                    menuAccent: designAccent,
+                    menuBackdrop: designBackdrop,
+                    menuMascot: designMascot,
+                    menuMascotSpeed: designSpeed,
+                    qrEnabled: designQrEnabled,
+                    ratingEnabled: designRatingEnabled,
+                    auditEnabled: designAuditEnabled,
+                    demoMenuEnabled: designDemoMenuEnabled
+                  })
+                }
+              >
+                <Save className="h-4 w-4" aria-hidden />
+                {updating ? "Saving…" : "Save Activity log setting"}
               </Button>
             </div>
           </div>

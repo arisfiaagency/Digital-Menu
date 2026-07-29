@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminLocale } from "@/components/admin/admin-preferences";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
+import { useTenant } from "@/components/tenant-provider";
 import { listAuditLogs } from "@/lib/firebase/audit";
 import { humanizeAuditField, humanizeAuditValue } from "@/lib/utils/audit-labels";
 import { cn } from "@/lib/utils/cn";
@@ -54,6 +55,7 @@ export function AuditLogManager({
 } = {}) {
   const { locale, text, dir: textDir } = useAdminLocale();
   const auth = useAdminAuth();
+  const { auditEnabled } = useTenant();
   const [logs, setLogs] = useState<AuditLog[] | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -64,7 +66,9 @@ export function AuditLogManager({
 
   const canView =
     !auth.loading &&
-    (viewer === "platform" ? Boolean(auth.isAdmin && auth.role !== "employee") : auth.isMainAdmin);
+    (viewer === "platform"
+      ? Boolean(auth.isAdmin && auth.role !== "employee")
+      : Boolean(auditEnabled && auth.can("audit")));
 
   async function load() {
     setRefreshing(true);

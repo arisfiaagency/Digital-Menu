@@ -218,20 +218,135 @@ function buildThermalHtml(payload: ThermalTicketPayload) {
  */
 export async function printThermalTicket(payload: ThermalTicketPayload) {
   if (typeof window === "undefined") return;
+  await printThermalHtml(buildThermalHtml(payload), payload.printerName);
+}
 
-  const html = buildThermalHtml(payload);
+export type ThermalReportRow = { label: string; value: string; strong?: boolean };
+export type ThermalReportBlock = {
+  title: string;
+  lines: Array<{ left: string; right: string; note?: string }>;
+};
 
-  if (payload.printerName?.trim()) {
+/** Compact Z-style report for shift summaries (thermal roll). */
+export type ThermalReportPayload = {
+  title: string;
+  subtitle?: string;
+  restaurantName?: string;
+  printerName?: string;
+  printerLabel?: string;
+  paperWidth: ThermalPaperWidth;
+  rows: ThermalReportRow[];
+  blocks?: ThermalReportBlock[];
+  footer?: string;
+};
+
+export async function printThermalReport(payload: ThermalReportPayload) {
+  if (typeof window === "undefined") return;
+  await printThermalHtml(buildThermalReportHtml(payload), payload.printerName);
+}
+
+async function printThermalHtml(html: string, printerName?: string) {
+  if (printerName?.trim()) {
     try {
       const { printHtmlWithQz } = await import("@/lib/qz-printers");
-      const printed = await printHtmlWithQz(payload.printerName, html);
+      const printed = await printHtmlWithQz(printerName, html);
       if (printed) return;
     } catch {
       // Fall through to browser print dialog.
     }
   }
-
   printThermalTicketInBrowser(html);
+}
+
+function buildThermalReportHtml(payload: ThermalReportPayload) {
+  const width = contentWidthMm(payload.paperWidth);
+  const page = payload.paperWidth;
+  const rowsHtml = payload.rows
+    .map(
+      (row) => `<div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin:3px 0;${
+        row.strong ? "font-weight:900;font-size:1.05em;" : "font-weight:700;"
+      }">
+        <div>${escapeHtml(row.label)}</div>
+        <div style="font-variant-numeric:tabular-nums;text-align:right;">${escapeHtml(row.value)}</div>
+      </div>`
+    )
+    .join("");
+
+  const blocksHtml = (payload.blocks || [])
+    .map((block) => {
+      const lines = block.lines
+        .map(
+          (line) => `<div style="margin:4px 0;">
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;font-weight:700;">
+              <div style="word-break:break-word;">${escapeHtml(line.left)}</div>
+              <div style="font-variant-numeric:tabular-nums;text-align:right;">${escapeHtml(line.right)}</div>
+            </div>
+            ${line.note ? `<div class="muted" style="margin-top:2px;">${escapeHtml(line.note)}</div>` : ""}
+          </div>`
+        )
+        .join("");
+      return `<div class="rule"></div>
+        <div style="font-weight:900;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">${escapeHtml(block.title)}</div>
+        ${lines}`;
+    })
+    .join("");
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(payload.title)}</title>
+  <style>
+    @page { size: ${page}mm auto; margin: 0; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #000;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      width: ${width}mm;
+      max-width: ${width}mm;
+      padding: 2mm;
+      box-sizing: border-box;
+      font-family: "Courier New", Courier, monospace;
+      font-size: ${page === 58 ? "11px" : "12px"};
+      line-height: 1.25;
+    }
+    .rule { border-top: 2px dashed #000; margin: 8px 0; }
+    .center { text-align: center; }
+    .muted { font-size: 11px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="center">
+    ${
+      payload.restaurantName
+        ? `<div style="font-size:${page === 58 ? "13px" : "15px"};font-weight:900;text-transform:uppercase;letter-spacing:0.06em;">${escapeHtml(payload.restaurantName)}</div>`
+        : ""
+    }
+    <div style="font-size:${page === 58 ? "14px" : "16px"};font-weight:900;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">
+      ${escapeHtml(payload.title)}
+    </div>
+    ${payload.subtitle ? `<div class="muted" style="margin-top:4px;">${escapeHtml(payload.subtitle)}</div>` : ""}
+    ${
+      payload.printerName
+        ? `<div class="muted" style="margin-top:4px;text-transform:uppercase;">${escapeHtml(payload.printerLabel || "Printer")}: ${escapeHtml(payload.printerName)}</div>`
+        : ""
+    }
+  </div>
+  <div class="rule"></div>
+  ${rowsHtml}
+  ${blocksHtml}
+  ${
+    payload.footer
+      ? `<div class="rule"></div><div class="center" style="font-weight:900;">${escapeHtml(payload.footer)}</div>`
+      : ""
+  }
+</body>
+</html>`;
 }
 
 function printThermalTicketInBrowser(html: string) {

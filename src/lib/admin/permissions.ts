@@ -12,14 +12,20 @@ export const ADMIN_FEATURES: AdminFeature[] = [
   "expenses",
   "settings",
   "reviews",
-  "qrCode"
+  "qrCode",
+  "audit"
 ];
 
-/** Features shown in employee-access toggles for this cafe (platform flags gate reviews / QR). */
-export function employeeAccessFeatures(opts: { qrEnabled: boolean; ratingEnabled: boolean }): AdminFeature[] {
+/** Features shown in employee-access toggles for this cafe (platform flags gate reviews / QR / audit). */
+export function employeeAccessFeatures(opts: {
+  qrEnabled: boolean;
+  ratingEnabled: boolean;
+  auditEnabled: boolean;
+}): AdminFeature[] {
   return ADMIN_FEATURES.filter((feature) => {
     if (feature === "reviews") return opts.ratingEnabled;
     if (feature === "qrCode") return opts.qrEnabled;
+    if (feature === "audit") return opts.auditEnabled;
     return true;
   });
 }
