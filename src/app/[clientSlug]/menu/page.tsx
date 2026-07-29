@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MenuApp } from "@/components/menu/menu-app";
 import { withDemoMenuCatalog } from "@/data/demo-menu";
+import { cafeMetadataIcons } from "@/lib/cafe-favicon";
 import { getPublicAppDataRest, getPublicClientRest } from "@/lib/firebase/rest";
 import { localized } from "@/lib/i18n/config";
 
@@ -25,6 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ clientSlu
   return {
     title: name,
     description: description || undefined,
+    icons: cafeMetadataIcons(data.general.logoUrl),
     openGraph: { title: name, description: description || undefined }
   };
 }

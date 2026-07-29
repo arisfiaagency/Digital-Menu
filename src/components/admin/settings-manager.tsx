@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUploadField } from "@/components/forms/image-upload-field";
 import { useAdminLocale, formatAdminText } from "@/components/admin/admin-preferences";
+import { CafeFavicon } from "@/components/cafe-favicon";
 import { useTenant } from "@/components/tenant-provider";
 import {
   emptyPosPrinterConfig,
@@ -197,6 +198,7 @@ export function SettingsManager() {
 
   return (
     <div className="space-y-6">
+      <CafeFavicon logoUrl={general.logoUrl} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
