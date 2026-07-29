@@ -56,6 +56,7 @@ import {
   savePosState,
   setMenuItemPosPinned,
   subscribePosLiveState,
+  mergePosOrders,
 } from "@/lib/firebase/firestore";
 import {
   loadPosPrinterConfig,
@@ -156,9 +157,12 @@ export function PosManager() {
   const menuPickerRef = useRef<HTMLDivElement | null>(null);
   const pendingPickerScroll = useRef(false);
   // While a save is in flight, skip remote snapshots so optimistic UI doesn't flash back.
-  // Apply the latest remote payload once all local writes finish.
+  // Apply the latest remote payload once all local writes finish (merged by order updatedAt).
   const inflightSaves = useRef(0);
   const pendingRemotePos = useRef<PosState | null>(null);
+  // Always point at the latest POS state so rapid add/remove doesn't write a stale snapshot.
+  const posRef = useRef(pos);
+  posRef.current = pos;
 
   // Only admins can edit the floor plan; everyone can view it and take orders.
   const [planEditing, setPlanEditing] = useState(false);
@@ -306,21 +310,34 @@ export function PosManager() {
   }, [selectedTableId, selectedOrder?.discountValue]);
 
   async function persist(nextPos: PosState, nextMessage?: string) {
-    const previousPos = pos;
+    const previousPos = posRef.current;
+    posRef.current = nextPos;
     setPos(nextPos);
     setSaving(true);
     setMessage("");
     setError("");
     inflightSaves.current += 1;
+    let synced = false;
     try {
       await savePosState(nextPos);
       // Pull the merged server state so concurrent captain edits on other tables appear.
       const live = await getPosLiveState();
+      const normalizedLive = normalizeTableOrder(live);
+      // Prefer any newer local open-order timestamps (this tab may have typed again
+      // while the write was in flight).
+      const mergedLive: PosState = {
+        ...normalizedLive,
+        orders: mergePosOrders(normalizedLive.orders, posRef.current.orders),
+        completedOrders: posRef.current.completedOrders || normalizedLive.completedOrders || []
+      };
       pendingRemotePos.current = null;
-      setPos(normalizeTableOrder(live));
+      posRef.current = mergedLive;
+      setPos(mergedLive);
+      synced = true;
       if (nextMessage) setMessage(nextMessage);
       return true;
     } catch (err) {
+      posRef.current = previousPos;
       setPos(previousPos);
       setError(err instanceof Error ? err.message : text.settingsSaveFailed);
       return false;
@@ -328,9 +345,21 @@ export function PosManager() {
       inflightSaves.current = Math.max(0, inflightSaves.current - 1);
       setSaving(false);
       if (inflightSaves.current === 0 && pendingRemotePos.current) {
-        const remote = pendingRemotePos.current;
+        const remote = normalizeTableOrder(pendingRemotePos.current);
         pendingRemotePos.current = null;
-        setPos(normalizeTableOrder(remote));
+        // Never replace optimistic/local open orders with an older buffered snapshot —
+        // that caused items to vanish for ~1s then reappear.
+        setPos((current) => {
+          const base = synced ? current : previousPos;
+          const merged: PosState = {
+            tables: remote.tables,
+            shapes: remote.shapes ?? base.shapes ?? [],
+            orders: mergePosOrders(remote.orders, base.orders),
+            completedOrders: base.completedOrders || []
+          };
+          posRef.current = merged;
+          return merged;
+        });
       }
     }
   }
@@ -338,6 +367,7 @@ export function PosManager() {
   // Persist a floor-plan edit: tables ordered top-to-bottom then left-to-right,
   // orders of deleted tables pruned, decorative shapes stored.
   async function saveFloorPlan(nextTables: PosTable[], nextShapes: PosShape[]) {
+    const currentPos = posRef.current;
     const ordered = [...nextTables]
       .sort(
         (a, b) =>
@@ -347,15 +377,15 @@ export function PosManager() {
       )
       .map((table, index) => ({ ...table, displayOrder: index }));
     const normalized = normalizeTableOrder({
-      ...pos,
+      ...currentPos,
       tables: ordered,
     }).tables;
     const ids = new Set(normalized.map((table) => table.id));
     const nextOrders = Object.fromEntries(
-      Object.entries(pos.orders).filter(([tableId]) => ids.has(tableId)),
+      Object.entries(currentPos.orders).filter(([tableId]) => ids.has(tableId)),
     );
     const saved = await persist(
-      { ...pos, tables: normalized, orders: nextOrders, shapes: nextShapes },
+      { ...currentPos, tables: normalized, orders: nextOrders, shapes: nextShapes },
       text.layoutSaved,
     );
     if (saved) {
@@ -371,13 +401,13 @@ export function PosManager() {
   // cleared order was persisted here as an "amount" discount before that default
   // changed. Tables with items in progress keep their own saved discount type.
   function orderForTable(tableId: string): PosTableOrder {
-    const stored = pos.orders[tableId];
-    return stored && stored.lines.length ? stored : emptyOrder(tableId);
+    return orderForTableFrom(pos, tableId);
   }
 
   function updateOrder(updater: (order: PosTableOrder) => PosTableOrder) {
     if (!selectedTable) return;
-    const current = orderForTable(selectedTable.id);
+    const currentPos = posRef.current;
+    const current = orderForTableFrom(currentPos, selectedTable.id);
     const nextOrder: PosTableOrder = {
       ...updater(current),
       tableId: selectedTable.id,
@@ -389,9 +419,9 @@ export function PosManager() {
       nextOrder.takenByUid = currentActorUid;
     }
     void persist({
-      ...pos,
+      ...currentPos,
       orders: {
-        ...pos.orders,
+        ...currentPos.orders,
         [selectedTable.id]: nextOrder,
       },
     });
@@ -461,7 +491,8 @@ export function PosManager() {
 
   function setLineFlavor(lineId: string, flavor: string) {
     if (!selectedTable) return;
-    const order = orderForTable(selectedTable.id);
+    const currentPos = posRef.current;
+    const order = orderForTableFrom(currentPos, selectedTable.id);
     const nextOrder = {
       ...order,
       lines: order.lines.map((line) =>
@@ -470,8 +501,8 @@ export function PosManager() {
       updatedAt: new Date().toISOString(),
     };
     void persist({
-      ...pos,
-      orders: { ...pos.orders, [selectedTable.id]: nextOrder },
+      ...currentPos,
+      orders: { ...currentPos.orders, [selectedTable.id]: nextOrder },
     });
   }
 
@@ -541,36 +572,58 @@ export function PosManager() {
       completedByUid: currentActorUid,
     };
 
+    const currentPos = posRef.current;
     const nextPos = {
-      ...pos,
-      completedOrders: [...(pos.completedOrders || []), completedOrder],
+      ...currentPos,
+      completedOrders: [...(currentPos.completedOrders || []), completedOrder],
       orders: {
-        ...pos.orders,
+        ...currentPos.orders,
         [selectedTable.id]: emptyOrder(selectedTable.id),
       },
     };
-    const previousPos = pos;
+    const previousPos = currentPos;
+    posRef.current = nextPos;
     setPos(nextPos);
     setSaving(true);
     setMessage("");
     setError("");
     inflightSaves.current += 1;
+    let synced = false;
     try {
       await completePosOrder(nextPos, completedOrder);
       const live = await getPosLiveState();
+      const normalizedLive = normalizeTableOrder(live);
+      const mergedLive: PosState = {
+        ...normalizedLive,
+        orders: mergePosOrders(normalizedLive.orders, posRef.current.orders),
+        completedOrders: posRef.current.completedOrders || normalizedLive.completedOrders || []
+      };
       pendingRemotePos.current = null;
-      setPos(normalizeTableOrder(live));
+      posRef.current = mergedLive;
+      setPos(mergedLive);
+      synced = true;
       setMessage(text.orderCompleted);
     } catch (err) {
+      posRef.current = previousPos;
       setPos(previousPos);
       setError(err instanceof Error ? err.message : text.settingsSaveFailed);
     } finally {
       inflightSaves.current = Math.max(0, inflightSaves.current - 1);
       setSaving(false);
       if (inflightSaves.current === 0 && pendingRemotePos.current) {
-        const remote = pendingRemotePos.current;
+        const remote = normalizeTableOrder(pendingRemotePos.current);
         pendingRemotePos.current = null;
-        setPos(normalizeTableOrder(remote));
+        setPos((current) => {
+          const base = synced ? current : previousPos;
+          const merged: PosState = {
+            tables: remote.tables,
+            shapes: remote.shapes ?? base.shapes ?? [],
+            orders: mergePosOrders(remote.orders, base.orders),
+            completedOrders: base.completedOrders || []
+          };
+          posRef.current = merged;
+          return merged;
+        });
       }
     }
   }
@@ -606,9 +659,10 @@ export function PosManager() {
       setTableAction(null);
       return;
     }
+    const currentPos = posRef.current;
     const targetTable = tables.find((table) => table.id === targetTableId);
     if (!targetTable) return;
-    if (tableOrderLineCount(pos.orders[targetTable.id]) > 0) {
+    if (tableOrderLineCount(currentPos.orders[targetTable.id]) > 0) {
       setError(text.targetTableOccupied);
       return;
     }
@@ -621,9 +675,9 @@ export function PosManager() {
 
     void persist(
       {
-        ...pos,
+        ...currentPos,
         orders: {
-          ...pos.orders,
+          ...currentPos.orders,
           [selectedTable.id]: emptyOrder(selectedTable.id),
           [targetTable.id]: movedOrder,
         },
@@ -642,11 +696,12 @@ export function PosManager() {
       setTableAction(null);
       return;
     }
+    const currentPos = posRef.current;
     const targetTable = tables.find((table) => table.id === targetTableId);
     if (!targetTable) return;
 
     const targetOrder =
-      pos.orders[targetTable.id] || emptyOrder(targetTable.id);
+      currentPos.orders[targetTable.id] || emptyOrder(targetTable.id);
     const mergedOrder: PosTableOrder = {
       ...targetOrder,
       tableId: targetTable.id,
@@ -656,9 +711,9 @@ export function PosManager() {
 
     void persist(
       {
-        ...pos,
+        ...currentPos,
         orders: {
-          ...pos.orders,
+          ...currentPos.orders,
           [selectedTable.id]: emptyOrder(selectedTable.id),
           [targetTable.id]: mergedOrder,
         },
@@ -3261,6 +3316,11 @@ function emptyOrder(tableId: string): PosTableOrder {
     // Stamp clear/move so transactional merge prefers this over a stale remote order.
     updatedAt: new Date().toISOString(),
   };
+}
+
+function orderForTableFrom(state: PosState, tableId: string): PosTableOrder {
+  const stored = state.orders[tableId];
+  return stored && stored.lines.length ? stored : emptyOrder(tableId);
 }
 
 // A menu item's `flavor` field holds the available flavors as a

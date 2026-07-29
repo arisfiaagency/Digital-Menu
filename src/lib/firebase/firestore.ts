@@ -1075,7 +1075,7 @@ function orderUpdatedAtMs(order: PosState["orders"][string] | undefined) {
 }
 
 /** Prefer the newer open order per table so captain + cashier edits don't clobber each other. */
-function mergePosOrders(
+export function mergePosOrders(
   remote: PosState["orders"],
   local: PosState["orders"]
 ): PosState["orders"] {

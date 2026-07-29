@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
+import { Roboto } from "next/font/google";
 import "./globals.css";
+
+const roboto = Roboto({
+  subsets: ["latin", "latin-ext"],
+  weight: ["300", "400", "500", "700"],
+  display: "swap",
+  variable: "--font-roboto"
+});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 const title = "Digital Menu";
@@ -32,7 +40,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ckb" dir="rtl" suppressHydrationWarning>
+    <html lang="ckb" dir="rtl" className={roboto.variable} suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );
