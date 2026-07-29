@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const legacyAdminFeatures = [
-  "dashboard",
+  // "dashboard" is intentionally omitted — platform supervisor uses /admin/dashboard.
   "categories",
   "menu-items",
   "pos",

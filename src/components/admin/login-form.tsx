@@ -43,7 +43,7 @@ export function LoginForm() {
   // the admin panel. AdminShell bounces employees without dashboard access to
   // their first allowed section.
   const alreadySignedIn = !auth.loading && auth.isAdmin;
-  const signedInPath = clientSlug ? `${adminBasePath}/dashboard` : "/admin/dashboard";
+  const signedInPath = clientSlug ? `${adminBasePath}/dashboard` : "/admin";
   useEffect(() => {
     if (alreadySignedIn) router.replace(signedInPath);
   }, [alreadySignedIn, router, signedInPath]);

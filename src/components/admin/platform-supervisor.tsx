@@ -53,7 +53,8 @@ const supervisorNav: { id: SupervisorTab; href: string; labelKey: string; icon: 
 function tabFromPath(pathname: string, fallback: SupervisorTab): SupervisorTab {
   if (pathname.startsWith("/admin/dashboard")) return "dashboard";
   if (pathname.startsWith("/admin/payments")) return "payments";
-  if (pathname.startsWith("/admin/clients") || pathname === "/admin" || pathname === "/admin/") return "clients";
+  if (pathname.startsWith("/admin/clients")) return "clients";
+  if (pathname === "/admin" || pathname === "/admin/") return "dashboard";
   return fallback;
 }
 
@@ -564,10 +565,10 @@ function SupervisorNavigation({
           const label = text[entry.labelKey];
           const active =
             entry.id === "dashboard"
-              ? pathname.startsWith("/admin/dashboard")
+              ? pathname.startsWith("/admin/dashboard") || pathname === "/admin" || pathname === "/admin/"
               : entry.id === "payments"
                 ? pathname.startsWith("/admin/payments")
-                : pathname.startsWith("/admin/clients") || pathname === "/admin" || pathname === "/admin/";
+                : pathname.startsWith("/admin/clients");
           return (
             <Link
               key={entry.href}
