@@ -1,5 +1,6 @@
-import { PlatformSupervisor } from "@/components/admin/platform-supervisor";
+import { redirect } from "next/navigation";
 
+/** Supervisor home opens the summary dashboard. */
 export default function AdminIndexPage() {
-  return <PlatformSupervisor />;
+  redirect("/admin/dashboard");
 }

@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
+import { PlatformSupervisor } from "@/components/admin/platform-supervisor";
 
 export default function AdminDashboardPage() {
-  notFound();
+  return <PlatformSupervisor initialTab="dashboard" />;
 }

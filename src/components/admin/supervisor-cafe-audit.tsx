@@ -92,7 +92,7 @@ export function SupervisorCafeAudit({ slug }: { slug: string }) {
             <h1 className="text-2xl font-semibold">{text.cafeNotFound}</h1>
             <p className="text-muted-foreground">{error || `No cafe found for /${clientSlug}.`}</p>
             <Button asChild variant="outline">
-              <Link href="/admin">{text.backToClients}</Link>
+              <Link href="/admin/clients">{text.backToClients}</Link>
             </Button>
           </CardContent>
         </Card>

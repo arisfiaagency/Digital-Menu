@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/menu/theme-toggle";
 import { useTenant } from "@/components/tenant-provider";
 import { adminLocaleChangeEvent, adminLocaleStorageKey, useLocale } from "@/hooks/use-locale";
 import { adminThemeChangeEventFor, adminThemeStorageKeyFor } from "@/lib/admin-theme";
+import { cn } from "@/lib/utils/cn";
 import type { Locale } from "@/types/models";
 
 function useAdminThemeKeys() {
@@ -115,8 +116,29 @@ export const adminText: Record<Locale, AdminText> = {
     supervisorBrand: "Digital Menu",
     supervisorTitle: "Supervisor",
     supervisorDesc: "Manage cafes, billing, and payments.",
+    supervisorDashboard: "Dashboard",
+    supervisorDashboardDesc: "Overview of cafes, access status, and payments.",
     supervisorClients: "Clients",
     supervisorPayments: "Payments",
+    supervisorStatCafes: "Cafes",
+    supervisorStatActive: "active",
+    supervisorStatBlocked: "Blocked",
+    supervisorStatDisabled: "disabled",
+    supervisorStatAttention: "Needs attention",
+    supervisorStatNearExpiry: "near expiry",
+    supervisorStatExpired: "expired",
+    supervisorStatTrialing: "On trial",
+    supervisorStatLive: "live access",
+    supervisorRevenueMonth: "Revenue this month",
+    supervisorRevenueAll: "Revenue all time",
+    supervisorOutstanding: "Outstanding balances",
+    supervisorNoPayments: "No payments recorded yet.",
+    supervisorNoOutstanding: "No outstanding balances.",
+    supervisorNeedsAttention: "Needs attention",
+    supervisorAllClear: "All cafes look healthy.",
+    supervisorRecentPayments: "Recent payments",
+    collapseSidebar: "Collapse sidebar",
+    expandSidebar: "Expand sidebar",
     dashboard: "Dashboard",
     qrCode: "QR code",
     qrCodeDesc: "Print this QR so customers can scan it to open your menu.",
@@ -656,8 +678,29 @@ export const adminText: Record<Locale, AdminText> = {
     supervisorBrand: "القائمة الرقمية",
     supervisorTitle: "المشرف",
     supervisorDesc: "إدارة المقاهي والفوترة والمدفوعات.",
+    supervisorDashboard: "لوحة التحكم",
+    supervisorDashboardDesc: "نظرة عامة على المقاهي وحالة الوصول والمدفوعات.",
     supervisorClients: "العملاء",
     supervisorPayments: "المدفوعات",
+    supervisorStatCafes: "المقاهي",
+    supervisorStatActive: "نشط",
+    supervisorStatBlocked: "محظور",
+    supervisorStatDisabled: "معطّل",
+    supervisorStatAttention: "يحتاج انتباهاً",
+    supervisorStatNearExpiry: "قرب الانتهاء",
+    supervisorStatExpired: "منتهٍ",
+    supervisorStatTrialing: "تجريبي",
+    supervisorStatLive: "وصول نشط",
+    supervisorRevenueMonth: "إيرادات هذا الشهر",
+    supervisorRevenueAll: "إيرادات الكل",
+    supervisorOutstanding: "الأرصدة المستحقة",
+    supervisorNoPayments: "لا توجد مدفوعات بعد.",
+    supervisorNoOutstanding: "لا توجد أرصدة مستحقة.",
+    supervisorNeedsAttention: "يحتاج انتباهاً",
+    supervisorAllClear: "كل المقاهي بحالة جيدة.",
+    supervisorRecentPayments: "أحدث المدفوعات",
+    collapseSidebar: "طي الشريط الجانبي",
+    expandSidebar: "توسيع الشريط الجانبي",
     dashboard: "لوحة التحكم",
     qrCode: "رمز QR",
     qrCodeDesc: "اطبع رمز QR هذا ليتمكن الزبائن من مسحه لفتح قائمتك.",
@@ -1197,8 +1240,29 @@ export const adminText: Record<Locale, AdminText> = {
     supervisorBrand: "مینیوی دیجیتاڵ",
     supervisorTitle: "سەرپەرشتیار",
     supervisorDesc: "بەڕێوەبردنی کافێ و پسوڵە و پارەدانەکان.",
+    supervisorDashboard: "داشبۆرد",
+    supervisorDashboardDesc: "کورتەی کافێکان، دۆخی دەستگەیشتن و پارەدانەکان.",
     supervisorClients: "کڵایەنتەکان",
     supervisorPayments: "پارەدانەکان",
+    supervisorStatCafes: "کافێکان",
+    supervisorStatActive: "چالاک",
+    supervisorStatBlocked: "بلۆککراو",
+    supervisorStatDisabled: "ناچالاک",
+    supervisorStatAttention: "پێویستی بە سەرنج",
+    supervisorStatNearExpiry: "نزیك بەسەرچوون",
+    supervisorStatExpired: "بەسەرچوو",
+    supervisorStatTrialing: "لە تاقیکردنەوە",
+    supervisorStatLive: "دەستگەیشتنی زیندوو",
+    supervisorRevenueMonth: "داهاتی ئەم مانگە",
+    supervisorRevenueAll: "داهاتی گشتی",
+    supervisorOutstanding: "باڵانسی ماوە",
+    supervisorNoPayments: "هێشتا هیچ پارەدانێک تۆمار نەکراوە.",
+    supervisorNoOutstanding: "هیچ باڵانسێکی ماوە نییە.",
+    supervisorNeedsAttention: "پێویستی بە سەرنج",
+    supervisorAllClear: "هەموو کافێکان باشن.",
+    supervisorRecentPayments: "دوایین پارەدانەکان",
+    collapseSidebar: "داخستنی لاتەنیشت",
+    expandSidebar: "کردنەوەی لاتەنیشت",
     dashboard: "داشبۆرد",
     qrCode: "کۆدی QR",
     qrCodeDesc: "ئەم کۆدی QRـە چاپ بکە تا کڕیارەکان بتوانن سکانی بکەن و مینیوەکەت بکەنەوە.",
@@ -1761,15 +1825,34 @@ export function useAdminLocale() {
   return { locale, setLocale, dir, text: adminText[locale] };
 }
 
-export function AdminPreferences({ compact = false, showTheme = true }: { compact?: boolean; showTheme?: boolean }) {
+export function AdminPreferences({
+  compact = false,
+  showTheme = true,
+  className
+}: {
+  compact?: boolean;
+  showTheme?: boolean;
+  className?: string;
+}) {
   const { locale, setLocale } = useAdminLocale();
   const { storageKey, changeEvent } = useAdminThemeKeys();
 
   return (
-    <div dir="ltr" className={compact ? "flex shrink-0 items-center gap-2" : "flex items-center gap-2"}>
+    <div
+      dir="ltr"
+      className={cn(
+        compact ? "flex shrink-0 items-center gap-2" : "flex items-center gap-2",
+        className
+      )}
+    >
       <LanguageGlobe locale={locale} onChange={setLocale} menuAlign="left" />
       {showTheme ? (
-        <ThemeToggle storageKey={storageKey} changeEvent={changeEvent} storageMode="session" />
+        <ThemeToggle
+          storageKey={storageKey}
+          changeEvent={changeEvent}
+          storageMode="session"
+          className="h-10 w-10"
+        />
       ) : null}
     </div>
   );

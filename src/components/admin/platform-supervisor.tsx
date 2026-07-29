@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   Building2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CreditCard,
   LogOut,
   Menu,
@@ -16,6 +19,7 @@ import {
 import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-preferences";
 import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from "@/components/admin/clients-panel";
 import { PaymentReports } from "@/components/admin/payment-reports";
+import { SupervisorDashboard } from "@/components/admin/supervisor-dashboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -38,12 +42,20 @@ import type {
   MenuDesign
 } from "@/types/models";
 
-type SupervisorTab = "clients" | "payments";
+type SupervisorTab = "dashboard" | "clients" | "payments";
 
 const supervisorNav: { id: SupervisorTab; href: string; labelKey: string; icon: LucideIcon }[] = [
-  { id: "clients", href: "/admin", labelKey: "supervisorClients", icon: Building2 },
+  { id: "dashboard", href: "/admin/dashboard", labelKey: "supervisorDashboard", icon: BarChart3 },
+  { id: "clients", href: "/admin/clients", labelKey: "supervisorClients", icon: Building2 },
   { id: "payments", href: "/admin/payments", labelKey: "supervisorPayments", icon: CreditCard }
 ];
+
+function tabFromPath(pathname: string, fallback: SupervisorTab): SupervisorTab {
+  if (pathname.startsWith("/admin/dashboard")) return "dashboard";
+  if (pathname.startsWith("/admin/payments")) return "payments";
+  if (pathname.startsWith("/admin/clients") || pathname === "/admin" || pathname === "/admin/") return "clients";
+  return fallback;
+}
 
 export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: SupervisorTab }) {
   const auth = useAdminAuth();
@@ -59,12 +71,29 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const tab: SupervisorTab = pathname.startsWith("/admin/payments")
-    ? "payments"
-    : pathname === "/admin" || pathname === "/admin/"
-      ? "clients"
-      : initialTab;
+  useEffect(() => {
+    try {
+      setSidebarCollapsed(window.sessionStorage.getItem("supervisor-sidebar-collapsed") === "1");
+    } catch {
+      // Ignore storage errors.
+    }
+  }, []);
+
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      try {
+        window.sessionStorage.setItem("supervisor-sidebar-collapsed", next ? "1" : "0");
+      } catch {
+        // Ignore storage errors.
+      }
+      return next;
+    });
+  }
+
+  const tab = tabFromPath(pathname, initialTab);
 
   async function refresh() {
     setLoadingClients(true);
@@ -79,8 +108,8 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
   }
 
   useEffect(() => {
-    if (auth.isAdmin) void refresh();
-  }, [auth.isAdmin]);
+    if (auth.isAdmin && tab === "clients") void refresh();
+  }, [auth.isAdmin, tab]);
 
   async function createClient(input: {
     name: string;
@@ -325,7 +354,12 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
         <Menu className="h-4 w-4" aria-hidden />
       </Button>
 
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-card p-4 sm:block">
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 hidden border-r bg-card p-3 transition-[width] duration-200 sm:block",
+          sidebarCollapsed ? "w-[4.5rem]" : "w-64 p-4"
+        )}
+      >
         <SupervisorNavigation
           pathname={pathname}
           text={text}
@@ -333,6 +367,8 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           profileName={profileName}
           profileHandle={profileHandle}
           roleLabel={roleLabel}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebarCollapsed}
           onLogout={signOut}
         />
       </aside>
@@ -369,19 +405,24 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           profileName={profileName}
           profileHandle={profileHandle}
           roleLabel={roleLabel}
+          collapsed={false}
           onNavigate={() => setMobileNavOpen(false)}
           onLogout={signOut}
         />
       </aside>
 
-      <main className="pt-14 sm:ml-64 sm:pt-0">
+      <main className={cn("pt-14 transition-[margin] duration-200 sm:pt-0", sidebarCollapsed ? "sm:ml-[4.5rem]" : "sm:ml-64")}>
         <div className="mx-auto grid w-full max-w-[1600px] gap-6 px-4 py-6 sm:px-6">
           <header>
             <h1 dir={textDir} className="text-3xl font-semibold">
-              {tab === "payments" ? text.supervisorPayments : text.supervisorClients}
+              {tab === "dashboard"
+                ? text.supervisorDashboard
+                : tab === "payments"
+                  ? text.supervisorPayments
+                  : text.supervisorClients}
             </h1>
             <p dir={textDir} className="text-muted-foreground">
-              {text.supervisorDesc}
+              {tab === "dashboard" ? text.supervisorDashboardDesc : text.supervisorDesc}
             </p>
           </header>
 
@@ -391,6 +432,8 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           {error ? (
             <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>
           ) : null}
+
+          {tab === "dashboard" ? <SupervisorDashboard /> : null}
 
           {tab === "payments" ? <PaymentReports /> : null}
 
@@ -463,6 +506,8 @@ function SupervisorNavigation({
   profileName,
   profileHandle,
   roleLabel,
+  collapsed = false,
+  onToggleCollapsed,
   onNavigate,
   onLogout
 }: {
@@ -472,45 +517,79 @@ function SupervisorNavigation({
   profileName: string;
   profileHandle: string;
   roleLabel: string;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
   onNavigate?: () => void;
   onLogout: () => void | Promise<void>;
 }) {
   return (
     <div className="flex h-full flex-col">
-      <Link href="/admin" dir={textDir} className="mb-6 block pr-10" onClick={onNavigate}>
-        <span className="block text-xl font-semibold">{text.supervisorBrand}</span>
-        <span className="mt-0.5 block text-xs font-medium text-muted-foreground">{text.supervisorTitle}</span>
-      </Link>
+      <div className={cn("mb-6 flex items-start gap-2", collapsed ? "flex-col items-center" : "pr-2")}>
+        <Link
+          href="/admin/dashboard"
+          dir={textDir}
+          className={cn("min-w-0 flex-1", collapsed && "flex justify-center")}
+          onClick={onNavigate}
+          title={text.supervisorBrand}
+        >
+          {collapsed ? (
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
+              DM
+            </span>
+          ) : (
+            <>
+              <span className="block text-xl font-semibold">{text.supervisorBrand}</span>
+              <span className="mt-0.5 block text-xs font-medium text-muted-foreground">{text.supervisorTitle}</span>
+            </>
+          )}
+        </Link>
+        {onToggleCollapsed ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            className="h-9 w-9 shrink-0 rounded-full"
+            aria-label={collapsed ? text.expandSidebar : text.collapseSidebar}
+            title={collapsed ? text.expandSidebar : text.collapseSidebar}
+            onClick={onToggleCollapsed}
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" aria-hidden /> : <ChevronLeft className="h-4 w-4" aria-hidden />}
+          </Button>
+        ) : null}
+      </div>
 
-      <nav className="grid gap-1">
+      <nav className={cn("grid gap-1", collapsed && "justify-items-center")}>
         {supervisorNav.map((entry) => {
           const Icon = entry.icon;
+          const label = text[entry.labelKey];
           const active =
-            entry.id === "payments"
-              ? pathname.startsWith("/admin/payments")
-              : pathname === "/admin" || pathname === "/admin/";
+            entry.id === "dashboard"
+              ? pathname.startsWith("/admin/dashboard")
+              : entry.id === "payments"
+                ? pathname.startsWith("/admin/payments")
+                : pathname.startsWith("/admin/clients") || pathname === "/admin" || pathname === "/admin/";
           return (
             <Link
               key={entry.href}
               href={entry.href}
               onClick={onNavigate}
+              title={label}
+              aria-label={label}
               className={cn(
-                "focus-ring flex items-center gap-3 rounded-md px-3 py-2 text-sm",
+                "focus-ring flex items-center rounded-md text-sm transition-colors",
+                collapsed ? "h-10 w-10 justify-center" : "gap-3 px-3 py-2",
                 active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
               )}
             >
-              <Icon className="h-4 w-4" aria-hidden />
-              <span dir={textDir}>{text[entry.labelKey]}</span>
+              <Icon className="h-4 w-4 shrink-0" aria-hidden />
+              {!collapsed ? <span dir={textDir}>{label}</span> : null}
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-6 rounded-md border p-3">
-        <p dir={textDir} className="mb-2 text-xs font-medium text-muted-foreground">
-          {text.profilePreferences}
-        </p>
-        <AdminPreferences />
+      <div className={cn("mt-6", collapsed ? "flex justify-center" : "")}>
+        <AdminPreferences compact className={collapsed ? "flex-col" : undefined} />
       </div>
 
       <SupervisorProfileMenu
@@ -519,6 +598,7 @@ function SupervisorNavigation({
         roleLabel={roleLabel}
         text={text}
         textDir={textDir}
+        collapsed={collapsed}
         onLogout={onLogout}
         onNavigate={onNavigate}
       />
@@ -532,6 +612,7 @@ function SupervisorProfileMenu({
   roleLabel,
   text,
   textDir,
+  collapsed = false,
   onLogout,
   onNavigate
 }: {
@@ -540,6 +621,7 @@ function SupervisorProfileMenu({
   roleLabel: string;
   text: Record<string, string>;
   textDir: "ltr" | "rtl";
+  collapsed?: boolean;
   onLogout: () => void | Promise<void>;
   onNavigate?: () => void;
 }) {
@@ -577,11 +659,14 @@ function SupervisorProfileMenu({
   }
 
   return (
-    <div ref={ref} className="relative mt-auto pt-4">
+    <div ref={ref} className={cn("relative mt-auto pt-4", collapsed && "flex justify-center")}>
       {open ? (
         <div
           role="menu"
-          className="pop-in absolute bottom-full left-0 z-20 mb-2 w-full overflow-hidden rounded-2xl border bg-card p-1.5 shadow-xl"
+          className={cn(
+            "pop-in absolute bottom-full z-20 mb-2 overflow-hidden rounded-2xl border bg-card p-1.5 shadow-xl",
+            collapsed ? "left-0 w-64" : "left-0 w-full"
+          )}
         >
           <div className="rounded-xl bg-muted/40 p-3">
             <div className="flex items-center gap-3">
@@ -615,22 +700,30 @@ function SupervisorProfileMenu({
 
       <button
         type="button"
-        className="focus-ring flex w-full items-center gap-3 rounded-2xl border bg-background/60 p-2.5 text-start transition-colors hover:bg-muted"
+        className={cn(
+          "focus-ring flex items-center rounded-2xl border bg-background/60 text-start transition-colors hover:bg-muted",
+          collapsed ? "h-11 w-11 justify-center p-0" : "w-full gap-3 p-2.5"
+        )}
         aria-label={text.adminProfile}
         aria-haspopup="menu"
         aria-expanded={open}
+        title={`${profileName} - ${secondaryProfileText}`}
         onClick={() => setOpen((value) => !value)}
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
           {avatarText}
         </span>
-        <span className="min-w-0 flex-1">
-          <span dir={textDir} className="block truncate text-sm font-semibold">
-            {profileName}
-          </span>
-          <span className="block truncate text-xs text-muted-foreground">{secondaryProfileText}</span>
-        </span>
-        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
+        {!collapsed ? (
+          <>
+            <span className="min-w-0 flex-1">
+              <span dir={textDir} className="block truncate text-sm font-semibold">
+                {profileName}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">{secondaryProfileText}</span>
+            </span>
+            <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
+          </>
+        ) : null}
       </button>
     </div>
   );

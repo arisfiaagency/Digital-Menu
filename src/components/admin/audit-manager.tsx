@@ -136,7 +136,7 @@ export function AuditLogManager({
         <div className="space-y-2">
           {viewer === "platform" ? (
             <Button asChild variant="outline" size="sm">
-              <Link href="/admin">
+              <Link href="/admin/clients">
                 <ArrowLeft className="h-4 w-4" aria-hidden />
                 {text.backToClients}
               </Link>
