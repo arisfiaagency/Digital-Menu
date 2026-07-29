@@ -358,6 +358,29 @@ export function SettingsManager() {
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{text.hoursHint}</p>
             </SettingsFormSection>
+            <SettingsFormSection title={text.posStationLabels}>
+              <p className="text-xs text-muted-foreground">{text.posStationLabelsHint}</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label={text.kitchenStationLabel}>
+                  <Input
+                    value={general.posKitchenLabel || ""}
+                    placeholder={text.kitchenStationPlaceholder}
+                    onChange={(event) =>
+                      setGeneral({ ...general, posKitchenLabel: event.target.value })
+                    }
+                  />
+                </Field>
+                <Field label={text.barStationLabel}>
+                  <Input
+                    value={general.posBarLabel || ""}
+                    placeholder={text.barStationPlaceholder}
+                    onChange={(event) =>
+                      setGeneral({ ...general, posBarLabel: event.target.value })
+                    }
+                  />
+                </Field>
+              </div>
+            </SettingsFormSection>
             <SettingsFormSection title={text.posPrinters}>
               <p className="text-xs text-muted-foreground">{text.posPrintersHint}</p>
               <div className="flex flex-wrap gap-2">
@@ -468,7 +491,7 @@ export function SettingsManager() {
                     ))}
                   </Select>
                 </Field>
-                <Field label={text.kitchenPrinter}>
+                <Field label={formatAdminText(text.stationPrinterAssign, { name: general.posKitchenLabel?.trim() || text.kitchenStationName })}>
                   <Select
                     value={printerConfig.kitchen}
                     onChange={(event) => updatePrinterConfig({ ...printerConfig, kitchen: event.target.value })}
@@ -479,7 +502,7 @@ export function SettingsManager() {
                     ))}
                   </Select>
                 </Field>
-                <Field label={text.barPrinter}>
+                <Field label={formatAdminText(text.stationPrinterAssign, { name: general.posBarLabel?.trim() || text.barStationName })}>
                   <Select
                     value={printerConfig.bar}
                     onChange={(event) => updatePrinterConfig({ ...printerConfig, bar: event.target.value })}

@@ -91,6 +91,10 @@ export type GeneralSettings = {
   defaultCurrency: Currency;
   // POS service fee added to each bill, as a percentage (e.g. 10 = 10%).
   serviceFeePercent?: number;
+  /** Custom POS label for the kitchen station button/ticket (e.g. "Food"). Empty = default. */
+  posKitchenLabel?: string;
+  /** Custom POS label for the bar station button/ticket (e.g. "Drinks"). Empty = default. */
+  posBarLabel?: string;
   // Café opening hours (0–24, whole hours) used by the public Open/Closed badge.
   // Uniform across the week. Falls back to the defaults when unset.
   openHour?: number;

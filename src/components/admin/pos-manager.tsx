@@ -210,6 +210,11 @@ export function PosManager() {
     data?.general.serviceFeePercent ?? DEFAULT_SERVICE_FEE_PERCENT,
   );
   const serviceFeeRate = serviceFeePercent / 100;
+  const kitchenStationLabel =
+    data?.general.posKitchenLabel?.trim() || text.kitchenStationName;
+  const barStationLabel = data?.general.posBarLabel?.trim() || text.barStationName;
+  const stationLabel = (station: "kitchen" | "bar") =>
+    station === "kitchen" ? kitchenStationLabel : barStationLabel;
   const flavorPickerLine =
     flavorPickerLineId != null
       ? selectedOrder?.lines.find((line) => line.id === flavorPickerLineId)
@@ -778,7 +783,7 @@ export function PosManager() {
     const issuedAt = formatReceiptDateTime(new Date());
     void printThermalTicket({
       kind: station,
-      title: station === "kitchen" ? text.kitchenTicket : text.barTicket,
+      title: formatAdminText(text.stationTicketTitle, { name: stationLabel(station) }),
       tableName: selectedTable.name,
       tableLabel: text.table,
       takenBy: selectedOrder.takenBy || currentActor || undefined,
@@ -1353,7 +1358,7 @@ export function PosManager() {
                       disabled={!selectedOrder.lines.length}>
                       <span className="inline-flex items-center gap-2">
                         <UtensilsCrossed className="h-4 w-4" aria-hidden />
-                        {text.sendToKitchen}
+                        {formatAdminText(text.sendToStation, { name: kitchenStationLabel })}
                       </span>
                       {printerConfig.kitchen ? (
                         <span className="max-w-full truncate text-[10px] font-normal text-muted-foreground">
@@ -1369,7 +1374,7 @@ export function PosManager() {
                       disabled={!selectedOrder.lines.length}>
                       <span className="inline-flex items-center gap-2">
                         <Wine className="h-4 w-4" aria-hidden />
-                        {text.sendToBar}
+                        {formatAdminText(text.sendToStation, { name: barStationLabel })}
                       </span>
                       {printerConfig.bar ? (
                         <span className="max-w-full truncate text-[10px] font-normal text-muted-foreground">
@@ -1440,11 +1445,11 @@ export function PosManager() {
         labels={{
           title: text.selectStationItems,
           description: text.selectStationItemsDesc,
-          kitchen: text.sendToKitchen,
-          bar: text.sendToBar,
+          kitchen: formatAdminText(text.sendToStation, { name: kitchenStationLabel }),
+          bar: formatAdminText(text.sendToStation, { name: barStationLabel }),
           alreadySent: text.alreadySent,
-          sentToKitchen: text.sentToKitchen,
-          sentToBar: text.sentToBar,
+          sentToKitchen: formatAdminText(text.sentToStation, { name: kitchenStationLabel }),
+          sentToBar: formatAdminText(text.sentToStation, { name: barStationLabel }),
           newItemsOnly: text.newItemsOnly,
           sendSelected: text.sendSelected,
           selectAll: text.selectAllItems,
