@@ -742,10 +742,12 @@ export function PosManager() {
 
   function openStationSend(station: "kitchen" | "bar") {
     if (!selectedOrder?.lines.length) return;
+    // Pre-select lines that still need this station. Items already fully sent to
+    // the *other* station stay visible (with a badge) but unchecked by default,
+    // so staff can send only the new bar/kitchen items without reprinting.
     const defaultIds = selectedOrder.lines
-      .filter((line) => stationUnsentQty(line, station) > 0)
+      .filter((line) => shouldAutoSelectForStation(line, station))
       .map((line) => line.id);
-    // If everything was already sent, leave selection empty so staff opt in to reprint.
     setStationSendSelectedIds(defaultIds);
     setStationSendTarget(station);
   }
@@ -1441,6 +1443,8 @@ export function PosManager() {
           kitchen: text.sendToKitchen,
           bar: text.sendToBar,
           alreadySent: text.alreadySent,
+          sentToKitchen: text.sentToKitchen,
+          sentToBar: text.sentToBar,
           newItemsOnly: text.newItemsOnly,
           sendSelected: text.sendSelected,
           selectAll: text.selectAllItems,
@@ -3402,6 +3406,21 @@ function stationPrintQty(line: PosOrderLine, station: "kitchen" | "bar") {
   return unsent > 0 ? unsent : line.quantity;
 }
 
+function otherStation(station: "kitchen" | "bar"): "kitchen" | "bar" {
+  return station === "kitchen" ? "bar" : "kitchen";
+}
+
+/** Auto-select new/unsent lines for this station; keep other-station tickets visible but unchecked. */
+function shouldAutoSelectForStation(line: PosOrderLine, station: "kitchen" | "bar") {
+  if (stationUnsentQty(line, station) <= 0) return false;
+  const other = otherStation(station);
+  // Fully ticketed to the other station only — still listed, not pre-checked.
+  if (stationSentQty(line, other) >= line.quantity && stationSentQty(line, station) === 0) {
+    return false;
+  }
+  return true;
+}
+
 function StationSendPicker({
   open,
   station,
@@ -3428,6 +3447,8 @@ function StationSendPicker({
     kitchen: string;
     bar: string;
     alreadySent: string;
+    sentToKitchen: string;
+    sentToBar: string;
     newItemsOnly: string;
     sendSelected: string;
     selectAll: string;
@@ -3460,6 +3481,16 @@ function StationSendPicker({
 
   const stationLabel = station === "kitchen" ? labels.kitchen : labels.bar;
   const canSend = selectedIds.length > 0;
+  // New / needed for this station first; items already handled elsewhere still listed below.
+  const orderedLines = [...lines].sort((a, b) => {
+    const aAuto = Number(shouldAutoSelectForStation(a, station));
+    const bAuto = Number(shouldAutoSelectForStation(b, station));
+    if (aAuto !== bAuto) return bAuto - aAuto;
+    const aUnsent = stationUnsentQty(a, station);
+    const bUnsent = stationUnsentQty(b, station);
+    if ((aUnsent > 0) !== (bUnsent > 0)) return aUnsent > 0 ? -1 : 1;
+    return 0;
+  });
 
   return (
     <div
@@ -3499,10 +3530,12 @@ function StationSendPicker({
         </div>
 
         <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
-          {lines.map((line) => {
+          {orderedLines.map((line) => {
             const selected = selectedIds.includes(line.id);
-            const sent = stationSentQty(line, station);
-            const unsent = stationUnsentQty(line, station);
+            const sentHere = stationSentQty(line, station);
+            const unsentHere = stationUnsentQty(line, station);
+            const sentKitchen = stationSentQty(line, "kitchen");
+            const sentBar = stationSentQty(line, "bar");
             const printQty = selected ? stationPrintQty(line, station) : 0;
             return (
               <button
@@ -3532,14 +3565,20 @@ function StationSendPicker({
                     <span className="text-sm font-semibold">
                       {localized(line.name, locale)}
                     </span>
-                    {unsent > 0 && sent > 0 ? (
-                      <BadgeTone tone="new">{labels.newItemsOnly} ×{unsent}</BadgeTone>
+                    {unsentHere > 0 && sentHere === 0 && sentKitchen === 0 && sentBar === 0 ? (
+                      <BadgeTone tone="new">{labels.newItemsOnly}</BadgeTone>
                     ) : null}
-                    {unsent === 0 && sent > 0 ? (
+                    {unsentHere > 0 && sentHere > 0 ? (
+                      <BadgeTone tone="new">{labels.newItemsOnly} ×{unsentHere}</BadgeTone>
+                    ) : null}
+                    {unsentHere === 0 && sentHere > 0 ? (
                       <BadgeTone tone="sent">{labels.alreadySent}</BadgeTone>
                     ) : null}
-                    {sent === 0 ? (
-                      <BadgeTone tone="new">{labels.newItemsOnly}</BadgeTone>
+                    {sentKitchen > 0 ? (
+                      <BadgeTone tone="kitchen">{labels.sentToKitchen}</BadgeTone>
+                    ) : null}
+                    {sentBar > 0 ? (
+                      <BadgeTone tone="bar">{labels.sentToBar}</BadgeTone>
                     ) : null}
                   </span>
                   {line.variantName ? (
@@ -3557,7 +3596,7 @@ function StationSendPicker({
                     {selected && printQty !== line.quantity
                       ? ` → ${printQty}`
                       : ""}
-                    {sent > 0 ? ` · ${labels.alreadySent} ${sent}` : ""}
+                    {sentHere > 0 ? ` · ${labels.alreadySent} ${sentHere}` : ""}
                   </span>
                 </span>
               </button>
@@ -3583,16 +3622,17 @@ function BadgeTone({
   tone,
   children,
 }: {
-  tone: "new" | "sent";
+  tone: "new" | "sent" | "kitchen" | "bar";
   children: ReactNode;
 }) {
   return (
     <span
       className={cn(
         "rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        tone === "new"
-          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-          : "bg-muted text-muted-foreground",
+        tone === "new" && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+        tone === "sent" && "bg-muted text-muted-foreground",
+        tone === "kitchen" && "bg-amber-500/15 text-amber-800 dark:text-amber-400",
+        tone === "bar" && "bg-sky-500/15 text-sky-800 dark:text-sky-400",
       )}
     >
       {children}
