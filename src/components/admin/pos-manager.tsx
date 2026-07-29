@@ -8,6 +8,7 @@ import {
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 import {
   Armchair,
@@ -82,6 +83,7 @@ import type {
   PosTableArea,
   PosTableOrder,
   PosTableShape,
+  Locale,
 } from "@/types/models";
 
 const emptyPosState: PosState = {
@@ -140,6 +142,11 @@ export function PosManager() {
   const [flavorPickerLineId, setFlavorPickerLineId] = useState<string | null>(
     null,
   );
+  // Kitchen / bar send picker — choose which table lines to ticket.
+  const [stationSendTarget, setStationSendTarget] = useState<"kitchen" | "bar" | null>(
+    null,
+  );
+  const [stationSendSelectedIds, setStationSendSelectedIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -467,11 +474,16 @@ export function PosManager() {
     updateOrder((order) => ({
       ...order,
       lines: order.lines
-        .map((line) =>
-          line.id === lineId
-            ? { ...line, quantity: line.quantity + delta }
-            : line,
-        )
+        .map((line) => {
+          if (line.id !== lineId) return line;
+          const quantity = line.quantity + delta;
+          return {
+            ...line,
+            quantity,
+            kitchenSentQty: Math.min(line.kitchenSentQty || 0, quantity),
+            barSentQty: Math.min(line.barSentQty || 0, quantity),
+          };
+        })
         .filter((line) => line.quantity > 0),
     }));
   }
@@ -728,8 +740,38 @@ export function PosManager() {
     });
   }
 
-  function printStationTicket(station: "kitchen" | "bar") {
-    if (!selectedTable || !selectedOrder?.lines.length) return;
+  function openStationSend(station: "kitchen" | "bar") {
+    if (!selectedOrder?.lines.length) return;
+    const defaultIds = selectedOrder.lines
+      .filter((line) => stationUnsentQty(line, station) > 0)
+      .map((line) => line.id);
+    // If everything was already sent, leave selection empty so staff opt in to reprint.
+    setStationSendSelectedIds(defaultIds);
+    setStationSendTarget(station);
+  }
+
+  function printStationTicket(station: "kitchen" | "bar", lineIds: string[]) {
+    if (!selectedTable || !selectedOrder?.lines.length || !lineIds.length) return;
+    const selectedLines = selectedOrder.lines.filter((line) => lineIds.includes(line.id));
+    if (!selectedLines.length) return;
+
+    const ticketLines = selectedLines
+      .map((line) => {
+        const qty = stationPrintQty(line, station);
+        if (qty <= 0) return null;
+        return {
+          quantity: qty,
+          nameEn: line.name.en,
+          nameCkb: line.name.ckb,
+          variantEn: line.variantName?.en,
+          variantCkb: line.variantName?.ckb,
+          flavor: line.flavor?.trim() || undefined,
+        };
+      })
+      .filter((line): line is NonNullable<typeof line> => line != null);
+
+    if (!ticketLines.length) return;
+
     const printerName = remindAssignedPrinter(station) || undefined;
     const issuedAt = formatReceiptDateTime(new Date());
     void printThermalTicket({
@@ -743,17 +785,23 @@ export function PosManager() {
       printerLabel: text.printerLabel,
       date: issuedAt.date,
       time: issuedAt.time,
-      lines: selectedOrder.lines.map((line) => ({
-        quantity: line.quantity,
-        nameEn: line.name.en,
-        nameCkb: line.name.ckb,
-        variantEn: line.variantName?.en,
-        variantCkb: line.variantName?.ckb,
-        flavor: line.flavor?.trim() || undefined,
-      })),
+      lines: ticketLines,
       qtyLabel: text.qty,
       paperWidth: printerConfig.paperWidth,
     });
+
+    // Mark selected lines as fully ticketed for this station (current quantity).
+    updateOrder((order) => ({
+      ...order,
+      lines: order.lines.map((line) => {
+        if (!lineIds.includes(line.id)) return line;
+        return station === "kitchen"
+          ? { ...line, kitchenSentQty: line.quantity }
+          : { ...line, barSentQty: line.quantity };
+      }),
+    }));
+    setStationSendTarget(null);
+    setStationSendSelectedIds([]);
   }
 
   const totals = selectedOrder
@@ -1299,7 +1347,7 @@ export function PosManager() {
                       type="button"
                       variant="outline"
                       className="h-auto min-h-10 flex-col gap-0.5 py-2"
-                      onClick={() => printStationTicket("kitchen")}
+                      onClick={() => openStationSend("kitchen")}
                       disabled={!selectedOrder.lines.length}>
                       <span className="inline-flex items-center gap-2">
                         <UtensilsCrossed className="h-4 w-4" aria-hidden />
@@ -1315,7 +1363,7 @@ export function PosManager() {
                       type="button"
                       variant="outline"
                       className="h-auto min-h-10 flex-col gap-0.5 py-2"
-                      onClick={() => printStationTicket("bar")}
+                      onClick={() => openStationSend("bar")}
                       disabled={!selectedOrder.lines.length}>
                       <span className="inline-flex items-center gap-2">
                         <Wine className="h-4 w-4" aria-hidden />
@@ -1378,6 +1426,51 @@ export function PosManager() {
           setFlavorPickerLineId(null);
         }}
         onClose={() => setFlavorPickerLineId(null)}
+      />
+
+      <StationSendPicker
+        open={stationSendTarget != null}
+        station={stationSendTarget || "kitchen"}
+        lines={selectedOrder?.lines || []}
+        selectedIds={stationSendSelectedIds}
+        locale={locale}
+        dir={textDir}
+        labels={{
+          title: text.selectStationItems,
+          description: text.selectStationItemsDesc,
+          kitchen: text.sendToKitchen,
+          bar: text.sendToBar,
+          alreadySent: text.alreadySent,
+          newItemsOnly: text.newItemsOnly,
+          sendSelected: text.sendSelected,
+          selectAll: text.selectAllItems,
+          clear: text.clearSelection,
+          cancel: text.cancel,
+          qty: text.qty,
+          variant: text.variant,
+        }}
+        onToggle={(lineId) => {
+          setStationSendSelectedIds((current) =>
+            current.includes(lineId)
+              ? current.filter((id) => id !== lineId)
+              : [...current, lineId],
+          );
+        }}
+        onSelectAll={() =>
+          setStationSendSelectedIds((selectedOrder?.lines || []).map((line) => line.id))
+        }
+        onClear={() => setStationSendSelectedIds([])}
+        onConfirm={() => {
+          if (!stationSendTarget || !stationSendSelectedIds.length) {
+            setMessage(text.noItemsSelected);
+            return;
+          }
+          printStationTicket(stationSendTarget, stationSendSelectedIds);
+        }}
+        onClose={() => {
+          setStationSendTarget(null);
+          setStationSendSelectedIds([]);
+        }}
       />
     </div>
   );
@@ -2804,6 +2897,10 @@ function mergeOrderLines(
     );
     if (existing) {
       existing.quantity += addedLine.quantity;
+      existing.kitchenSentQty =
+        (existing.kitchenSentQty || 0) + (addedLine.kitchenSentQty || 0);
+      existing.barSentQty =
+        (existing.barSentQty || 0) + (addedLine.barSentQty || 0);
     } else {
       lines.push({ ...addedLine, id: crypto.randomUUID() });
     }
@@ -3287,6 +3384,219 @@ function FlavorPicker({
         </div>
       </div>
     </div>
+  );
+}
+
+function stationSentQty(line: PosOrderLine, station: "kitchen" | "bar") {
+  const sent = station === "kitchen" ? line.kitchenSentQty : line.barSentQty;
+  return Math.min(Math.max(0, sent || 0), line.quantity);
+}
+
+function stationUnsentQty(line: PosOrderLine, station: "kitchen" | "bar") {
+  return Math.max(0, line.quantity - stationSentQty(line, station));
+}
+
+/** Print only the unsent remainder, or full qty when reprinting an already-sent line. */
+function stationPrintQty(line: PosOrderLine, station: "kitchen" | "bar") {
+  const unsent = stationUnsentQty(line, station);
+  return unsent > 0 ? unsent : line.quantity;
+}
+
+function StationSendPicker({
+  open,
+  station,
+  lines,
+  selectedIds,
+  locale,
+  dir,
+  labels,
+  onToggle,
+  onSelectAll,
+  onClear,
+  onConfirm,
+  onClose,
+}: {
+  open: boolean;
+  station: "kitchen" | "bar";
+  lines: PosOrderLine[];
+  selectedIds: string[];
+  locale: Locale;
+  dir: LocaleDirection;
+  labels: {
+    title: string;
+    description: string;
+    kitchen: string;
+    bar: string;
+    alreadySent: string;
+    newItemsOnly: string;
+    sendSelected: string;
+    selectAll: string;
+    clear: string;
+    cancel: string;
+    qty: string;
+    variant: string;
+  };
+  onToggle: (lineId: string) => void;
+  onSelectAll: () => void;
+  onClear: () => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const stationLabel = station === "kitchen" ? labels.kitchen : labels.bar;
+  const canSend = selectedIds.length > 0;
+
+  return (
+    <div
+      className="dialog-backdrop fixed inset-0 z-[70] flex items-end justify-center p-3 sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label={labels.title}
+      onMouseDown={onClose}
+    >
+      <div
+        dir={dir}
+        className="dialog-panel flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl border bg-card p-5 text-card-foreground shadow-2xl sm:p-6"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            {station === "kitchen" ? (
+              <UtensilsCrossed className="h-5 w-5" aria-hidden />
+            ) : (
+              <Wine className="h-5 w-5" aria-hidden />
+            )}
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold">{labels.title}</h2>
+            <p className="mt-0.5 text-sm font-medium text-primary">{stationLabel}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{labels.description}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onSelectAll}>
+            {labels.selectAll}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onClear}>
+            {labels.clear}
+          </Button>
+        </div>
+
+        <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
+          {lines.map((line) => {
+            const selected = selectedIds.includes(line.id);
+            const sent = stationSentQty(line, station);
+            const unsent = stationUnsentQty(line, station);
+            const printQty = selected ? stationPrintQty(line, station) : 0;
+            return (
+              <button
+                key={line.id}
+                type="button"
+                onClick={() => onToggle(line.id)}
+                className={cn(
+                  "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition",
+                  selected
+                    ? "border-primary bg-primary/10"
+                    : "hover:bg-muted/60",
+                )}
+              >
+                <span
+                  className={cn(
+                    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-muted-foreground/40",
+                  )}
+                  aria-hidden
+                >
+                  {selected ? <Check className="h-3.5 w-3.5" /> : null}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold">
+                      {localized(line.name, locale)}
+                    </span>
+                    {unsent > 0 && sent > 0 ? (
+                      <BadgeTone tone="new">{labels.newItemsOnly} ×{unsent}</BadgeTone>
+                    ) : null}
+                    {unsent === 0 && sent > 0 ? (
+                      <BadgeTone tone="sent">{labels.alreadySent}</BadgeTone>
+                    ) : null}
+                    {sent === 0 ? (
+                      <BadgeTone tone="new">{labels.newItemsOnly}</BadgeTone>
+                    ) : null}
+                  </span>
+                  {line.variantName ? (
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {labels.variant}: {localized(line.variantName, locale, line.variantName.en)}
+                    </span>
+                  ) : null}
+                  {line.flavor?.trim() ? (
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {line.flavor.trim()}
+                    </span>
+                  ) : null}
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {labels.qty}: {line.quantity}
+                    {selected && printQty !== line.quantity
+                      ? ` → ${printQty}`
+                      : ""}
+                    {sent > 0 ? ` · ${labels.alreadySent} ${sent}` : ""}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={onClose}>
+            {labels.cancel}
+          </Button>
+          <Button type="button" onClick={onConfirm} disabled={!canSend}>
+            {labels.sendSelected}
+            {canSend ? ` (${selectedIds.length})` : ""}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BadgeTone({
+  tone,
+  children,
+}: {
+  tone: "new" | "sent";
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        tone === "new"
+          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+          : "bg-muted text-muted-foreground",
+      )}
+    >
+      {children}
+    </span>
   );
 }
 

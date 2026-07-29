@@ -167,6 +167,10 @@ export type PosOrderLine = {
   quantity: number;
   unitPrice: number;
   currency: Currency;
+  /** How many of this line were already ticketed to kitchen (avoids duplicate tickets). */
+  kitchenSentQty?: number;
+  /** How many of this line were already ticketed to bar (avoids duplicate tickets). */
+  barSentQty?: number;
 };
 
 export type PosTableOrder = {
