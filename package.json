@@ -25,6 +25,7 @@
     "firebase-admin": "^13.0.1",
     "lucide-react": "^0.468.0",
     "next": "^15.1.0",
+    "otplib": "^13.4.1",
     "qrcode": "^1.5.4",
     "qz-tray": "^2.2.6",
     "react": "^19.0.0",

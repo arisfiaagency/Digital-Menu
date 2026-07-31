@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Building2, Check, ChevronRight, Copy, KeyRound, Search, Star } from "lucide-react";
+import { ArrowLeft, Building2, Check, ChevronRight, Copy, KeyRound, Search, ShieldCheck, Star, X } from "lucide-react";
 import { useAdminLocale } from "@/components/admin/admin-preferences";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -161,22 +161,23 @@ export function SupervisorRatings() {
 
   return (
     <div dir={dir} className="space-y-5">
-      <RatingsApiPanel text={text} />
-
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <p className="text-sm text-muted-foreground">{text.supervisorRatingsDesc}</p>
-        <label className="relative block w-full sm:max-w-xs">
-          <Search
-            className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <Input
-            className="ps-10"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={text.supervisorRatingsSearch}
-          />
-        </label>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <RatingsApiButton text={text} />
+          <label className="relative block w-full sm:w-64">
+            <Search
+              className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              className="ps-10"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={text.supervisorRatingsSearch}
+            />
+          </label>
+        </div>
       </div>
 
       {loading ? (
@@ -235,7 +236,27 @@ export function SupervisorRatings() {
   );
 }
 
-function RatingsApiPanel({ text }: { text: Record<string, string> }) {
+function RatingsApiButton({ text }: { text: Record<string, string> }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        <KeyRound className="h-4 w-4" aria-hidden />
+        {text.supervisorRatingsApiGenerate}
+      </Button>
+      {open ? <RatingsApiDialog text={text} onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+}
+
+function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onClose: () => void }) {
+  const [step, setStep] = useState<"2fa" | "key">("2fa");
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [totpSecret, setTotpSecret] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [challenge, setChallenge] = useState("");
   const [configured, setConfigured] = useState(false);
   const [keyPrefix, setKeyPrefix] = useState("");
   const [createdAt, setCreatedAt] = useState("");
@@ -243,11 +264,24 @@ function RatingsApiPanel({ text }: { text: Record<string, string> }) {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState<"key" | "list" | "cafe" | "">("");
+  const [copied, setCopied] = useState<"key" | "list" | "cafe" | "secret" | "">("");
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const listUrl = `${origin}/api/v1/ratings`;
   const cafeUrl = `${origin}/api/v1/ratings/{slug}`;
+
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
 
   useEffect(() => {
     let active = true;
@@ -255,23 +289,25 @@ function RatingsApiPanel({ text }: { text: Record<string, string> }) {
       try {
         const token = await getFirebaseAuth()?.currentUser?.getIdToken();
         if (!token) throw new Error(text.supervisorRatingsApiAuth);
-        const res = await fetch("/api/admin/ratings-api", {
+        const res = await fetch("/api/admin/ratings-2fa", {
           headers: { Authorization: `Bearer ${token}` }
         });
         const json = (await res.json()) as {
           ok?: boolean;
-          configured?: boolean;
-          keyPrefix?: string;
-          createdAt?: string;
+          enabled?: boolean;
+          qrDataUrl?: string;
+          secret?: string;
           error?: string;
         };
-        if (!res.ok || !json.ok) throw new Error(json.error || text.supervisorRatingsApiLoadFailed);
+        if (!res.ok || !json.ok || !json.qrDataUrl) {
+          throw new Error(json.error || text.supervisorRatingsApi2faLoadFailed);
+        }
         if (!active) return;
-        setConfigured(Boolean(json.configured));
-        setKeyPrefix(json.keyPrefix || "");
-        setCreatedAt(json.createdAt || "");
+        setTotpEnabled(Boolean(json.enabled));
+        setQrDataUrl(json.qrDataUrl);
+        setTotpSecret(json.secret || "");
       } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : text.supervisorRatingsApiLoadFailed);
+        if (active) setError(err instanceof Error ? err.message : text.supervisorRatingsApi2faLoadFailed);
       } finally {
         if (active) setLoading(false);
       }
@@ -279,9 +315,66 @@ function RatingsApiPanel({ text }: { text: Record<string, string> }) {
     return () => {
       active = false;
     };
-  }, [text.supervisorRatingsApiAuth, text.supervisorRatingsApiLoadFailed]);
+  }, [text.supervisorRatingsApiAuth, text.supervisorRatingsApi2faLoadFailed]);
+
+  async function verifyTwoFactor() {
+    setWorking(true);
+    setError("");
+    try {
+      const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+      if (!token) throw new Error(text.supervisorRatingsApiAuth);
+      const res = await fetch("/api/admin/ratings-2fa", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          action: totpEnabled ? "verify" : "confirm",
+          code: totpCode
+        })
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        challenge?: string;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.challenge) {
+        throw new Error(json.error || text.supervisorRatingsApi2faFailed);
+      }
+      setChallenge(json.challenge);
+      setTotpEnabled(true);
+      setTotpCode("");
+
+      const statusRes = await fetch("/api/admin/ratings-api", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const status = (await statusRes.json()) as {
+        ok?: boolean;
+        configured?: boolean;
+        keyPrefix?: string;
+        createdAt?: string;
+        error?: string;
+      };
+      if (statusRes.ok && status.ok) {
+        setConfigured(Boolean(status.configured));
+        setKeyPrefix(status.keyPrefix || "");
+        setCreatedAt(status.createdAt || "");
+      }
+      setStep("key");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : text.supervisorRatingsApi2faFailed);
+    } finally {
+      setWorking(false);
+    }
+  }
 
   async function generateKey() {
+    if (!challenge) {
+      setStep("2fa");
+      setError(text.supervisorRatingsApi2faRequired);
+      return;
+    }
     setWorking(true);
     setError("");
     try {
@@ -289,7 +382,11 @@ function RatingsApiPanel({ text }: { text: Record<string, string> }) {
       if (!token) throw new Error(text.supervisorRatingsApiAuth);
       const res = await fetch("/api/admin/ratings-api", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ challenge })
       });
       const json = (await res.json()) as {
         ok?: boolean;
@@ -299,12 +396,17 @@ function RatingsApiPanel({ text }: { text: Record<string, string> }) {
         error?: string;
       };
       if (!res.ok || !json.ok || !json.apiKey) {
+        if (res.status === 403) {
+          setChallenge("");
+          setStep("2fa");
+        }
         throw new Error(json.error || text.supervisorRatingsApiGenerateFailed);
       }
       setFreshKey(json.apiKey);
       setConfigured(true);
       setKeyPrefix(json.keyPrefix || json.apiKey.slice(0, 11));
       setCreatedAt(json.createdAt || "");
+      setChallenge("");
     } catch (err) {
       setError(err instanceof Error ? err.message : text.supervisorRatingsApiGenerateFailed);
     } finally {
@@ -312,7 +414,7 @@ function RatingsApiPanel({ text }: { text: Record<string, string> }) {
     }
   }
 
-  async function copyText(value: string, which: "key" | "list" | "cafe") {
+  async function copyText(value: string, which: "key" | "list" | "cafe" | "secret") {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(which);
@@ -322,87 +424,184 @@ function RatingsApiPanel({ text }: { text: Record<string, string> }) {
     }
   }
 
+  function requestRegenerate() {
+    setFreshKey("");
+    setChallenge("");
+    setTotpCode("");
+    setError("");
+    setStep("2fa");
+  }
+
   return (
-    <Card>
-      <CardContent className="space-y-4 pt-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-3 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label={text.supervisorRatingsApiTitle}
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-xl border bg-card shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
           <div className="min-w-0">
             <p className="flex items-center gap-2 font-semibold">
-              <KeyRound className="h-4 w-4 text-primary" aria-hidden />
-              {text.supervisorRatingsApiTitle}
+              {step === "2fa" ? (
+                <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
+              ) : (
+                <KeyRound className="h-4 w-4 text-primary" aria-hidden />
+              )}
+              {step === "2fa" ? text.supervisorRatingsApi2faTitle : text.supervisorRatingsApiTitle}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">{text.supervisorRatingsApiDesc}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {step === "2fa" ? text.supervisorRatingsApi2faDesc : text.supervisorRatingsApiDesc}
+            </p>
           </div>
-          <Button type="button" onClick={() => void generateKey()} disabled={working || loading}>
-            <KeyRound className="h-4 w-4" aria-hidden />
-            {working
-              ? text.supervisorRatingsApiGenerating
-              : configured
-                ? text.supervisorRatingsApiRegenerate
-                : text.supervisorRatingsApiGenerate}
+          <Button type="button" variant="outline" size="icon" aria-label={text.cancel || "Close"} onClick={onClose}>
+            <X className="h-4 w-4" aria-hidden />
           </Button>
         </div>
 
-        {loading ? <Skeleton className="h-16 w-full" /> : null}
-
-        {!loading && configured ? (
-          <div className="space-y-2 rounded-lg border bg-muted/20 p-3 text-sm">
-            <p>
-              <span className="text-muted-foreground">{text.supervisorRatingsApiStatus}: </span>
-              <span className="font-medium text-primary">{text.supervisorRatingsApiActive}</span>
-              {keyPrefix ? (
-                <span className="ms-2 font-mono text-xs text-muted-foreground">
-                  {keyPrefix}…
-                </span>
+        <div className="space-y-4 p-4">
+          {step === "2fa" ? (
+            <>
+              {loading ? <Skeleton className="mx-auto h-48 w-48 rounded-lg" /> : null}
+              {!loading && qrDataUrl ? (
+                <div className="flex flex-col items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={qrDataUrl}
+                    alt={text.supervisorRatingsApi2faQrAlt}
+                    className="h-48 w-48 rounded-lg border bg-white p-2"
+                  />
+                  <p className="text-center text-sm text-muted-foreground">{text.supervisorRatingsApi2faScan}</p>
+                  {totpSecret ? (
+                    <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+                      <code dir="ltr" className="min-w-0 flex-1 break-all rounded-md border bg-muted/30 px-3 py-2 text-xs">
+                        {totpSecret}
+                      </code>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => void copyText(totpSecret, "secret")}
+                      >
+                        {copied === "secret" ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+                        {copied === "secret" ? text.supervisorRatingsApiCopied : text.supervisorRatingsApi2faCopySecret}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
-            </p>
-            {createdAt ? (
-              <p className="text-xs text-muted-foreground">
-                {text.supervisorRatingsApiCreated}: {formatDate(createdAt, "en")}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
 
-        {freshKey ? (
-          <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
-            <p className="text-sm font-medium text-primary">{text.supervisorRatingsApiKeyOnce}</p>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <code dir="ltr" className="min-w-0 flex-1 break-all rounded-md border bg-background px-3 py-2 text-xs">
-                {freshKey}
-              </code>
-              <Button type="button" variant="outline" size="sm" onClick={() => void copyText(freshKey, "key")}>
-                {copied === "key" ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
-                {copied === "key" ? text.supervisorRatingsApiCopied : text.supervisorRatingsApiCopyKey}
+              <div className="space-y-2">
+                <label htmlFor="ratings-totp-code" className="text-sm font-medium">
+                  {text.supervisorRatingsApi2faCodeLabel}
+                </label>
+                <Input
+                  id="ratings-totp-code"
+                  dir="ltr"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  maxLength={6}
+                  value={totpCode}
+                  onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  disabled={loading || working}
+                />
+              </div>
+
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => void verifyTwoFactor()}
+                disabled={loading || working || totpCode.length !== 6}
+              >
+                <ShieldCheck className="h-4 w-4" aria-hidden />
+                {working
+                  ? text.supervisorRatingsApi2faVerifying
+                  : totpEnabled
+                    ? text.supervisorRatingsApi2faContinue
+                    : text.supervisorRatingsApi2faConfirm}
               </Button>
-            </div>
-          </div>
-        ) : null}
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                className="w-full sm:w-auto"
+                onClick={() => void (challenge ? generateKey() : requestRegenerate())}
+                disabled={working}
+              >
+                <KeyRound className="h-4 w-4" aria-hidden />
+                {working
+                  ? text.supervisorRatingsApiGenerating
+                  : configured
+                    ? text.supervisorRatingsApiRegenerate
+                    : text.supervisorRatingsApiGenerate}
+              </Button>
 
-        <div className="space-y-2 text-sm">
-          <p className="font-medium">{text.supervisorRatingsApiEndpoints}</p>
-          <EndpointRow
-            label={text.supervisorRatingsApiList}
-            value={listUrl}
-            copied={copied === "list"}
-            copyLabel={text.supervisorRatingsApiCopyUrl}
-            copiedLabel={text.supervisorRatingsApiCopied}
-            onCopy={() => void copyText(listUrl, "list")}
-          />
-          <EndpointRow
-            label={text.supervisorRatingsApiCafe}
-            value={cafeUrl}
-            copied={copied === "cafe"}
-            copyLabel={text.supervisorRatingsApiCopyUrl}
-            copiedLabel={text.supervisorRatingsApiCopied}
-            onCopy={() => void copyText(cafeUrl, "cafe")}
-          />
-          <p className="text-xs text-muted-foreground">{text.supervisorRatingsApiAuthHint}</p>
+              {configured ? (
+                <div className="space-y-2 rounded-lg border bg-muted/20 p-3 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">{text.supervisorRatingsApiStatus}: </span>
+                    <span className="font-medium text-primary">{text.supervisorRatingsApiActive}</span>
+                    {keyPrefix ? (
+                      <span className="ms-2 font-mono text-xs text-muted-foreground">{keyPrefix}…</span>
+                    ) : null}
+                  </p>
+                  {createdAt ? (
+                    <p className="text-xs text-muted-foreground">
+                      {text.supervisorRatingsApiCreated}: {formatDate(createdAt, "en")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {freshKey ? (
+                <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <p className="text-sm font-medium text-primary">{text.supervisorRatingsApiKeyOnce}</p>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <code dir="ltr" className="min-w-0 flex-1 break-all rounded-md border bg-background px-3 py-2 text-xs">
+                      {freshKey}
+                    </code>
+                    <Button type="button" variant="outline" size="sm" onClick={() => void copyText(freshKey, "key")}>
+                      {copied === "key" ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+                      {copied === "key" ? text.supervisorRatingsApiCopied : text.supervisorRatingsApiCopyKey}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="space-y-2 text-sm">
+                <p className="font-medium">{text.supervisorRatingsApiEndpoints}</p>
+                <EndpointRow
+                  label={text.supervisorRatingsApiList}
+                  value={listUrl}
+                  copied={copied === "list"}
+                  copyLabel={text.supervisorRatingsApiCopyUrl}
+                  copiedLabel={text.supervisorRatingsApiCopied}
+                  onCopy={() => void copyText(listUrl, "list")}
+                />
+                <EndpointRow
+                  label={text.supervisorRatingsApiCafe}
+                  value={cafeUrl}
+                  copied={copied === "cafe"}
+                  copyLabel={text.supervisorRatingsApiCopyUrl}
+                  copiedLabel={text.supervisorRatingsApiCopied}
+                  onCopy={() => void copyText(cafeUrl, "cafe")}
+                />
+                <p className="text-xs text-muted-foreground">{text.supervisorRatingsApiAuthHint}</p>
+              </div>
+            </>
+          )}
+
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </div>
-
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
