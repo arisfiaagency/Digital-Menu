@@ -73,6 +73,11 @@ export async function saveRatingsApiSecret(
   return createdAt;
 }
 
+/** Revoke the public ratings API key (public endpoints reject until a new key is minted). */
+export async function deleteRatingsApiSecret(db: Firestore) {
+  await db.doc(RATINGS_API_DOC).delete();
+}
+
 export function apiKeysMatch(provided: string, keyHash: string) {
   if (!provided || !keyHash) return false;
   const a = Buffer.from(hashRatingsApiKey(provided), "utf8");

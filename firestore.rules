@@ -118,6 +118,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Platform security audit (API key / TOTP events) — Admin SDK only.
+    match /platformAuditLogs/{logId} {
+      allow read, write: if false;
+    }
+
     match /clients/{clientId} {
       // Full cafe account (billing, owner email, …) is never anonymous-public.
       allow get: if isPlatformAdmin() || isTenantAdmin(clientId);

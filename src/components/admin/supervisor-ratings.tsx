@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Building2, Check, ChevronRight, Copy, KeyRound, Search, ShieldCheck, Star, X } from "lucide-react";
+import { ArrowLeft, Building2, Check, ChevronRight, Copy, KeyRound, Search, ShieldCheck, Star, Trash2, X } from "lucide-react";
 import { useAdminLocale } from "@/components/admin/admin-preferences";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -250,12 +250,20 @@ function RatingsApiButton({ text }: { text: Record<string, string> }) {
   );
 }
 
+async function freshIdToken() {
+  const user = getFirebaseAuth()?.currentUser;
+  if (!user) return null;
+  return user.getIdToken(true);
+}
+
 function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onClose: () => void }) {
   const [step, setStep] = useState<"2fa" | "key">("2fa");
   const [totpEnabled, setTotpEnabled] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [totpSecret, setTotpSecret] = useState("");
   const [totpCode, setTotpCode] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [showResetPanel, setShowResetPanel] = useState(false);
   const [challenge, setChallenge] = useState("");
   const [configured, setConfigured] = useState(false);
   const [keyPrefix, setKeyPrefix] = useState("");
@@ -285,10 +293,16 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
   }, [onClose]);
 
   useEffect(() => {
+    if (!freshKey) return;
+    const timer = window.setTimeout(() => setFreshKey(""), 90_000);
+    return () => window.clearTimeout(timer);
+  }, [freshKey]);
+
+  useEffect(() => {
     let active = true;
     void (async () => {
       try {
-        const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+        const token = await freshIdToken();
         if (!token) throw new Error(text.supervisorRatingsApiAuth);
         const res = await fetch("/api/admin/ratings-2fa", {
           headers: { Authorization: `Bearer ${token}` }
@@ -329,7 +343,7 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
     setWorking(true);
     setError("");
     try {
-      const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+      const token = await freshIdToken();
       if (!token) throw new Error(text.supervisorRatingsApiAuth);
       const res = await fetch("/api/admin/ratings-2fa", {
         method: "POST",
@@ -385,10 +399,13 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
       setError(text.supervisorRatingsApi2faRequired);
       return;
     }
+    if (configured && !window.confirm(text.supervisorRatingsApiRegenerateConfirm)) {
+      return;
+    }
     setWorking(true);
     setError("");
     try {
-      const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+      const token = await freshIdToken();
       if (!token) throw new Error(text.supervisorRatingsApiAuth);
       const res = await fetch("/api/admin/ratings-api", {
         method: "POST",
@@ -424,6 +441,48 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
     }
   }
 
+  async function revokeKey() {
+    if (!configured) return;
+    if (!challenge) {
+      setStep("2fa");
+      setError(text.supervisorRatingsApi2faRequired);
+      return;
+    }
+    if (!window.confirm(text.supervisorRatingsApiDeleteConfirm)) return;
+
+    setWorking(true);
+    setError("");
+    try {
+      const token = await freshIdToken();
+      if (!token) throw new Error(text.supervisorRatingsApiAuth);
+      const res = await fetch("/api/admin/ratings-api", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ challenge })
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        if (res.status === 403) {
+          setChallenge("");
+          setStep("2fa");
+        }
+        throw new Error(json.error || text.supervisorRatingsApiDeleteFailed);
+      }
+      setConfigured(false);
+      setKeyPrefix("");
+      setCreatedAt("");
+      setFreshKey("");
+      setChallenge("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : text.supervisorRatingsApiDeleteFailed);
+    } finally {
+      setWorking(false);
+    }
+  }
+
   async function copyText(value: string, which: "key" | "list" | "cafe" | "secret") {
     try {
       await navigator.clipboard.writeText(value);
@@ -441,14 +500,20 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
     setError("");
     setQrDataUrl("");
     setTotpSecret("");
+    setShowResetPanel(false);
+    setResetCode("");
     setStep("2fa");
   }
 
   async function regenerateAuthenticatorQr() {
+    if (resetCode.length !== 6) {
+      setError(text.supervisorRatingsApi2faResetCodeRequired);
+      return;
+    }
     setWorking(true);
     setError("");
     try {
-      const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+      const token = await freshIdToken();
       if (!token) throw new Error(text.supervisorRatingsApiAuth);
       const res = await fetch("/api/admin/ratings-2fa", {
         method: "POST",
@@ -456,7 +521,7 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ action: "reset" })
+        body: JSON.stringify({ action: "reset", code: resetCode })
       });
       const json = (await res.json()) as {
         ok?: boolean;
@@ -472,6 +537,8 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
       setTotpSecret(json.secret || "");
       setChallenge("");
       setTotpCode("");
+      setResetCode("");
+      setShowResetPanel(false);
       setFreshKey("");
       setStep("2fa");
     } catch (err) {
@@ -583,19 +650,33 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
             </>
           ) : (
             <>
-              <Button
-                type="button"
-                className="w-full sm:w-auto"
-                onClick={() => void (challenge ? generateKey() : requestKeyUnlock())}
-                disabled={working}
-              >
-                <KeyRound className="h-4 w-4" aria-hidden />
-                {working
-                  ? text.supervisorRatingsApiGenerating
-                  : configured
-                    ? text.supervisorRatingsApiRegenerate
-                    : text.supervisorRatingsApiGenerate}
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto"
+                  onClick={() => void (challenge ? generateKey() : requestKeyUnlock())}
+                  disabled={working}
+                >
+                  <KeyRound className="h-4 w-4" aria-hidden />
+                  {working
+                    ? text.supervisorRatingsApiGenerating
+                    : configured
+                      ? text.supervisorRatingsApiRegenerate
+                      : text.supervisorRatingsApiGenerate}
+                </Button>
+                {configured ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 sm:w-auto"
+                    onClick={() => void (challenge ? revokeKey() : requestKeyUnlock())}
+                    disabled={working}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                    {text.supervisorRatingsApiDelete}
+                  </Button>
+                ) : null}
+              </div>
 
               {configured ? (
                 <div className="space-y-2 rounded-lg border bg-muted/20 p-3 text-sm">
@@ -617,6 +698,7 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
               {freshKey ? (
                 <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
                   <p className="text-sm font-medium text-primary">{text.supervisorRatingsApiKeyOnce}</p>
+                  <p className="text-xs text-muted-foreground">{text.supervisorRatingsApiKeyHideHint}</p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <code dir="ltr" className="min-w-0 flex-1 break-all rounded-md border bg-background px-3 py-2 text-xs">
                       {freshKey}
@@ -650,18 +732,61 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
                 <p className="text-xs text-muted-foreground">{text.supervisorRatingsApiAuthHint}</p>
               </div>
 
-              <div className="border-t pt-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => void regenerateAuthenticatorQr()}
-                  disabled={working}
-                >
-                  <ShieldCheck className="h-4 w-4" aria-hidden />
-                  {text.supervisorRatingsApi2faResetQr}
-                </Button>
-                <p className="mt-2 text-xs text-muted-foreground">{text.supervisorRatingsApi2faResetHint}</p>
+              <div className="space-y-3 border-t pt-3">
+                {!showResetPanel ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setShowResetPanel(true);
+                      setResetCode("");
+                      setError("");
+                    }}
+                    disabled={working}
+                  >
+                    <ShieldCheck className="h-4 w-4" aria-hidden />
+                    {text.supervisorRatingsApi2faResetQr}
+                  </Button>
+                ) : (
+                  <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+                    <p className="text-sm font-medium">{text.supervisorRatingsApi2faResetQr}</p>
+                    <p className="text-xs text-muted-foreground">{text.supervisorRatingsApi2faResetHint}</p>
+                    <Input
+                      dir="ltr"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      placeholder="000000"
+                      maxLength={6}
+                      value={resetCode}
+                      onChange={(event) => setResetCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                      disabled={working}
+                      aria-label={text.supervisorRatingsApi2faCodeLabel}
+                    />
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        type="button"
+                        className="flex-1"
+                        onClick={() => void regenerateAuthenticatorQr()}
+                        disabled={working || resetCode.length !== 6}
+                      >
+                        {working ? text.supervisorRatingsApi2faVerifying : text.supervisorRatingsApi2faResetConfirm}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setShowResetPanel(false);
+                          setResetCode("");
+                        }}
+                        disabled={working}
+                      >
+                        {text.cancel || "Cancel"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
