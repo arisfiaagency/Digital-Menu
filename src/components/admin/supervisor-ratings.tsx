@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Building2, ChevronRight, Search, Star } from "lucide-react";
+import { ArrowLeft, Building2, Check, ChevronRight, Copy, KeyRound, Search, Star } from "lucide-react";
 import { useAdminLocale } from "@/components/admin/admin-preferences";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { listClientReviews, listClients } from "@/lib/firebase/firestore";
 import { cn } from "@/lib/utils/cn";
 import type { ClientAccount, Review } from "@/types/models";
@@ -160,6 +161,8 @@ export function SupervisorRatings() {
 
   return (
     <div dir={dir} className="space-y-5">
+      <RatingsApiPanel text={text} />
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <p className="text-sm text-muted-foreground">{text.supervisorRatingsDesc}</p>
         <label className="relative block w-full sm:max-w-xs">
@@ -228,6 +231,206 @@ export function SupervisorRatings() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function RatingsApiPanel({ text }: { text: Record<string, string> }) {
+  const [configured, setConfigured] = useState(false);
+  const [keyPrefix, setKeyPrefix] = useState("");
+  const [createdAt, setCreatedAt] = useState("");
+  const [freshKey, setFreshKey] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState<"key" | "list" | "cafe" | "">("");
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const listUrl = `${origin}/api/v1/ratings`;
+  const cafeUrl = `${origin}/api/v1/ratings/{slug}`;
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+        if (!token) throw new Error(text.supervisorRatingsApiAuth);
+        const res = await fetch("/api/admin/ratings-api", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = (await res.json()) as {
+          ok?: boolean;
+          configured?: boolean;
+          keyPrefix?: string;
+          createdAt?: string;
+          error?: string;
+        };
+        if (!res.ok || !json.ok) throw new Error(json.error || text.supervisorRatingsApiLoadFailed);
+        if (!active) return;
+        setConfigured(Boolean(json.configured));
+        setKeyPrefix(json.keyPrefix || "");
+        setCreatedAt(json.createdAt || "");
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : text.supervisorRatingsApiLoadFailed);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [text.supervisorRatingsApiAuth, text.supervisorRatingsApiLoadFailed]);
+
+  async function generateKey() {
+    setWorking(true);
+    setError("");
+    try {
+      const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+      if (!token) throw new Error(text.supervisorRatingsApiAuth);
+      const res = await fetch("/api/admin/ratings-api", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        apiKey?: string;
+        keyPrefix?: string;
+        createdAt?: string;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.apiKey) {
+        throw new Error(json.error || text.supervisorRatingsApiGenerateFailed);
+      }
+      setFreshKey(json.apiKey);
+      setConfigured(true);
+      setKeyPrefix(json.keyPrefix || json.apiKey.slice(0, 11));
+      setCreatedAt(json.createdAt || "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : text.supervisorRatingsApiGenerateFailed);
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function copyText(value: string, which: "key" | "list" | "cafe") {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(which);
+      window.setTimeout(() => setCopied(""), 1600);
+    } catch {
+      setError(text.supervisorRatingsApiCopyFailed);
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-4 pt-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 font-semibold">
+              <KeyRound className="h-4 w-4 text-primary" aria-hidden />
+              {text.supervisorRatingsApiTitle}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{text.supervisorRatingsApiDesc}</p>
+          </div>
+          <Button type="button" onClick={() => void generateKey()} disabled={working || loading}>
+            <KeyRound className="h-4 w-4" aria-hidden />
+            {working
+              ? text.supervisorRatingsApiGenerating
+              : configured
+                ? text.supervisorRatingsApiRegenerate
+                : text.supervisorRatingsApiGenerate}
+          </Button>
+        </div>
+
+        {loading ? <Skeleton className="h-16 w-full" /> : null}
+
+        {!loading && configured ? (
+          <div className="space-y-2 rounded-lg border bg-muted/20 p-3 text-sm">
+            <p>
+              <span className="text-muted-foreground">{text.supervisorRatingsApiStatus}: </span>
+              <span className="font-medium text-primary">{text.supervisorRatingsApiActive}</span>
+              {keyPrefix ? (
+                <span className="ms-2 font-mono text-xs text-muted-foreground">
+                  {keyPrefix}…
+                </span>
+              ) : null}
+            </p>
+            {createdAt ? (
+              <p className="text-xs text-muted-foreground">
+                {text.supervisorRatingsApiCreated}: {formatDate(createdAt, "en")}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {freshKey ? (
+          <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <p className="text-sm font-medium text-primary">{text.supervisorRatingsApiKeyOnce}</p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <code dir="ltr" className="min-w-0 flex-1 break-all rounded-md border bg-background px-3 py-2 text-xs">
+                {freshKey}
+              </code>
+              <Button type="button" variant="outline" size="sm" onClick={() => void copyText(freshKey, "key")}>
+                {copied === "key" ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+                {copied === "key" ? text.supervisorRatingsApiCopied : text.supervisorRatingsApiCopyKey}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="space-y-2 text-sm">
+          <p className="font-medium">{text.supervisorRatingsApiEndpoints}</p>
+          <EndpointRow
+            label={text.supervisorRatingsApiList}
+            value={listUrl}
+            copied={copied === "list"}
+            copyLabel={text.supervisorRatingsApiCopyUrl}
+            copiedLabel={text.supervisorRatingsApiCopied}
+            onCopy={() => void copyText(listUrl, "list")}
+          />
+          <EndpointRow
+            label={text.supervisorRatingsApiCafe}
+            value={cafeUrl}
+            copied={copied === "cafe"}
+            copyLabel={text.supervisorRatingsApiCopyUrl}
+            copiedLabel={text.supervisorRatingsApiCopied}
+            onCopy={() => void copyText(cafeUrl, "cafe")}
+          />
+          <p className="text-xs text-muted-foreground">{text.supervisorRatingsApiAuthHint}</p>
+        </div>
+
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EndpointRow({
+  label,
+  value,
+  copied,
+  copyLabel,
+  copiedLabel,
+  onCopy
+}: {
+  label: string;
+  value: string;
+  copied: boolean;
+  copyLabel: string;
+  copiedLabel: string;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border bg-background p-2.5 sm:flex-row sm:items-center sm:gap-2">
+      <span className="shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
+      <code dir="ltr" className="min-w-0 flex-1 break-all text-xs">
+        {value}
+      </code>
+      <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onCopy}>
+        {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
+        {copied ? copiedLabel : copyLabel}
+      </Button>
     </div>
   );
 }

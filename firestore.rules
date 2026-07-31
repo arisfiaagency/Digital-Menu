@@ -113,6 +113,11 @@ service cloud.firestore {
       allow create, update, delete: if isPlatformFullAdmin();
     }
 
+    // Secrets (ratings API key hash, etc.) — Admin SDK only; never client SDK.
+    match /platformSecrets/{docId} {
+      allow read, write: if false;
+    }
+
     match /clients/{clientId} {
       // Full cafe account (billing, owner email, …) is never anonymous-public.
       allow get: if isPlatformAdmin() || isTenantAdmin(clientId);
