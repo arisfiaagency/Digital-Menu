@@ -6,22 +6,27 @@ import {
   ensureRatingsTotpSecret,
   issueTotpChallenge,
   loadRatingsTotp,
+  resetRatingsTotpSecret,
   verifyRatingsTotpCode
 } from "@/lib/api/ratings-totp";
 
 export const runtime = "nodejs";
 
-/** QR + setup status for authenticator app (secrets only via Admin SDK). */
+/** Setup status. QR/secret only when not yet confirmed (first setup or after reset). */
 export async function GET(request: NextRequest) {
   const authz = await requirePlatformFullAdmin(request);
   if ("error" in authz) return authz.error;
 
   const record = await ensureRatingsTotpSecret(authz.db, authz.uid);
-  const qr = await buildAuthenticatorQr(authz.email, record.secret);
 
+  if (record.enabled) {
+    return NextResponse.json({ ok: true, enabled: true });
+  }
+
+  const qr = await buildAuthenticatorQr(authz.email, record.secret);
   return NextResponse.json({
     ok: true,
-    enabled: record.enabled,
+    enabled: false,
     qrDataUrl: qr.qrDataUrl,
     secret: qr.secret,
     otpauthUrl: qr.otpauthUrl
@@ -29,9 +34,10 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Body: `{ action: "confirm" | "verify", code: "123456" }`
+ * Body: `{ action: "confirm" | "verify" | "reset", code?: "123456" }`
  * - confirm: first-time enable after scanning QR
  * - verify: check code when already enabled
+ * - reset: mint a new secret + QR (invalidates the previous authenticator)
  */
 export async function POST(request: NextRequest) {
   const authz = await requirePlatformFullAdmin(request);
@@ -44,12 +50,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const action = body.action === "confirm" || body.action === "verify" ? body.action : "";
-  const code = typeof body.code === "string" ? body.code : "";
+  const action =
+    body.action === "confirm" || body.action === "verify" || body.action === "reset" ? body.action : "";
   if (!action) {
-    return NextResponse.json({ ok: false, error: "action must be confirm or verify." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "action must be confirm, verify, or reset." }, { status: 400 });
   }
 
+  if (action === "reset") {
+    const record = await resetRatingsTotpSecret(authz.db, authz.uid);
+    const qr = await buildAuthenticatorQr(authz.email, record.secret);
+    return NextResponse.json({
+      ok: true,
+      enabled: false,
+      qrDataUrl: qr.qrDataUrl,
+      secret: qr.secret,
+      otpauthUrl: qr.otpauthUrl
+    });
+  }
+
+  const code = typeof body.code === "string" ? body.code : "";
   const record = await loadRatingsTotp(authz.db, authz.uid);
   if (!record) {
     return NextResponse.json({ ok: false, error: "2FA is not set up. Reload and scan the QR code." }, { status: 400 });

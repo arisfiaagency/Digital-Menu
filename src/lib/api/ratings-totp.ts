@@ -49,6 +49,16 @@ export async function enableRatingsTotp(db: Firestore, uid: string, secret: stri
   return updatedAt;
 }
 
+/** Issue a new secret and disable until confirmed with a fresh QR scan. */
+export async function resetRatingsTotpSecret(db: Firestore, uid: string): Promise<RatingsTotpRecord> {
+  const secret = generateSecret();
+  const updatedAt = new Date().toISOString();
+  const record: RatingsTotpRecord = { secret, enabled: false, updatedAt };
+  await db.collection("platformSecrets").doc(totpDocId(uid)).set(record);
+  await clearTotpChallenge(db, uid);
+  return record;
+}
+
 export function verifyRatingsTotpCode(secret: string, code: string) {
   const token = code.replace(/\s+/g, "");
   if (!/^\d{6}$/.test(token)) return false;

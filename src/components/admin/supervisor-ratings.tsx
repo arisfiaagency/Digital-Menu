@@ -269,6 +269,7 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const listUrl = `${origin}/api/v1/ratings`;
   const cafeUrl = `${origin}/api/v1/ratings/{slug}`;
+  const showSetupQr = !totpEnabled && Boolean(qrDataUrl);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -299,13 +300,20 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
           secret?: string;
           error?: string;
         };
-        if (!res.ok || !json.ok || !json.qrDataUrl) {
+        if (!res.ok || !json.ok) {
           throw new Error(json.error || text.supervisorRatingsApi2faLoadFailed);
         }
         if (!active) return;
-        setTotpEnabled(Boolean(json.enabled));
-        setQrDataUrl(json.qrDataUrl);
-        setTotpSecret(json.secret || "");
+        const enabled = Boolean(json.enabled);
+        setTotpEnabled(enabled);
+        if (enabled) {
+          setQrDataUrl("");
+          setTotpSecret("");
+        } else {
+          if (!json.qrDataUrl) throw new Error(text.supervisorRatingsApi2faLoadFailed);
+          setQrDataUrl(json.qrDataUrl);
+          setTotpSecret(json.secret || "");
+        }
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : text.supervisorRatingsApi2faLoadFailed);
       } finally {
@@ -344,6 +352,8 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
       }
       setChallenge(json.challenge);
       setTotpEnabled(true);
+      setQrDataUrl("");
+      setTotpSecret("");
       setTotpCode("");
 
       const statusRes = await fetch("/api/admin/ratings-api", {
@@ -424,13 +434,55 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
     }
   }
 
-  function requestRegenerate() {
+  function requestKeyUnlock() {
     setFreshKey("");
     setChallenge("");
     setTotpCode("");
     setError("");
+    setQrDataUrl("");
+    setTotpSecret("");
     setStep("2fa");
   }
+
+  async function regenerateAuthenticatorQr() {
+    setWorking(true);
+    setError("");
+    try {
+      const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+      if (!token) throw new Error(text.supervisorRatingsApiAuth);
+      const res = await fetch("/api/admin/ratings-2fa", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ action: "reset" })
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        qrDataUrl?: string;
+        secret?: string;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.qrDataUrl) {
+        throw new Error(json.error || text.supervisorRatingsApi2faResetFailed);
+      }
+      setTotpEnabled(false);
+      setQrDataUrl(json.qrDataUrl);
+      setTotpSecret(json.secret || "");
+      setChallenge("");
+      setTotpCode("");
+      setFreshKey("");
+      setStep("2fa");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : text.supervisorRatingsApi2faResetFailed);
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  const twoFaTitle = showSetupQr ? text.supervisorRatingsApi2faSetupTitle : text.supervisorRatingsApi2faTitle;
+  const twoFaDesc = showSetupQr ? text.supervisorRatingsApi2faSetupDesc : text.supervisorRatingsApi2faDesc;
 
   return (
     <div
@@ -452,10 +504,10 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
               ) : (
                 <KeyRound className="h-4 w-4 text-primary" aria-hidden />
               )}
-              {step === "2fa" ? text.supervisorRatingsApi2faTitle : text.supervisorRatingsApiTitle}
+              {step === "2fa" ? twoFaTitle : text.supervisorRatingsApiTitle}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {step === "2fa" ? text.supervisorRatingsApi2faDesc : text.supervisorRatingsApiDesc}
+              {step === "2fa" ? twoFaDesc : text.supervisorRatingsApiDesc}
             </p>
           </div>
           <Button type="button" variant="outline" size="icon" aria-label={text.cancel || "Close"} onClick={onClose}>
@@ -466,8 +518,10 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
         <div className="space-y-4 p-4">
           {step === "2fa" ? (
             <>
-              {loading ? <Skeleton className="mx-auto h-48 w-48 rounded-lg" /> : null}
-              {!loading && qrDataUrl ? (
+              {loading && showSetupQr ? <Skeleton className="mx-auto h-48 w-48 rounded-lg" /> : null}
+              {loading && !showSetupQr ? <Skeleton className="h-10 w-full" /> : null}
+
+              {!loading && showSetupQr ? (
                 <div className="flex flex-col items-center gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -532,7 +586,7 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
               <Button
                 type="button"
                 className="w-full sm:w-auto"
-                onClick={() => void (challenge ? generateKey() : requestRegenerate())}
+                onClick={() => void (challenge ? generateKey() : requestKeyUnlock())}
                 disabled={working}
               >
                 <KeyRound className="h-4 w-4" aria-hidden />
@@ -594,6 +648,20 @@ function RatingsApiDialog({ text, onClose }: { text: Record<string, string>; onC
                   onCopy={() => void copyText(cafeUrl, "cafe")}
                 />
                 <p className="text-xs text-muted-foreground">{text.supervisorRatingsApiAuthHint}</p>
+              </div>
+
+              <div className="border-t pt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => void regenerateAuthenticatorQr()}
+                  disabled={working}
+                >
+                  <ShieldCheck className="h-4 w-4" aria-hidden />
+                  {text.supervisorRatingsApi2faResetQr}
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">{text.supervisorRatingsApi2faResetHint}</p>
               </div>
             </>
           )}
