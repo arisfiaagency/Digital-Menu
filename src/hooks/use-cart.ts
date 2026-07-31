@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { menuItemCardImageUrl } from "@/lib/storage/menu-image";
 import { effectiveItemPrice } from "@/lib/utils/format";
 import type { Currency, LocalizedText, MenuItem, MenuVariant } from "@/types/models";
 
@@ -96,7 +97,7 @@ export function useCart() {
           variantId: variant?.id,
           name: item.name,
           variantName: variant?.name,
-          imageUrl: item.imageUrl,
+          imageUrl: menuItemCardImageUrl(item) || undefined,
           unitPrice,
           currency: item.currency,
           quantity: 1

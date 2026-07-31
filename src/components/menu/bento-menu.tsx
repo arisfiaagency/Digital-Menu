@@ -3,6 +3,7 @@
 import { Plus, Search, UtensilsCrossed } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { menuItemCardImageUrl } from "@/lib/storage/menu-image";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
@@ -98,7 +99,7 @@ function BentoTile({
     <article className="mb-3 break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-sm">
       {showImages ? (
         <button type="button" onClick={onOpen} aria-label={name} className={cn("relative block w-full overflow-hidden bg-muted", big ? "aspect-[3/4]" : "aspect-square")}>
-          <FallbackMenuImage src={item.imageUrl} alt={name} fallbackSrc={logoUrl} />
+          <FallbackMenuImage src={menuItemCardImageUrl(item)} alt={name} fallbackSrc={logoUrl} />
           <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" aria-hidden />
           {item.isFeatured ? (
             <span className="absolute start-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase text-primary-foreground">{translate(locale, "menu.featured")}</span>

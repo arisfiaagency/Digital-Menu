@@ -6,11 +6,16 @@ import { Button } from "@/components/ui/button";
 import { adminErrorText } from "@/components/admin/admin-preferences";
 import { cn } from "@/lib/utils/cn";
 import { hasStorageConfig } from "@/lib/storage";
-import { compressImage, uploadImage, validateImageFile } from "@/lib/storage";
+import { compressImage, uploadImage, uploadMenuItemImage, validateImageFile } from "@/lib/storage";
 import { isVideoMediaUrl } from "@/lib/storage/media-url";
 import type { ImageHistoryEntry } from "@/types/models";
 
-type UploadResult = { imageUrl: string; imagePath: string };
+type UploadResult = {
+  imageUrl: string;
+  imagePath: string;
+  thumbUrl?: string;
+  thumbPath?: string;
+};
 
 export function ImageUploadField({
   label,
@@ -24,6 +29,8 @@ export function ImageUploadField({
   accept = "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm",
   /** When true, existing remote media is not fetched until Preview is pressed. */
   deferPreview = false,
+  /** Menu items: auto-create a small card thumb alongside the full image. */
+  generateThumb = false,
   onUploaded,
   onRemoved,
   onRollback,
@@ -40,6 +47,7 @@ export function ImageUploadField({
   inputHint?: string;
   accept?: string;
   deferPreview?: boolean;
+  generateThumb?: boolean;
   onUploaded: (result: UploadResult) => void;
   onRemoved?: () => void;
   onRollback?: (entry: ImageHistoryEntry) => void;
@@ -86,8 +94,9 @@ export function ImageUploadField({
     setProgress(0);
     onUploadingChange?.(true);
     try {
-      const uploadFile = await compressImage(file);
-      const result = await uploadImage(path, uploadFile, setProgress, fileName);
+      const result = generateThumb
+        ? await uploadMenuItemImage(path, file, setProgress, fileName)
+        : await uploadImage(path, await compressImage(file), setProgress, fileName);
       setPreview(result.imageUrl);
       setPreviewIsVideo(isVideoMediaUrl(result.imageUrl));
       onUploaded(result);

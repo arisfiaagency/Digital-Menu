@@ -38,10 +38,17 @@ export function isVideoContentType(contentType: string) {
   return videoTypes.has(contentType);
 }
 
-// Longest edge we keep for menu photos. Cards render well under this; anything larger is wasted bytes
-// on a phone. 1600 keeps it crisp on retina while cutting big camera photos down hard.
-const MAX_IMAGE_DIMENSION = 1600;
+/** Full / detail view longest edge. */
+const MAX_FULL_DIMENSION = 1600;
+/** Menu card thumb longest edge — small on purpose to cut R2 traffic. */
+const MAX_THUMB_DIMENSION = 480;
 const RECOMPRESSIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+export type MenuImageVariants = {
+  full: File;
+  /** Static WebP for cards. Null for video (cards fall back to the full URL). */
+  thumb: File | null;
+};
 
 /**
  * Downscales oversized photos and re-encodes them to WebP before upload so menu images load fast on
@@ -50,11 +57,41 @@ const RECOMPRESSIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
  */
 export async function compressImage(file: File): Promise<File> {
   if (!RECOMPRESSIBLE_TYPES.has(file.type)) return file;
-  if (typeof document === "undefined" || typeof createImageBitmap !== "function") return file;
+  const encoded = await encodeWebpVariant(file, MAX_FULL_DIMENSION, 0.82);
+  if (!encoded || encoded.size >= file.size) return file;
+  return encoded;
+}
+
+/**
+ * One admin pick → full image for detail + small thumb for menu cards.
+ * GIFs keep the animated file as full and get a still WebP thumb (cards stay light).
+ * Videos are uploaded as-is with no separate thumb.
+ */
+export async function prepareMenuImageVariants(file: File): Promise<MenuImageVariants> {
+  if (videoTypes.has(file.type)) {
+    return { full: file, thumb: null };
+  }
+
+  if (file.type === "image/gif") {
+    const thumb = await encodeWebpVariant(file, MAX_THUMB_DIMENSION, 0.78);
+    return { full: file, thumb };
+  }
+
+  const encodedFull = await encodeWebpVariant(file, MAX_FULL_DIMENSION, 0.82);
+  // Keep the original when WebP wouldn't save bytes (tiny camera exports, etc.).
+  const full = encodedFull && encodedFull.size < file.size ? encodedFull : file;
+  // Prefer encoding the thumb from the already-resized full when it's WebP.
+  const thumbSource = full.type === "image/webp" ? full : file;
+  const thumb = await encodeWebpVariant(thumbSource, MAX_THUMB_DIMENSION, 0.78);
+  return { full, thumb };
+}
+
+async function encodeWebpVariant(file: File, maxDimension: number, quality: number): Promise<File | null> {
+  if (typeof document === "undefined" || typeof createImageBitmap !== "function") return null;
 
   try {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
 
@@ -64,18 +101,17 @@ export async function compressImage(file: File): Promise<File> {
     const context = canvas.getContext("2d");
     if (!context) {
       bitmap.close?.();
-      return file;
+      return null;
     }
     context.drawImage(bitmap, 0, 0, width, height);
     bitmap.close?.();
 
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
-    // Only swap in the compressed copy if it's actually smaller (already-tiny images won't benefit).
-    if (!blob || blob.size >= file.size) return file;
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+    if (!blob) return null;
 
-    const name = `${file.name.replace(/\.[^./]+$/, "")}.webp`;
+    const name = `${file.name.replace(/\.[^./]+$/, "")}${maxDimension <= MAX_THUMB_DIMENSION ? "-thumb" : ""}.webp`;
     return new File([blob], name, { type: "image/webp", lastModified: Date.now() });
   } catch {
-    return file;
+    return null;
   }
 }

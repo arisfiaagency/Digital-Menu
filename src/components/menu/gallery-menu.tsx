@@ -3,6 +3,7 @@
 import { Plus, Search, UtensilsCrossed } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { menuItemCardImageUrl } from "@/lib/storage/menu-image";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
@@ -138,7 +139,7 @@ function GalleryTile({
   return (
     <article className="group relative aspect-square overflow-hidden rounded-2xl bg-muted shadow-sm">
       <button type="button" onClick={onOpen} aria-label={name} className="absolute inset-0">
-        <FallbackMenuImage src={item.imageUrl} alt={name} fallbackSrc={logoUrl} />
+        <FallbackMenuImage src={menuItemCardImageUrl(item)} alt={name} fallbackSrc={logoUrl} />
         <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
       </button>
 

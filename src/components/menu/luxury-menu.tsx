@@ -11,6 +11,7 @@ import { LanguageGlobe } from "@/components/menu/language-globe";
 import { ThemeToggle } from "@/components/menu/theme-toggle";
 import { SocialLinks } from "@/components/menu/social-links";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { menuItemCardImageUrl } from "@/lib/storage/menu-image";
 import { isAnimatedMediaUrl } from "@/lib/storage/media-url";
 import { BrandCredit } from "@/components/brand-credit";
 import { MenuItemDetailModal } from "@/components/menu/menu-item-detail-modal";
@@ -343,7 +344,7 @@ function LuxuryItemRow({
   const description = localized(item.description, locale);
   const price = effectiveItemPrice(item);
   const hasDiscount = Boolean(item.discountPrice);
-  const animatedMedia = isAnimatedMediaUrl(item.imageUrl);
+  const animatedMedia = isAnimatedMediaUrl(menuItemCardImageUrl(item));
 
   return (
     <Reveal delay={Math.min(index, 6) * 60} className="group py-6 first:pt-0">
@@ -359,7 +360,7 @@ function LuxuryItemRow({
                 : "relative h-20 w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-border transition-transform duration-500 group-hover:scale-[1.03] sm:h-24 sm:w-24"
             }
           >
-            <FallbackMenuImage src={item.imageUrl} alt={name} fallbackSrc={logoUrl} />
+            <FallbackMenuImage src={menuItemCardImageUrl(item)} alt={name} fallbackSrc={logoUrl} />
           </button>
         ) : null}
         <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">

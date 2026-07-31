@@ -6,6 +6,7 @@ import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { menuItemCardImageUrl } from "@/lib/storage/menu-image";
 import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
@@ -106,7 +107,7 @@ function BrutalCard({
           aria-label={name}
           className="group relative aspect-square overflow-hidden border-b-2 border-foreground bg-muted"
         >
-          <FallbackMenuImage src={item.imageUrl} alt={name} />
+          <FallbackMenuImage src={menuItemCardImageUrl(item)} alt={name} />
           {item.isSoldOut ? (
             <span className="absolute inset-0 flex items-center justify-center bg-background/70 text-[10px] font-black uppercase tracking-widest text-destructive">
               {translate(locale, "menu.soldOut")}

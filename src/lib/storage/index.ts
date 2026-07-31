@@ -1,14 +1,25 @@
 import { getFirebaseAuth } from "@/lib/firebase/client";
-import { compressImage, imageExtensionForFile, validateImageFile } from "@/lib/storage/image-utils";
-import { resolveUploadFolder } from "@/lib/storage/paths";
+import {
+  compressImage,
+  imageExtensionForFile,
+  prepareMenuImageVariants,
+  validateImageFile
+} from "@/lib/storage/image-utils";
+import { resolveUploadFolder, slugifyImageFileBase } from "@/lib/storage/paths";
 import { isCloudflareR2Path } from "@/lib/storage/provider";
 import { bindClientSlug, getActiveClientSlug } from "@/lib/tenant";
 
-export { compressImage, validateImageFile, imageExtensionForFile } from "@/lib/storage/image-utils";
+export { compressImage, validateImageFile, imageExtensionForFile, prepareMenuImageVariants } from "@/lib/storage/image-utils";
+export { menuItemCardImageUrl, menuItemDetailImageUrl } from "@/lib/storage/menu-image";
 export { isCloudflareR2Path } from "@/lib/storage/provider";
 export { resolveUploadFolder, clientImageFolder, slugifyImageFileBase } from "@/lib/storage/paths";
 
-export type UploadImageResult = { imageUrl: string; imagePath: string };
+export type UploadImageResult = {
+  imageUrl: string;
+  imagePath: string;
+  thumbUrl?: string;
+  thumbPath?: string;
+};
 
 export function hasStorageConfig() {
   return Boolean(process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL);
@@ -74,6 +85,43 @@ export const uploadImage = bindClientSlug(async function uploadImage(
   });
 
   return result;
+});
+
+/**
+ * Menu-item upload: one file in → full + thumb in R2.
+ * Still photos → two WebPs; GIF → animated full + still thumb; video → full only.
+ */
+export const uploadMenuItemImage = bindClientSlug(async function uploadMenuItemImage(
+  path: string,
+  file: File,
+  onProgress?: (progress: number) => void,
+  fileName?: string
+): Promise<UploadImageResult> {
+  const error = validateImageFile(file);
+  if (error) throw new Error(error);
+  if (!hasStorageConfig()) throw new Error("Cloudflare R2 is not configured.");
+
+  const variants = await prepareMenuImageVariants(file);
+  const base = slugifyImageFileBase(fileName || "menu-item");
+
+  const full = await uploadImage(path, variants.full, (progress) => {
+    onProgress?.(variants.thumb ? Math.round(progress * 0.55) : progress);
+  }, base);
+
+  if (!variants.thumb) {
+    onProgress?.(100);
+    return full;
+  }
+
+  const thumb = await uploadImage(path, variants.thumb, (progress) => {
+    onProgress?.(55 + Math.round(progress * 0.45));
+  }, `${base}-thumb`);
+
+  return {
+    ...full,
+    thumbUrl: thumb.imageUrl,
+    thumbPath: thumb.imagePath
+  };
 });
 
 /** Deletes an R2 image (`r2/…`). Non-R2 legacy paths are skipped. */

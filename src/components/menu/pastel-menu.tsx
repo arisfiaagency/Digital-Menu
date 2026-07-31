@@ -3,6 +3,7 @@
 import { Plus, Search, UtensilsCrossed } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { menuItemCardImageUrl } from "@/lib/storage/menu-image";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
@@ -98,7 +99,7 @@ function PastelCard({
     <article className="flex items-center gap-3 rounded-[1.75rem] border border-primary/10 bg-card/80 p-3 shadow-sm">
       {showImages ? (
         <button type="button" onClick={onOpen} aria-label={name} className="h-20 w-20 shrink-0 overflow-hidden rounded-3xl bg-muted">
-          <FallbackMenuImage src={item.imageUrl} alt={name} fallbackSrc={logoUrl} />
+          <FallbackMenuImage src={menuItemCardImageUrl(item)} alt={name} fallbackSrc={logoUrl} />
         </button>
       ) : null}
       <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-start">

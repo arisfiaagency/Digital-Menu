@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Minus, Plus, Search, UtensilsCrossed } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { menuItemCardImageUrl } from "@/lib/storage/menu-image";
 import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { useMenuController, MenuTopControls, MenuOverlays } from "@/components/menu/menu-shell";
@@ -197,7 +198,7 @@ function ModernCard({
     <article className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-md">
       {showImages ? (
         <button type="button" onClick={onOpen} aria-label={name} className="relative aspect-square overflow-hidden bg-muted">
-          <FallbackMenuImage src={item.imageUrl} alt={name} fallbackSrc={logoUrl} />
+          <FallbackMenuImage src={menuItemCardImageUrl(item)} alt={name} fallbackSrc={logoUrl} />
           {item.isSoldOut ? (
             <span className="absolute inset-0 flex items-center justify-center bg-background/60 text-xs font-bold uppercase tracking-wide text-destructive">
               {translate(locale, "menu.soldOut")}

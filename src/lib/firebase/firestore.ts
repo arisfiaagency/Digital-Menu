@@ -657,7 +657,9 @@ export const reorderMenuItems = bindClientSlug(async function reorderMenuItems(u
 async function pruneExpiredImageHistory(item: MenuItem, persist: boolean) {
   const expired = (item.imageHistory || []).filter((entry) => isExpired(entry.expiresAt));
   if (!expired.length) return;
-  await Promise.allSettled(expired.map((entry) => removeImage(entry.imagePath)));
+  await Promise.allSettled(
+    expired.flatMap((entry) => [removeImage(entry.imagePath), removeImage(entry.thumbPath)])
+  );
   if (persist && item.id) {
     const db = getFirebaseDb();
     if (db) await updateDoc(tenantDoc(db, "menuItems", item.id), { imageHistory: withActiveImageHistory(item).imageHistory || [] });

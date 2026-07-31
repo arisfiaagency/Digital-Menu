@@ -103,7 +103,7 @@ export async function listAuditLogs(max = 400, forClientSlug?: string): Promise<
 // --- diffing ------------------------------------------------------------
 
 // Internal/technical keys never worth showing in the activity log.
-const IGNORED_FIELDS = new Set(["id", "createdAt", "updatedAt", "imagePath", "logoPath", "coverImagePath"]);
+const IGNORED_FIELDS = new Set(["id", "createdAt", "updatedAt", "imagePath", "thumbPath", "logoPath", "coverImagePath"]);
 
 // Compare two versions of an entity and return the human-visible field changes.
 // Nested localized objects flatten to `name.en`, `name.ar`… so even a single

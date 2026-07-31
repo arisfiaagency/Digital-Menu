@@ -34,6 +34,8 @@ const imageHistoryEntrySchema = z.object({
   id: z.string().min(1),
   imageUrl: z.string().url(),
   imagePath: z.string().min(1),
+  thumbUrl: z.string().url().optional().or(z.literal("")),
+  thumbPath: z.string().optional(),
   createdAt: z.string().min(1),
   expiresAt: z.string().min(1)
 });
@@ -47,6 +49,8 @@ export const menuItemSchema = z.object({
   flavor: z.string().optional().default(""),
   imageUrl: z.string().url().optional().or(z.literal("")),
   imagePath: z.string().optional(),
+  thumbUrl: z.string().url().optional().or(z.literal("")),
+  thumbPath: z.string().optional(),
   imageHistory: z.array(imageHistoryEntrySchema).default([]),
   basePrice: z.coerce.number().int().min(0),
   discountPrice: z.coerce.number().int().min(0).optional(),

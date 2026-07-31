@@ -29,6 +29,9 @@ export type ImageHistoryEntry = {
   id: string;
   imageUrl: string;
   imagePath: string;
+  /** Optional card-sized companion saved with newer uploads. */
+  thumbUrl?: string;
+  thumbPath?: string;
   createdAt: string;
   expiresAt: string;
 };
@@ -42,6 +45,9 @@ export type MenuItem = {
   flavor?: string;
   imageUrl?: string;
   imagePath?: string;
+  /** Small WebP for menu cards; falls back to imageUrl when missing (legacy items). */
+  thumbUrl?: string;
+  thumbPath?: string;
   imageHistory?: ImageHistoryEntry[];
   basePrice: number;
   discountPrice?: number;

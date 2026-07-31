@@ -3,6 +3,7 @@
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { menuItemDetailImageUrl } from "@/lib/storage/menu-image";
 import { QuantityStepper } from "@/components/menu/cart";
 import { localized, translate } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney } from "@/lib/utils/format";
@@ -71,7 +72,7 @@ export function MenuItemDetailModal({
 
           {settings.showImages ? (
             <div className="group relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10 sm:aspect-[16/10]">
-              <FallbackMenuImage src={item.imageUrl} alt={title} fallbackSrc={logoUrl} />
+              <FallbackMenuImage src={menuItemDetailImageUrl(item)} alt={title} fallbackSrc={logoUrl} />
               {item.isSoldOut ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/65 backdrop-blur-[2px]">
                   <span className="rounded-full border border-destructive bg-background/90 px-5 py-2 text-base font-semibold text-destructive">

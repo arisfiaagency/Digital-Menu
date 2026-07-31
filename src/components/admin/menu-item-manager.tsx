@@ -42,6 +42,8 @@ const emptyItem: MenuItemFormData = {
   flavor: "",
   imageUrl: "",
   imagePath: "",
+  thumbUrl: "",
+  thumbPath: "",
   imageHistory: [],
   basePrice: 0,
   discountPrice: undefined,
@@ -196,6 +198,8 @@ export function MenuItemManager() {
       },
       imageUrl: item.imageUrl || "",
       imagePath: item.imagePath || "",
+      thumbUrl: item.thumbUrl || "",
+      thumbPath: item.thumbPath || "",
       imageHistory: activeImageHistory(item.imageHistory)
     });
   }
@@ -849,6 +853,7 @@ function MenuItemEditorForm({
             text={text}
             path="menu-items"
             deferPreview
+            generateThumb
             fileName={
               form.watch("name.en") ||
               form.watch("name.ckb") ||
@@ -863,21 +868,29 @@ function MenuItemEditorForm({
               form.setValue("imageHistory", addCurrentImageToHistory(form.getValues()), { shouldDirty: true });
               form.setValue("imageUrl", result.imageUrl, { shouldDirty: true, shouldValidate: true });
               form.setValue("imagePath", result.imagePath, { shouldDirty: true });
+              form.setValue("thumbUrl", result.thumbUrl || "", { shouldDirty: true });
+              form.setValue("thumbPath", result.thumbPath || "", { shouldDirty: true });
             }}
             onRemoved={() => {
               form.setValue("imageHistory", addCurrentImageToHistory(form.getValues()), { shouldDirty: true });
               form.setValue("imageUrl", "", { shouldDirty: true, shouldValidate: true });
               form.setValue("imagePath", "", { shouldDirty: true });
+              form.setValue("thumbUrl", "", { shouldDirty: true });
+              form.setValue("thumbPath", "", { shouldDirty: true });
             }}
             onRollback={(entry) => {
               const values = form.getValues();
               const history = addCurrentImageToHistory({
                 imageUrl: values.imageUrl,
                 imagePath: values.imagePath,
+                thumbUrl: values.thumbUrl,
+                thumbPath: values.thumbPath,
                 imageHistory: (values.imageHistory || []).filter((item) => item.id !== entry.id)
               });
               form.setValue("imageUrl", entry.imageUrl, { shouldDirty: true, shouldValidate: true });
               form.setValue("imagePath", entry.imagePath, { shouldDirty: true });
+              form.setValue("thumbUrl", entry.thumbUrl || "", { shouldDirty: true });
+              form.setValue("thumbPath", entry.thumbPath || "", { shouldDirty: true });
               form.setValue("imageHistory", history, { shouldDirty: true });
             }}
             onUploadingChange={onUploadingChange}
@@ -1083,10 +1096,14 @@ function nextDisplayOrder(entries: { displayOrder: number }[]) {
 function addCurrentImageToHistory({
   imageUrl,
   imagePath,
+  thumbUrl,
+  thumbPath,
   imageHistory = []
 }: {
   imageUrl?: string;
   imagePath?: string;
+  thumbUrl?: string;
+  thumbPath?: string;
   imageHistory?: ImageHistoryEntry[];
 }) {
   const active = activeImageHistory(imageHistory);
@@ -1096,6 +1113,8 @@ function addCurrentImageToHistory({
     id: crypto.randomUUID(),
     imageUrl,
     imagePath,
+    thumbUrl: thumbUrl || undefined,
+    thumbPath: thumbPath || undefined,
     createdAt: createdAt.toISOString(),
     expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
   };

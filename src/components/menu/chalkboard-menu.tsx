@@ -7,6 +7,7 @@ import { OpenStatusBadge } from "@/components/menu/open-status-badge";
 import { SocialLinks } from "@/components/menu/social-links";
 import { QuantityStepper } from "@/components/menu/cart";
 import { FallbackMenuImage } from "@/components/menu/fallback-menu-image";
+import { menuItemCardImageUrl } from "@/lib/storage/menu-image";
 import { useMenuController, MenuTopControls, MenuOverlays, useForcedDark } from "@/components/menu/menu-shell";
 import { BrandCredit } from "@/components/brand-credit";
 import type { MenuDesignProps } from "@/components/menu/menu-types";
@@ -160,7 +161,7 @@ function ChalkCard({
           aria-label={name}
           className="group relative aspect-[4/3] overflow-hidden bg-black/20 ring-1 ring-white/15"
         >
-          <FallbackMenuImage src={item.imageUrl} alt={name} />
+          <FallbackMenuImage src={menuItemCardImageUrl(item)} alt={name} />
           {item.isSoldOut ? (
             <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs uppercase tracking-widest text-rose-300">
               {translate(locale, "menu.soldOut")}
