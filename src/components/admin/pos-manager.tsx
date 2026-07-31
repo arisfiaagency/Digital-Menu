@@ -67,7 +67,6 @@ import { printThermalTicket } from "@/lib/thermal-print";
 import { localized } from "@/lib/i18n/config";
 import type { LocaleDirection } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils/cn";
-import { isVideoMediaUrl } from "@/lib/storage/media-url";
 import { formatMoney, normalizeSearch, roundCashTotal } from "@/lib/utils/format";
 import { useTenant } from "@/components/tenant-provider";
 import type {
@@ -1107,21 +1106,19 @@ export function PosManager() {
                       </button>
                     );
                     const header = (
-                      <div className="flex items-start gap-3">
-                        <MenuPickerThumb src={item.imageUrl} alt={title} />
-                        <span className="flex min-w-0 flex-1 items-start justify-between gap-2">
-                          <span className="min-w-0">
+                      <div className="flex min-w-0 items-start justify-between gap-2">
+                        <span className="min-w-0">
                           <span className="flex items-center gap-1.5">
                             {item.isPosPinned ? (
                               <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">
                                 {text.posPinnedSection}
                               </span>
                             ) : null}
-                          <span
-                            dir={textDir}
-                            className="line-clamp-2 block font-semibold">
-                            {title}
-                          </span>
+                            <span
+                              dir={textDir}
+                              className="line-clamp-2 block font-semibold">
+                              {title}
+                            </span>
                           </span>
                           <span
                             dir={textDir}
@@ -1134,12 +1131,11 @@ export function PosManager() {
                               text.noCategory,
                             )}
                           </span>
-                          </span>
-                          <span className="flex shrink-0 flex-col items-end gap-1">
-                            {pinControl}
-                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                              {variants.length ? `${variants.length} ${text.variants}` : formatMoney(price, item.currency, locale)}
-                            </span>
+                        </span>
+                        <span className="flex shrink-0 flex-col items-end gap-1">
+                          {pinControl}
+                          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                            {variants.length ? `${variants.length} ${text.variants}` : formatMoney(price, item.currency, locale)}
                           </span>
                         </span>
                       </div>
@@ -2971,56 +2967,6 @@ function mergeOrderLines(
     }
   }
   return lines;
-}
-
-// Square thumbnail for the menu picker. Real uploaded photos fill the tile
-// (object-cover); items without an image fall back to the default cafe logo,
-// matching the catalog cards. Video uses <video>; GIFs stay on <img>.
-const POS_THUMB_FALLBACK = "/site-icon.png";
-
-function MenuPickerThumb({ src, alt }: { src?: string; alt: string }) {
-  const [imageSrc, setImageSrc] = useState(src || POS_THUMB_FALLBACK);
-  const [useVideo, setUseVideo] = useState(() => isVideoMediaUrl(src));
-  const isFallback = imageSrc === POS_THUMB_FALLBACK;
-
-  useEffect(() => {
-    setImageSrc(src || POS_THUMB_FALLBACK);
-    setUseVideo(isVideoMediaUrl(src));
-  }, [src]);
-
-  return (
-    <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-gradient-to-br from-accent via-primary/5 to-secondary/10">
-      {useVideo && !isFallback ? (
-        <video
-          src={imageSrc}
-          muted
-          autoPlay
-          loop
-          playsInline
-          preload="metadata"
-          aria-label={alt}
-          className="h-full w-full object-cover"
-          onError={() => {
-            setUseVideo(false);
-            setImageSrc(POS_THUMB_FALLBACK);
-          }}
-        />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageSrc}
-          alt={alt}
-          loading="eager"
-          decoding="sync"
-          className={cn(
-            "h-full w-full object-cover",
-            isFallback && "scale-90 rounded-full p-1.5",
-          )}
-          onError={() => setImageSrc(POS_THUMB_FALLBACK)}
-        />
-      )}
-    </span>
-  );
 }
 
 // Coffee cup with big billowing vapor — used only on occupied tables. Color
