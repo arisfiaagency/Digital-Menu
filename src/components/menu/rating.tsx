@@ -76,6 +76,7 @@ function RatingDialog({
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [mounted, setMounted] = useState(false);
   const [limited, setLimited] = useState(false);
@@ -104,7 +105,7 @@ function RatingDialog({
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, rating, comment, name })
+        body: JSON.stringify({ slug, rating, comment, name, email })
       });
       const json = (await res.json()) as { ok?: boolean };
       if (!res.ok || !json.ok) throw new Error("failed");
@@ -202,6 +203,17 @@ function RatingDialog({
                 onChange={(e) => setName(e.target.value)}
                 maxLength={60}
                 placeholder={translate(locale, "menu.ratingName")}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              />
+              <input
+                dir="ltr"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                maxLength={120}
+                placeholder={translate(locale, "menu.ratingEmail")}
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
 

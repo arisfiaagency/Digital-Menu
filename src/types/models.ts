@@ -471,6 +471,8 @@ export type Review = {
   rating: number;
   comment?: string;
   name?: string;
+  /** Optional contact email if the customer entered one. */
+  email?: string;
   at?: string;
   createdAt?: Timestamp;
 };

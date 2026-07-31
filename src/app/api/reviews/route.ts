@@ -10,12 +10,21 @@ import { normalizeClientSlug } from "@/lib/tenant";
 // Firestore rules closed to anonymous writes.
 const MAX_COMMENT = 500;
 const MAX_NAME = 60;
+const MAX_EMAIL = 120;
+
+function normalizeReviewEmail(value: string) {
+  const email = value.trim().slice(0, MAX_EMAIL);
+  if (!email) return "";
+  // Lightweight check — keep optional contact field lenient.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  return email.toLowerCase();
+}
 
 export async function POST(request: NextRequest) {
   const limited = await rateLimit(request, "reviews", { limit: 8, windowMs: 15 * 60 * 1000 });
   if (limited) return limited;
 
-  let body: { slug?: unknown; rating?: unknown; comment?: unknown; name?: unknown };
+  let body: { slug?: unknown; rating?: unknown; comment?: unknown; name?: unknown; email?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -26,12 +35,17 @@ export async function POST(request: NextRequest) {
   const rating = Number(body.rating);
   const comment = typeof body.comment === "string" ? body.comment.trim().slice(0, MAX_COMMENT) : "";
   const name = typeof body.name === "string" ? body.name.trim().slice(0, MAX_NAME) : "";
+  const emailRaw = typeof body.email === "string" ? body.email : "";
+  const email = normalizeReviewEmail(emailRaw);
 
   if (!slug) {
     return NextResponse.json({ ok: false, error: "Missing cafe." }, { status: 400 });
   }
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     return NextResponse.json({ ok: false, error: "Rating must be 1–5." }, { status: 400 });
+  }
+  if (email === null) {
+    return NextResponse.json({ ok: false, error: "Enter a valid email or leave it blank." }, { status: 400 });
   }
 
   const db = getAdminDb();
@@ -58,6 +72,7 @@ export async function POST(request: NextRequest) {
         rating,
         comment: comment || null,
         name: name || null,
+        email: email || null,
         at: new Date().toISOString(),
         createdAt: FieldValue.serverTimestamp()
       });

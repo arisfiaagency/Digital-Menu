@@ -26,7 +26,7 @@ import { getFirebaseDb } from "@/lib/firebase/client";
 import { buildChanges, logAudit } from "@/lib/firebase/audit";
 import { removeImage } from "@/lib/storage";
 import { sanitizeSocialLinks } from "@/lib/social-urls";
-import { bindClientSlug, getActiveClientSlug, isReservedClientSlug, normalizeClientSlug } from "@/lib/tenant";
+import { bindClientSlug, getActiveClientSlug, isReservedClientSlug, normalizeClientSlug, runWithClientSlug } from "@/lib/tenant";
 import { extendSubscriptionExpiry } from "@/lib/client-access";
 import { slugify } from "@/lib/utils/format";
 import type { AdminPermissions, AdminProfile, AdminRole, AppData, CashShift, Category, ClientAccount, Expense, MenuItem, OptionalLocalizedText, PlatformPayment, PosCompletedOrder, PosShape, PosShapeKind, PosState, PosTableArea, PosTableShape, Review } from "@/types/models";
@@ -118,6 +118,13 @@ export const listReviews = bindClientSlug(async function listReviews(max: number
   const snap = await getDocs(query(tenantCollection(db, "reviews"), orderBy("createdAt", "desc"), limit(max)));
   return snap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<Review, "id">) }));
 });
+
+/** Supervisor: load reviews for any cafe by slug (platform full admin). */
+export async function listClientReviews(slug: string, max: number = 500): Promise<Review[]> {
+  const normalized = normalizeClientSlug(slug);
+  if (!normalized) return [];
+  return runWithClientSlug(normalized, () => listReviews(max));
+}
 
 export const getClient = bindClientSlug(async function getClient(slug: string): Promise<ClientAccount | null> {
   const db = getFirebaseDb();

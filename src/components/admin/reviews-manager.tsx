@@ -97,9 +97,14 @@ export function ReviewsManager() {
                     <span className="text-xs text-muted-foreground">{formatDate(review.at, locale)}</span>
                   </div>
                   {review.comment ? <p className="text-sm text-foreground">{review.comment}</p> : null}
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {review.name?.trim() || text.reviewsAnonymous}
-                  </p>
+                  <div className="space-y-0.5 text-xs font-medium text-muted-foreground">
+                    <p>{review.name?.trim() || text.reviewsAnonymous}</p>
+                    {review.email?.trim() ? (
+                      <p dir="ltr" className="truncate font-normal">
+                        {review.email.trim()}
+                      </p>
+                    ) : null}
+                  </div>
                 </CardContent>
               </Card>
             ))}

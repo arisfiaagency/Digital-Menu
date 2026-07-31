@@ -5,6 +5,7 @@
     "rateTitle": "Rate your experience",
     "ratingComment": "Add a comment (optional)",
     "ratingName": "Your name (optional)",
+    "ratingEmail": "Email (optional)",
     "ratingSubmit": "Submit rating",
     "ratingSending": "Sending…",
     "ratingThanks": "Thanks for your feedback!",

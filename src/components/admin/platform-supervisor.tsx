@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   ShieldCheck,
+  Star,
   X,
   type LucideIcon
 } from "lucide-react";
@@ -20,6 +21,7 @@ import { AdminPreferences, useAdminLocale } from "@/components/admin/admin-prefe
 import { ClientsPanel, defaultBilling, defaultSubscription, defaultTrial } from "@/components/admin/clients-panel";
 import { PaymentReports } from "@/components/admin/payment-reports";
 import { SupervisorDashboard } from "@/components/admin/supervisor-dashboard";
+import { SupervisorRatings } from "@/components/admin/supervisor-ratings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -42,17 +44,19 @@ import type {
   MenuDesign
 } from "@/types/models";
 
-type SupervisorTab = "dashboard" | "clients" | "payments";
+type SupervisorTab = "dashboard" | "clients" | "payments" | "ratings";
 
 const supervisorNav: { id: SupervisorTab; href: string; labelKey: string; icon: LucideIcon }[] = [
   { id: "dashboard", href: "/admin/dashboard", labelKey: "supervisorDashboard", icon: BarChart3 },
   { id: "clients", href: "/admin/clients", labelKey: "supervisorClients", icon: Building2 },
-  { id: "payments", href: "/admin/payments", labelKey: "supervisorPayments", icon: CreditCard }
+  { id: "payments", href: "/admin/payments", labelKey: "supervisorPayments", icon: CreditCard },
+  { id: "ratings", href: "/admin/ratings", labelKey: "supervisorRatings", icon: Star }
 ];
 
 function tabFromPath(pathname: string, fallback: SupervisorTab): SupervisorTab {
   if (pathname.startsWith("/admin/dashboard")) return "dashboard";
   if (pathname.startsWith("/admin/payments")) return "payments";
+  if (pathname.startsWith("/admin/ratings")) return "ratings";
   if (pathname.startsWith("/admin/clients")) return "clients";
   if (pathname === "/admin" || pathname === "/admin/") return "dashboard";
   return fallback;
@@ -420,10 +424,16 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
                 ? text.supervisorDashboard
                 : tab === "payments"
                   ? text.supervisorPayments
-                  : text.supervisorClients}
+                  : tab === "ratings"
+                    ? text.supervisorRatings
+                    : text.supervisorClients}
             </h1>
             <p dir={textDir} className="text-muted-foreground">
-              {tab === "dashboard" ? text.supervisorDashboardDesc : text.supervisorDesc}
+              {tab === "dashboard"
+                ? text.supervisorDashboardDesc
+                : tab === "ratings"
+                  ? text.supervisorRatingsDesc
+                  : text.supervisorDesc}
             </p>
           </header>
 
@@ -437,6 +447,8 @@ export function PlatformSupervisor({ initialTab = "clients" }: { initialTab?: Su
           {tab === "dashboard" ? <SupervisorDashboard /> : null}
 
           {tab === "payments" ? <PaymentReports /> : null}
+
+          {tab === "ratings" ? <SupervisorRatings /> : null}
 
           {tab === "clients" ? (
             <ClientsPanel
@@ -568,7 +580,9 @@ function SupervisorNavigation({
               ? pathname.startsWith("/admin/dashboard") || pathname === "/admin" || pathname === "/admin/"
               : entry.id === "payments"
                 ? pathname.startsWith("/admin/payments")
-                : pathname.startsWith("/admin/clients");
+                : entry.id === "ratings"
+                  ? pathname.startsWith("/admin/ratings")
+                  : pathname.startsWith("/admin/clients");
           return (
             <Link
               key={entry.href}
