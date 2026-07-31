@@ -266,10 +266,10 @@ service cloud.firestore {
       }
 
       match /reviews/{reviewId} {
-        // Customer ratings/reviews: cafe staff read them in the admin. Public
-        // submissions go through the Admin-SDK /api/reviews route (which also
+        // Cafe staff + platform supervisor (including platform employees) may read.
+        // Public submissions go through the Admin-SDK /api/reviews route (which also
         // updates the aggregate on the client doc), so no client-side writes.
-        allow read: if isTenantAdmin(clientId);
+        allow read: if isPlatformAdmin() || isTenantAdmin(clientId);
         allow create, update, delete: if false;
       }
     }

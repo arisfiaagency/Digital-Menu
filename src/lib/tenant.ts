@@ -49,7 +49,10 @@ export async function runWithClientSlug<T>(
   slugOrFn: string | null | (() => Promise<T>),
   maybeFn?: () => Promise<T>
 ): Promise<T> {
-  const slug = typeof slugOrFn === "function" ? activeClientSlug : slugOrFn;
+  // When nesting (e.g. runWithClientSlug(slug, () => listReviews())), inherit the
+  // active bound slug from the stack — not only the module-level activeClientSlug,
+  // which stays null on platform /admin routes and would wipe the tenant path.
+  const slug = typeof slugOrFn === "function" ? getActiveClientSlug() : slugOrFn;
   const fn = typeof slugOrFn === "function" ? slugOrFn : maybeFn!;
   boundSlugStack.push(slug);
   try {
