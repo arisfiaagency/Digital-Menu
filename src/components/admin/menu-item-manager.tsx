@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, type FieldPath, type UseFormReturn } from "react-hook-form";
 import type { z } from "zod";
-import { CheckCircle2, ChevronDown, CircleOff, ImageOff, ListOrdered, Pencil, PlusCircle, Trash2, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, CircleOff, Eye, ImageOff, ListOrdered, Pencil, PlusCircle, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { deleteMenuItem, getAdminAppData, reorderMenuItems, saveMenuItem, update
 import { localized } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils/cn";
 import { focusFirstInvalidField } from "@/lib/utils/focus-invalid-field";
+import { isVideoMediaUrl } from "@/lib/storage/media-url";
 import { formatMoney, normalizeSearch } from "@/lib/utils/format";
 import { menuItemSchema } from "@/lib/validation/schemas";
 import type { AppData, Category, Currency, ImageHistoryEntry, Locale, MenuItem } from "@/types/models";
@@ -76,6 +77,7 @@ export function MenuItemManager() {
   const [error, setError] = useState("");
   const [statusSavingIds, setStatusSavingIds] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<MenuItem | null>(null);
+  const [imagePreviewItem, setImagePreviewItem] = useState<MenuItem | null>(null);
   const [handledLinkedCategory, setHandledLinkedCategory] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [orderedItems, setOrderedItems] = useState<MenuItem[]>([]);
@@ -404,22 +406,10 @@ export function MenuItemManager() {
                   positionLabel={text.position}
                   dir={textDir}
                   renderRow={(item) => (
-                    <>
-                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border bg-muted">
-                        {item.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                            <ImageOff className="h-4 w-4" aria-hidden />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold">{localized(item.name, locale, item.name.en)}</p>
-                        <p className="truncate text-xs text-muted-foreground">{formatMoney(item.basePrice, item.currency, locale)}</p>
-                      </div>
-                    </>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{localized(item.name, locale, item.name.en)}</p>
+                      <p className="truncate text-xs text-muted-foreground">{formatMoney(item.basePrice, item.currency, locale)}</p>
+                    </div>
                   )}
                 />
               </div>
@@ -484,54 +474,61 @@ export function MenuItemManager() {
                     aria-expanded={expanded}
                     onClick={() => setExpandedItemId((current) => (current === item.id ? null : item.id))}
                   >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-muted">
-                        {item.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                            <ImageOff className="h-5 w-5" aria-hidden />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold">{localized(item.name, locale, item.name.en)}</p>
-                          <Badge className={cn(item.isAvailable && !item.isSoldOut ? "border-primary/30 bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
-                            {item.isSoldOut ? text.soldOut : item.isAvailable ? text.available : text.inactive}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold">{localized(item.name, locale, item.name.en)}</p>
+                        <Badge className={cn(item.isAvailable && !item.isSoldOut ? "border-primary/30 bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
+                          {item.isSoldOut ? text.soldOut : item.isAvailable ? text.available : text.inactive}
+                        </Badge>
+                        {item.isFeatured ? <Badge>{text.featured}</Badge> : null}
+                        {item.isPosPinned ? <Badge>{text.posPinned}</Badge> : null}
+                        {item.isPopular ? <Badge>{text.popular}</Badge> : null}
+                        {item.isNew ? <Badge>{text.isNew}</Badge> : null}
+                        {missingTranslationCount ? (
+                          <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                            {text.missingTranslations}
                           </Badge>
-                          {item.isFeatured ? <Badge>{text.featured}</Badge> : null}
-                          {item.isPosPinned ? <Badge>{text.posPinned}</Badge> : null}
-                          {item.isPopular ? <Badge>{text.popular}</Badge> : null}
-                          {item.isNew ? <Badge>{text.isNew}</Badge> : null}
-                          {missingTranslationCount ? (
-                            <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
-                              {text.missingTranslations}
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <p className="mt-1 truncate text-sm text-muted-foreground">
-                          <span lang="en">{item.name.en}</span> / <span lang="ar">{item.name.ar}</span> / <span lang="ckb">{item.name.ckb}</span>
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                          <span className="rounded-full border bg-background px-2 py-0.5">{categoryName}</span>
-                          <span className="rounded-full border bg-background px-2 py-0.5">{formatMoney(item.basePrice, item.currency, locale)}</span>
-                        </div>
+                        ) : null}
+                        {!item.imageUrl ? (
+                          <Badge className="bg-muted text-muted-foreground">
+                            <ImageOff className="me-1 h-3 w-3" aria-hidden />
+                            {text.missingImages}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">
+                        <span lang="en">{item.name.en}</span> / <span lang="ar">{item.name.ar}</span> / <span lang="ckb">{item.name.ckb}</span>
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span className="rounded-full border bg-background px-2 py-0.5">{categoryName}</span>
+                        <span className="rounded-full border bg-background px-2 py-0.5">{formatMoney(item.basePrice, item.currency, locale)}</span>
                       </div>
                     </div>
                     <ChevronDown className={cn("h-5 w-5 shrink-0 text-muted-foreground transition-transform", expanded && "rotate-180")} aria-hidden />
                   </button>
-                  <div className="flex shrink-0 items-center gap-2 rounded-md border bg-background px-3 py-2">
-                    <span className={cn("text-xs font-semibold", item.isAvailable ? "text-primary" : "text-muted-foreground")}>
-                      {item.isAvailable ? text.available : text.inactive}
-                    </span>
-                    <Switch
-                      label={`${text.available}: ${localized(item.name, locale, item.name.en)}`}
-                      checked={item.isAvailable}
-                      disabled={statusSaving}
-                      onCheckedChange={(checked) => toggleItemAvailable(item, checked)}
-                    />
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label={text.preview}
+                      title={text.preview}
+                      disabled={!item.imageUrl}
+                      onClick={() => setImagePreviewItem(item)}
+                    >
+                      <Eye className="h-4 w-4" aria-hidden />
+                    </Button>
+                    <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2">
+                      <span className={cn("text-xs font-semibold", item.isAvailable ? "text-primary" : "text-muted-foreground")}>
+                        {item.isAvailable ? text.available : text.inactive}
+                      </span>
+                      <Switch
+                        label={`${text.available}: ${localized(item.name, locale, item.name.en)}`}
+                        checked={item.isAvailable}
+                        disabled={statusSaving}
+                        onCheckedChange={(checked) => toggleItemAvailable(item, checked)}
+                      />
+                    </div>
                   </div>
                 </div>
                 {expanded ? (
@@ -554,6 +551,17 @@ export function MenuItemManager() {
                       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
                         <MenuItemAdminPreview item={item} locale={locale} text={text} />
                         <div className="flex flex-wrap content-start gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={text.preview}
+                            title={text.preview}
+                            disabled={!item.imageUrl}
+                            onClick={() => setImagePreviewItem(item)}
+                          >
+                            <Eye className="h-4 w-4" aria-hidden />
+                          </Button>
                           <Button type="button" variant="outline" size="icon" aria-label={text.edit} title={text.edit} onClick={() => edit(item)}>
                             <Pencil className="h-4 w-4" aria-hidden />
                           </Button>
@@ -596,6 +604,55 @@ export function MenuItemManager() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {imagePreviewItem?.imageUrl ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={text.preview}
+          onClick={() => setImagePreviewItem(null)}
+        >
+          <div
+            className="relative w-full max-w-lg overflow-hidden rounded-xl border bg-card shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+              <p className="truncate font-semibold">
+                {localized(imagePreviewItem.name, locale, imagePreviewItem.name.en)}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={text.cancel}
+                onClick={() => setImagePreviewItem(null)}
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </Button>
+            </div>
+            <div className="relative aspect-[5/4] bg-muted">
+              {isVideoMediaUrl(imagePreviewItem.imageUrl) ? (
+                <video
+                  src={imagePreviewItem.imageUrl}
+                  muted
+                  autoPlay
+                  loop
+                  playsInline
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imagePreviewItem.imageUrl}
+                  alt={localized(imagePreviewItem.name, locale, imagePreviewItem.name.en)}
+                  className="h-full w-full object-cover"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -791,6 +848,7 @@ function MenuItemEditorForm({
             label={text.itemImage}
             text={text}
             path="menu-items"
+            deferPreview
             fileName={
               form.watch("name.en") ||
               form.watch("name.ckb") ||
@@ -885,18 +943,44 @@ function MenuItemAdminPreview({
   const title = localized(item.name, locale, item.name.en || text.menuItem);
   const description = localized(item.description, locale);
   const hasDiscount = typeof item.discountPrice === "number" && item.discountPrice > 0;
+  // Don't fetch R2 media until the admin asks — list pages with many items stay light.
+  const [showImage, setShowImage] = useState(false);
+
+  useEffect(() => {
+    setShowImage(false);
+  }, [item.imageUrl]);
 
   return (
     <div className="rounded-lg border bg-muted/25 p-3">
       <p className="mb-3 text-sm font-medium">{text.preview}</p>
       <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
         <div className="relative aspect-[5/4] bg-gradient-to-br from-accent via-primary/10 to-secondary/10">
-          {item.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.imageUrl} alt={title} className="h-full w-full object-cover" />
+          {item.imageUrl && showImage ? (
+            isVideoMediaUrl(item.imageUrl) ? (
+              <video
+                src={item.imageUrl}
+                muted
+                autoPlay
+                loop
+                playsInline
+                aria-label={title}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.imageUrl} alt={title} className="h-full w-full object-cover" />
+            )
           ) : (
-            <div className="flex h-full items-center justify-center p-6 text-center text-lg font-semibold text-primary/70">
-              {title}
+            <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+              <p className="text-lg font-semibold text-primary/70">{title}</p>
+              {item.imageUrl ? (
+                <Button type="button" size="sm" variant="outline" onClick={() => setShowImage(true)}>
+                  <Eye className="h-4 w-4" aria-hidden />
+                  {text.showImages || text.preview}
+                </Button>
+              ) : (
+                <p className="text-sm text-muted-foreground">{text.missingImages}</p>
+              )}
             </div>
           )}
           {item.isSoldOut ? (
