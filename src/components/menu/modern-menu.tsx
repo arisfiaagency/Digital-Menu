@@ -55,7 +55,7 @@ export function ModernMenu({ data, accent }: MenuDesignProps) {
       <DesignBackdrop design="modern" />
       {/* Sticky top bar */}
       <div className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <div className="flex min-w-0 items-center gap-2.5">
             {general.logoUrl ? (
               <Image src={general.logoUrl} alt={ctrl.restaurantName} width={40} height={40} className="h-10 w-10 rounded-xl object-cover ring-1 ring-border" />
@@ -90,7 +90,7 @@ export function ModernMenu({ data, accent }: MenuDesignProps) {
 
       {/* Sticky pill category nav */}
       {browse.sections.length ? (
-        <nav className="sticky top-[61px] z-20 border-b bg-background/85 backdrop-blur">
+        <nav className="sticky top-[var(--menu-sticky-offset,3.75rem)] z-20 border-b bg-background/85 backdrop-blur">
           <div className="mx-auto flex w-full max-w-5xl gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {browse.sections.map((section) => (
               <button
@@ -227,11 +227,11 @@ function ModernCard({
           {showCart && !item.isSoldOut ? (
             quantity > 0 ? (
               <div className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 p-0.5">
-                <button type="button" aria-label="Decrease" onClick={onDecrement} className="flex h-7 w-7 items-center justify-center rounded-full text-primary hover:bg-primary/10">
+                <button type="button" aria-label="Decrease" onClick={onDecrement} className="flex h-10 w-10 items-center justify-center rounded-full text-primary hover:bg-primary/10 sm:h-8 sm:w-8">
                   <Minus className="h-3.5 w-3.5" aria-hidden />
                 </button>
                 <span className="min-w-4 text-center text-xs font-bold tabular-nums">{formatNumber(quantity, locale)}</span>
-                <button type="button" aria-label="Increase" onClick={onIncrement} className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
+                <button type="button" aria-label="Increase" onClick={onIncrement} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 sm:h-8 sm:w-8">
                   <Plus className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </div>

@@ -195,7 +195,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <Menu className="h-4 w-4" aria-hidden />
       </Button>
 
-      <aside className="no-print fixed inset-y-0 left-0 hidden w-64 border-r bg-card p-4 sm:block">
+      <aside className="no-print fixed inset-y-0 left-0 hidden w-64 overflow-y-auto border-r bg-card p-4 sm:block">
         <AdminNavigation
           pathname={pathname}
           text={text}
@@ -228,7 +228,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <aside
         className={cn(
-          "no-print fixed inset-y-0 left-0 z-50 w-64 border-r bg-card p-4 shadow-xl transition-transform duration-300 sm:hidden",
+          "no-print fixed inset-y-0 left-0 z-50 flex w-[min(18rem,100vw-2.5rem)] flex-col overflow-y-auto border-r bg-card p-4 pt-14 shadow-xl transition-transform duration-300 sm:hidden",
           mobileNavOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -264,10 +264,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         />
       </aside>
 
-      <main className="pt-14 sm:ml-64 sm:pt-0">
+      <main className="min-w-0 overflow-x-hidden pt-14 sm:ml-64 sm:pt-0">
         {/* Admin content uses a wider cap than the global `container` (1180px) so grid-heavy pages
             like POS actually fill big screens, staying fluid on laptops and centered on ultrawides. */}
-        <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6">{children}</div>
+        <div className="mx-auto w-full min-w-0 max-w-[1600px] px-3 py-5 sm:px-6 sm:py-6">{children}</div>
       </main>
     </div>
   );
@@ -326,11 +326,11 @@ function AdminNavigation({
   ];
 
   return (
-    <div className="flex h-full flex-col">
-      <Link href={homeHref} dir={textDir} className="mb-6 block pr-10 text-xl font-semibold" onClick={onNavigate}>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <Link href={homeHref} dir={textDir} className="mb-4 block shrink-0 pr-10 text-xl font-semibold sm:mb-6" onClick={onNavigate}>
         {text.brand}
       </Link>
-      <nav className="grid gap-1">
+      <nav className="grid min-h-0 flex-1 content-start gap-1 overflow-y-auto pb-2">
         {items.map((entry) => {
           const Icon = entry.icon;
           const label = text[entry.labelKey];
@@ -340,17 +340,17 @@ function AdminNavigation({
               href={entry.href}
               onClick={onNavigate}
               className={cn(
-                "focus-ring flex items-center gap-3 rounded-md px-3 py-2 text-sm",
+                "focus-ring flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 text-sm sm:min-h-0 sm:py-2",
                 pathname === entry.href ? "bg-primary text-primary-foreground" : "hover:bg-muted"
               )}
             >
-              <Icon className="h-4 w-4" aria-hidden />
-              <span dir={textDir}>{label}</span>
+              <Icon className="h-4 w-4 shrink-0" aria-hidden />
+              <span dir={textDir} className="min-w-0 truncate">{label}</span>
             </Link>
           );
         })}
       </nav>
-      <div className="mt-6 rounded-md border p-3">
+      <div className="mt-4 shrink-0 rounded-md border p-3 sm:mt-6">
         <AdminPreferences />
       </div>
       <AdminProfileMenu

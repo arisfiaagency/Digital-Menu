@@ -32,7 +32,7 @@ export function KraftMenu({ data, accent }: MenuDesignProps) {
       style={{ ...accentStyle(accent), fontFamily: SERIF }}>
       <DesignBackdrop design="kraft" />
       <div className="border-b border-dashed border-foreground/30">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-3">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3">
           <span className="truncate text-sm font-semibold uppercase tracking-[0.25em]">{ctrl.restaurantName}</span>
           <MenuTopControls ctrl={ctrl} />
         </div>
@@ -67,7 +67,7 @@ export function KraftMenu({ data, accent }: MenuDesignProps) {
                   {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
                 </h2>
               </div>
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4">
                 {section.items.map((item) => (
                   <KraftCard key={item.id} item={item} locale={locale} textDir={textDir}
                     showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}

@@ -62,7 +62,7 @@ export function MagazineMenu({ data, accent }: MenuDesignProps) {
               <h2 dir={textDir} className="mb-4 border-b-2 border-foreground/70 pb-1 text-2xl font-black uppercase tracking-tight">
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
                 {section.items.map((item) => (
                   <MagazineCard key={item.id} item={item} locale={locale} textDir={textDir}
                     showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}

@@ -39,7 +39,7 @@ export function ClassicMenu({ data, accent }: MenuDesignProps) {
       <DesignBackdrop design="classic" />
       {/* Slim top bar */}
       <div className="border-b border-stone-300/70 dark:border-stone-700/60">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-3">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3">
           <span className="truncate text-xs font-semibold uppercase tracking-[0.3em] text-stone-500 dark:text-stone-400">
             {ctrl.restaurantName}
           </span>
@@ -85,7 +85,7 @@ export function ClassicMenu({ data, accent }: MenuDesignProps) {
               <h2 className="mb-6 text-center text-2xl font-bold uppercase tracking-[0.18em]">
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4">
                 {section.items.map((item) => (
                   <ClassicCard
                     key={item.id}
@@ -193,11 +193,11 @@ function ClassicCard({
           {showCart && !item.isSoldOut ? (
             quantity > 0 ? (
               <div className="inline-flex items-center gap-1 rounded-full border border-primary/40 p-0.5">
-                <button type="button" aria-label="Decrease" onClick={onDecrement} className="flex h-6 w-6 items-center justify-center rounded-full text-primary hover:bg-primary/10">
+                <button type="button" aria-label="Decrease" onClick={onDecrement} className="flex h-10 w-10 items-center justify-center rounded-full text-primary hover:bg-primary/10 sm:h-8 sm:w-8">
                   <Minus className="h-3 w-3" aria-hidden />
                 </button>
                 <span className="min-w-4 text-center text-xs font-bold tabular-nums">{formatNumber(quantity, locale)}</span>
-                <button type="button" aria-label="Increase" onClick={onIncrement} className="flex h-6 w-6 items-center justify-center rounded-full text-primary hover:bg-primary/10">
+                <button type="button" aria-label="Increase" onClick={onIncrement} className="flex h-10 w-10 items-center justify-center rounded-full text-primary hover:bg-primary/10 sm:h-8 sm:w-8">
                   <Plus className="h-3 w-3" aria-hidden />
                 </button>
               </div>

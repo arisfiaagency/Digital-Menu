@@ -31,7 +31,7 @@ export function MinimalMenu({ data, accent }: MenuDesignProps) {
     <main dir={textDir} className="menu-theme-root relative isolate min-h-dvh bg-background text-foreground" style={accentStyle(accent)}>
       <DesignBackdrop design="minimal" />
       {/* Top bar */}
-      <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-6 py-5">
+      <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-6 sm:py-5">
         <span className="truncate text-sm font-medium tracking-tight">{ctrl.restaurantName}</span>
         <MenuTopControls ctrl={ctrl} />
       </div>
@@ -66,7 +66,7 @@ export function MinimalMenu({ data, accent }: MenuDesignProps) {
               <h2 className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4">
                 {section.items.map((item) => (
                   <MinimalCard
                     key={item.id}

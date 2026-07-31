@@ -32,7 +32,7 @@ export function BrutalistMenu({ data, accent }: MenuDesignProps) {
     <main dir={textDir} className="menu-theme-root relative isolate min-h-dvh bg-background text-foreground" style={{ ...accentStyle(accent), fontFamily: MONO }}>
       <DesignBackdrop design="brutalist" />
       <div className="border-b-4 border-foreground">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <span className="truncate text-sm font-bold uppercase">{ctrl.restaurantName}</span>
           <MenuTopControls ctrl={ctrl} />
         </div>
@@ -63,7 +63,7 @@ export function BrutalistMenu({ data, accent }: MenuDesignProps) {
                 style={{ boxShadow: "4px 4px 0 hsl(var(--foreground))" }}>
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4">
                 {section.items.map((item) => (
                   <BrutalCard key={item.id} item={item} locale={locale} textDir={textDir}
                     showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}

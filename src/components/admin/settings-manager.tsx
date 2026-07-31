@@ -535,8 +535,8 @@ export function SettingsManager() {
           <CardHeader><CardTitle>{text.menuSettings}</CardTitle></CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Object.entries(menu).filter(([key]) => key !== "updatedAt" && key !== "enableFilters").map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between rounded-md border p-3">
-                <span className="text-sm font-medium">{menuSettingLabel(key, text)}</span>
+              <div key={key} className="flex min-w-0 items-center justify-between gap-3 rounded-md border p-3">
+                <span className="min-w-0 flex-1 text-sm font-medium leading-snug">{menuSettingLabel(key, text)}</span>
                 <Switch label={menuSettingLabel(key, text)} checked={Boolean(value)} onCheckedChange={(checked) => setMenu({ ...menu, [key]: checked })} />
               </div>
             ))}

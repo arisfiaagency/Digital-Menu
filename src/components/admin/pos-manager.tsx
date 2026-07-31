@@ -991,8 +991,8 @@ export function PosManager() {
       </Card>
 
       {selectedTable ? (
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div ref={menuPickerRef} className="min-h-0 scroll-mt-20">
+      <div className="flex flex-col-reverse gap-4 xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
+        <div ref={menuPickerRef} className="min-h-0 min-w-0 scroll-mt-20">
           <Card className="min-h-0">
             <CardHeader>
               <CardTitle className="text-lg">{text.menuPicker}</CardTitle>
@@ -1076,8 +1076,8 @@ export function PosManager() {
                   ))}
                 </Select>
               </div>
-              <div className="max-h-[640px] overflow-y-auto pr-1 xl:max-h-[calc(100vh-21rem)]">
-                <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
+              <div className="max-h-[min(28rem,55dvh)] overflow-y-auto pr-1 sm:max-h-[640px] xl:max-h-[calc(100vh-21rem)]">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2 sm:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] sm:gap-3 xl:grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
                   {menuItems.map((item) => {
                     const title = localized(item.name, locale, item.name.en);
                     const variants = item.variants.filter((variant) => variant.isAvailable);
@@ -1193,8 +1193,8 @@ export function PosManager() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
+        <Card className="sticky top-14 z-20 max-h-[min(52dvh,32rem)] overflow-y-auto border-primary/20 shadow-sm xl:static xl:top-auto xl:z-auto xl:max-h-none xl:overflow-visible xl:shadow-none">
+          <CardHeader className="pb-3 sm:pb-6">
             <CardTitle className="flex items-center gap-2 text-lg">
               <ReceiptText className="h-5 w-5 text-primary" aria-hidden />
               {text.orderSummary}
@@ -1240,7 +1240,7 @@ export function PosManager() {
                     selectedOrder.lines.map((line) => (
                       <div
                         key={line.id}
-                        className="grid grid-cols-[1fr_auto] gap-3 rounded-lg border p-3">
+                        className="flex flex-col gap-3 rounded-lg border p-3 sm:grid sm:grid-cols-[1fr_auto] sm:items-start">
                         <div className="min-w-0">
                           <p
                             dir={textDir}
@@ -1274,11 +1274,12 @@ export function PosManager() {
                             </span>
                           </button>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             type="button"
                             variant="outline"
                             size="icon"
+                            className="h-10 w-10 sm:h-9 sm:w-9"
                             aria-label="Decrease"
                             onClick={() => changeLineQuantity(line.id, -1)}>
                             <Minus className="h-3.5 w-3.5" aria-hidden />
@@ -1290,6 +1291,7 @@ export function PosManager() {
                             type="button"
                             variant="outline"
                             size="icon"
+                            className="h-10 w-10 sm:h-9 sm:w-9"
                             aria-label="Increase"
                             onClick={() => changeLineQuantity(line.id, 1)}>
                             <Plus className="h-3.5 w-3.5" aria-hidden />
@@ -1298,6 +1300,7 @@ export function PosManager() {
                             type="button"
                             variant="destructive"
                             size="icon"
+                            className="h-10 w-10 sm:h-9 sm:w-9"
                             aria-label={text.remove}
                             onClick={() => removeLine(line.id)}>
                             <Trash2 className="h-3.5 w-3.5" aria-hidden />
@@ -1315,7 +1318,7 @@ export function PosManager() {
                 </div>
 
                 <div className="grid gap-3 rounded-lg border p-3">
-                  <div className="grid grid-cols-[140px_1fr] gap-2">
+                  <div className="grid grid-cols-[6.5rem_1fr] gap-2 sm:grid-cols-[140px_1fr]">
                     <Select
                       value={selectedOrder.discountType}
                       aria-label={text.discount}
@@ -2541,75 +2544,79 @@ function PosFloorPlan({
   return (
     <div className="space-y-3">
       {editing ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addTable("indoor")}>
-            <Armchair className="h-4 w-4" aria-hidden />
-            {text.indoor}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addTable("outdoor")}>
-            <Umbrella className="h-4 w-4" aria-hidden />
-            {text.outdoor}
-          </Button>
-          <span className="mx-1 h-5 w-px bg-border" aria-hidden />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addShape("rectangle")}>
-            <RectangleHorizontal className="h-4 w-4" aria-hidden />
-            {text.addRectangle}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addShape("circle")}>
-            <Circle className="h-4 w-4" aria-hidden />
-            {text.addCircle}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addShape("triangle")}>
-            <Triangle className="h-4 w-4" aria-hidden />
-            {text.addTriangle}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addShape("wall")}>
-            <Minus className="h-4 w-4" aria-hidden />
-            {text.addWall}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addShape("door")}>
-            <DoorOpen className="h-4 w-4" aria-hidden />
-            {text.addDoor}
-          </Button>
-          <span className="ms-auto flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
+              onClick={() => addTable("indoor")}>
+              <Armchair className="h-4 w-4" aria-hidden />
+              {text.indoor}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addTable("outdoor")}>
+              <Umbrella className="h-4 w-4" aria-hidden />
+              {text.outdoor}
+            </Button>
+            <span className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addShape("rectangle")}>
+              <RectangleHorizontal className="h-4 w-4" aria-hidden />
+              {text.addRectangle}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addShape("circle")}>
+              <Circle className="h-4 w-4" aria-hidden />
+              {text.addCircle}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addShape("triangle")}>
+              <Triangle className="h-4 w-4" aria-hidden />
+              {text.addTriangle}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addShape("wall")}>
+              <Minus className="h-4 w-4" aria-hidden />
+              {text.addWall}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addShape("door")}>
+              <DoorOpen className="h-4 w-4" aria-hidden />
+              {text.addDoor}
+            </Button>
+          </div>
+          <span className="flex w-full items-center gap-2 sm:ms-auto sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none"
               onClick={onCancelEdit}>
               {text.cancel}
             </Button>
             <Button
               type="button"
               size="sm"
+              className="flex-1 sm:flex-none"
               onClick={() => onSave(draftTables, draftShapes)}>
               {text.saveLayout}
             </Button>
@@ -2623,7 +2630,7 @@ function PosFloorPlan({
         tabIndex={editing ? 0 : undefined}
         onKeyDown={editing ? onBoardKeyDown : undefined}
         onPointerDown={editing ? () => setSelection([]) : undefined}
-        className="floor-grid-bg floor-board relative w-full select-none overflow-hidden rounded-xl border bg-muted/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="floor-grid-bg floor-board relative min-h-[18rem] w-full select-none overflow-hidden rounded-xl border bg-muted/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:min-h-[22rem]"
         style={{ aspectRatio: `${FLOOR_W} / ${FLOOR_H}` }}>
         {boardShapes.map((shape) => {
           const sel = editing && isSelected("shape", shape.id);

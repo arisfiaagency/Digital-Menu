@@ -26,7 +26,16 @@ function ratedRecently(slug: string): boolean {
 // It only opens the rating FORM — the public menu never shows the cafe's current
 // average/score (that lives in the admin Reviews tab). Submissions POST to
 // /api/reviews, which updates the aggregate behind the scenes.
-export function RatingButton({ locale, textDir }: { locale: Locale; textDir: LocaleDirection }) {
+export function RatingButton({
+  locale,
+  textDir,
+  compact = false
+}: {
+  locale: Locale;
+  textDir: LocaleDirection;
+  /** Hide the label on narrow top bars; icon + aria-label remain. */
+  compact?: boolean;
+}) {
   const chrome = useMenuChrome();
   const slug = chrome.slug;
   const [open, setOpen] = useState(false);
@@ -40,10 +49,13 @@ export function RatingButton({ locale, textDir }: { locale: Locale; textDir: Loc
         type="button"
         onClick={() => setOpen(true)}
         aria-label={translate(locale, "menu.rateUs")}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card/70 px-3 text-sm font-semibold text-foreground backdrop-blur transition-colors hover:bg-muted"
+        className={cn(
+          "inline-flex h-10 items-center justify-center rounded-full border border-border bg-card/70 text-sm font-semibold text-foreground backdrop-blur transition-colors hover:bg-muted sm:h-9",
+          compact ? "w-10 gap-0 px-0 sm:w-auto sm:gap-1.5 sm:px-3" : "gap-1.5 px-3"
+        )}
       >
         <Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden />
-        <span>{translate(locale, "menu.rateUs")}</span>
+        <span className={cn(compact && "hidden sm:inline")}>{translate(locale, "menu.rateUs")}</span>
       </button>
       {open ? <RatingDialog slug={slug} locale={locale} textDir={textDir} onClose={() => setOpen(false)} /> : null}
     </>

@@ -94,8 +94,8 @@ export function useMenuController(data: AppData): MenuController {
 // toggle doesn't make sense.
 export function MenuTopControls({ ctrl, hideTheme = false }: { ctrl: MenuController; hideTheme?: boolean }) {
   return (
-    <div className="flex items-center gap-2">
-      <RatingButton locale={ctrl.locale} textDir={ctrl.textDir} />
+    <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+      <RatingButton locale={ctrl.locale} textDir={ctrl.textDir} compact />
       {ctrl.showCart ? (
         <CartIconButton count={ctrl.cart.totalQuantity} locale={ctrl.locale} onClick={() => ctrl.setCartOpen(true)} />
       ) : null}

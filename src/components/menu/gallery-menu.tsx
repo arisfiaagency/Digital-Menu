@@ -14,6 +14,7 @@ import { DesignBackdrop } from "@/components/menu/design-backdrop";
 import { localized, translate } from "@/lib/i18n/config";
 import { effectiveItemPrice, formatMoney } from "@/lib/utils/format";
 import { accentStyle } from "@/lib/utils/accent";
+import { cn } from "@/lib/utils/cn";
 import type { Locale, MenuItem } from "@/types/models";
 
 // The "Photo Gallery" design: an image-first grid of full-bleed square tiles with
@@ -32,7 +33,7 @@ export function GalleryMenu({ data, accent }: MenuDesignProps) {
       <DesignBackdrop design="gallery" />
       {/* Sticky top bar */}
       <div className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <span className="truncate text-base font-bold tracking-tight">{ctrl.restaurantName}</span>
           <MenuTopControls ctrl={ctrl} />
         </div>
@@ -68,7 +69,7 @@ export function GalleryMenu({ data, accent }: MenuDesignProps) {
               <h2 dir={textDir} className="mb-4 text-xl font-extrabold tracking-tight">
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 sm:gap-3 lg:grid-cols-4">
                 {section.items.map((item) => (
                   <GalleryTile
                     key={item.id}
@@ -154,7 +155,7 @@ function GalleryTile({
         </span>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3 text-white">
+      <div className={cn("pointer-events-none absolute inset-x-0 bottom-0 p-2.5 text-white sm:p-3", showCart && !item.isSoldOut && "pe-14 sm:pe-16")}>
         <h3 dir={textDir} className="line-clamp-2 text-sm font-bold leading-snug drop-shadow">{name}</h3>
         {showPrices ? (
           <div className="mt-0.5 flex items-center gap-1.5">
@@ -177,7 +178,7 @@ function GalleryTile({
               type="button"
               aria-label={`${translate(locale, "cart.add")} ${name}`}
               onClick={onAdd}
-              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:bg-primary/90 active:scale-90"
+              className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:bg-primary/90 active:scale-90 sm:h-9 sm:w-9"
             >
               <Plus className="h-4 w-4" aria-hidden />
             </button>

@@ -41,7 +41,7 @@ export function ChalkboardMenu({ data, accent }: MenuDesignProps) {
       <DesignBackdrop design="chalkboard" />
       {/* Top bar */}
       <div className="border-b border-dashed border-white/25">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-3">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3">
           <span className="truncate text-sm tracking-wide text-[#f3efe6]/80">{ctrl.restaurantName}</span>
           <MenuTopControls ctrl={ctrl} hideTheme />
         </div>
@@ -83,7 +83,7 @@ export function ChalkboardMenu({ data, accent }: MenuDesignProps) {
               <h2 className="mb-5 text-center text-3xl font-bold tracking-wide text-primary" style={{ textShadow: "0 1px 0 rgba(0,0,0,0.3)" }}>
                 {section.category ? localized(section.category.name, locale) : translate(locale, "menu.all")}
               </h2>
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4">
                 {section.items.map((item) => (
                   <ChalkCard
                     key={item.id}

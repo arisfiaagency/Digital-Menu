@@ -255,7 +255,8 @@ export function LuxuryMenu({ data, accent }: MenuDesignProps) {
           type="button"
           onClick={() => setCartOpen(true)}
           dir={textDir}
-          className="pop-in fixed bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-[0_16px_40px_-12px_hsl(var(--primary)/0.7)] ring-1 ring-primary/30 transition-transform hover:-translate-x-1/2 hover:-translate-y-0.5"
+          className="pop-in fixed bottom-6 left-1/2 z-30 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-[0_16px_40px_-12px_hsl(var(--primary)/0.7)] ring-1 ring-primary/30 transition-transform hover:-translate-x-1/2 hover:-translate-y-0.5 sm:gap-3 sm:px-6"
+          style={{ bottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}
         >
           <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-xs font-semibold">{cart.totalQuantity}</span>
           <span className="tracking-wide">{formatMoney(cartGrandTotal, cart.currency ?? data.general.defaultCurrency, locale)}</span>
@@ -348,7 +349,7 @@ function LuxuryItemRow({
 
   return (
     <Reveal delay={Math.min(index, 6) * 60} className="group py-6 first:pt-0">
-      <div dir={textDir} className="flex items-start gap-5">
+      <div dir={textDir} className="flex items-start gap-3 sm:gap-5">
         {showImages ? (
           <button
             type="button"
@@ -356,8 +357,8 @@ function LuxuryItemRow({
             aria-label={name}
             className={
               animatedMedia
-                ? "relative h-20 w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-border sm:h-24 sm:w-24"
-                : "relative h-20 w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-border transition-transform duration-500 group-hover:scale-[1.03] sm:h-24 sm:w-24"
+                ? "relative h-16 w-16 shrink-0 overflow-hidden rounded-xl ring-1 ring-border sm:h-24 sm:w-24"
+                : "relative h-16 w-16 shrink-0 overflow-hidden rounded-xl ring-1 ring-border transition-transform duration-500 group-hover:scale-[1.03] sm:h-24 sm:w-24"
             }
           >
             <FallbackMenuImage src={menuItemCardImageUrl(item)} alt={name} fallbackSrc={logoUrl} />
@@ -387,11 +388,11 @@ function LuxuryItemRow({
           <div className="shrink-0 self-center">
             {quantity > 0 ? (
               <div className="flex items-center gap-2 rounded-full border border-primary/30 px-1 py-1">
-                <button type="button" aria-label="Decrease" onClick={onDecrement} className="flex h-7 w-7 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10">
+                <button type="button" aria-label="Decrease" onClick={onDecrement} className="flex h-10 w-10 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10 sm:h-8 sm:w-8">
                   <Minus className="h-3.5 w-3.5" aria-hidden />
                 </button>
                 <span className="min-w-4 text-center text-sm font-semibold tabular-nums">{quantity}</span>
-                <button type="button" aria-label="Increase" onClick={onIncrement} className="flex h-7 w-7 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10">
+                <button type="button" aria-label="Increase" onClick={onIncrement} className="flex h-10 w-10 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10 sm:h-8 sm:w-8">
                   <Plus className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </div>

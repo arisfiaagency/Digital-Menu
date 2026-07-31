@@ -40,9 +40,10 @@ export function QuantityStepper({
   locale: Locale;
   size?: "sm" | "md";
 }) {
-  const dim = size === "sm" ? "h-7 w-7" : "h-9 w-9";
+  // Keep tap targets near 44px on phones even for the compact "sm" size.
+  const dim = size === "sm" ? "h-9 w-9 sm:h-8 sm:w-8" : "h-10 w-10 sm:h-9 sm:w-9";
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 p-1">
+    <div className="inline-flex items-center gap-0.5 rounded-full border border-primary/30 bg-primary/5 p-1 sm:gap-1">
       <button
         type="button"
         aria-label={translate(locale, "cart.decrease")}
@@ -125,7 +126,7 @@ export function CartFab({
     <button
       type="button"
       onClick={onClick}
-      className="cart-fab-in focus-ring fixed bottom-5 right-4 z-40 inline-flex items-center gap-3 rounded-full bg-primary py-3 pe-5 ps-4 text-primary-foreground shadow-xl shadow-primary/25 transition-transform active:scale-95"
+      className="cart-fab-in focus-ring fixed bottom-5 end-3 z-40 inline-flex max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-full bg-primary py-3 pe-4 ps-3 text-primary-foreground shadow-xl shadow-primary/25 transition-transform active:scale-95 sm:end-4 sm:gap-3 sm:pe-5 sm:ps-4"
       style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
     >
       <span className="relative inline-flex">
@@ -247,7 +248,10 @@ export function CartSheet({
               ))}
             </ul>
 
-            <div className="border-t px-5 py-4">
+            <div
+              className="border-t px-5 py-4"
+              style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+            >
               <div className="grid gap-1.5">
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="text-muted-foreground">{translate(locale, "cart.subtotal")}</span>
@@ -275,7 +279,7 @@ export function CartSheet({
               <button
                 type="button"
                 onClick={cart.clear}
-                className="focus-ring mt-3 inline-flex items-center gap-1.5 rounded-md text-xs font-semibold text-destructive transition-colors hover:text-destructive/80"
+                className="focus-ring mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-md text-xs font-semibold text-destructive transition-colors hover:text-destructive/80 sm:min-h-0"
               >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
                 {translate(locale, "cart.clear")}

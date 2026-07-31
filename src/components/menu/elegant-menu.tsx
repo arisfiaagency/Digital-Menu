@@ -32,7 +32,7 @@ export function ElegantMenu({ data, accent }: MenuDesignProps) {
     <main dir={textDir} className="menu-theme-root relative isolate min-h-dvh bg-background text-foreground"
       style={{ ...accentStyle(accent), fontFamily: SERIF }}>
       <DesignBackdrop design="elegant" />
-      <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-6 py-4">
+      <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-6 sm:py-4">
         <span className="truncate text-xs uppercase tracking-[0.35em] text-stone-500">{ctrl.restaurantName}</span>
         <MenuTopControls ctrl={ctrl} />
       </div>
@@ -66,7 +66,7 @@ export function ElegantMenu({ data, accent }: MenuDesignProps) {
                 </h2>
                 <span className="h-px w-10 bg-stone-300" />
               </div>
-              <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+              <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-5">
                 {section.items.map((item) => (
                   <ElegantCard key={item.id} item={item} locale={locale} textDir={textDir}
                     showPrices={ctrl.showPrices} showImages={ctrl.showImages} showCart={ctrl.showCart} quantity={cart.quantityOf(item.id)}

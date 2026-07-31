@@ -71,7 +71,7 @@ export function MenuItemDetailModal({
           </Button>
 
           {settings.showImages ? (
-            <div className="group relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10 sm:aspect-[16/10]">
+            <div className="group relative aspect-[5/3] max-h-[40dvh] overflow-hidden bg-gradient-to-br from-accent via-primary/5 to-secondary/10 sm:aspect-[16/10] sm:max-h-none">
               <FallbackMenuImage src={menuItemDetailImageUrl(item)} alt={title} fallbackSrc={logoUrl} />
               {item.isSoldOut ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/65 backdrop-blur-[2px]">
@@ -163,7 +163,7 @@ export function MenuItemDetailModal({
                                 type="button"
                                 aria-label={translate(locale, "cart.add")}
                                 onClick={() => cart.add(item, variant)}
-                                className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:bg-primary/90 active:scale-90"
+                                className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:bg-primary/90 active:scale-90 sm:h-9 sm:w-9"
                               >
                                 <Plus className="h-4 w-4" aria-hidden />
                               </button>
@@ -179,7 +179,10 @@ export function MenuItemDetailModal({
           </div>
 
           {canAddToCart ? (
-            <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t bg-card px-4 py-3 sm:px-7">
+            <div
+              className="sticky bottom-0 flex items-center justify-between gap-3 border-t bg-card px-4 py-3 sm:px-7"
+              style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+            >
               <div className="min-w-0">
                 <p className="text-xs font-medium text-muted-foreground">{translate(locale, "cart.add")}</p>
                 <p className="text-lg font-bold text-primary">{formatMoney(effectivePrice, item.currency, locale)}</p>
@@ -192,7 +195,7 @@ export function MenuItemDetailModal({
                   onDecrement={() => cart.decrement(item.id)}
                 />
               ) : (
-                <Button type="button" onClick={() => cart.add(item)} className="rounded-full px-5">
+                <Button type="button" onClick={() => cart.add(item)} className="min-h-11 rounded-full px-5 sm:min-h-0">
                   <Plus className="h-4 w-4" aria-hidden />
                   <span>{translate(locale, "cart.add")}</span>
                 </Button>

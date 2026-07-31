@@ -45,7 +45,7 @@ export function TabsMenu({ data, accent }: MenuDesignProps) {
       <DesignBackdrop design="tabs" />
       {/* Top bar */}
       <div className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <div className="flex min-w-0 items-center gap-2.5">
             {general.logoUrl ? (
               <Image src={general.logoUrl} alt={ctrl.restaurantName} width={36} height={36} className="h-9 w-9 rounded-xl object-cover ring-1 ring-border" />
@@ -79,7 +79,7 @@ export function TabsMenu({ data, accent }: MenuDesignProps) {
 
       {/* Tabs (hidden while searching) */}
       {!searching && tabs.length ? (
-        <nav className="sticky top-[57px] z-20 mt-3 border-b bg-background/90 backdrop-blur">
+        <nav className="sticky top-[var(--menu-sticky-offset,3.5rem)] z-20 mt-3 border-b bg-background/90 backdrop-blur">
           <div className="mx-auto flex w-full max-w-3xl gap-1 overflow-x-auto px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {tabs.map((tab) => {
               const key = tabKey(tab);

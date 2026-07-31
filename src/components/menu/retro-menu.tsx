@@ -34,7 +34,7 @@ export function RetroMenu({ data, accent }: MenuDesignProps) {
 
       {/* Top bar */}
       <div className="border-b-2 border-primary/70">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <span className="truncate text-sm font-black uppercase tracking-widest text-primary">{ctrl.restaurantName}</span>
           <MenuTopControls ctrl={ctrl} />
         </div>

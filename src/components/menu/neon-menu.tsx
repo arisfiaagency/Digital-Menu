@@ -56,7 +56,7 @@ export function NeonMenu({ data, accent }: MenuDesignProps) {
 
       {/* Top bar */}
       <div className="sticky top-0 z-30 border-b border-white/10 bg-background/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <span className="truncate text-sm font-bold uppercase tracking-[0.25em] text-primary" style={{ textShadow: "0 0 16px hsl(var(--primary) / 0.8)" }}>
             {ctrl.restaurantName}
           </span>
@@ -95,7 +95,7 @@ export function NeonMenu({ data, accent }: MenuDesignProps) {
 
       {/* Category nav */}
       {browse.sections.length ? (
-        <nav className="sticky top-[57px] z-20 border-y border-white/10 bg-background/85 backdrop-blur">
+        <nav className="sticky top-[var(--menu-sticky-offset,3.5rem)] z-20 border-y border-white/10 bg-background/85 backdrop-blur">
           <div className="mx-auto flex w-full max-w-4xl gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {browse.sections.map((section) => {
               const active = activeCategoryId === section.category.id;
@@ -238,11 +238,11 @@ function NeonCard({
           {showCart && !item.isSoldOut ? (
             quantity > 0 ? (
               <div className="inline-flex items-center gap-1 rounded-full border border-primary/50 p-0.5">
-                <button type="button" aria-label="Decrease" onClick={onDecrement} className="flex h-7 w-7 items-center justify-center rounded-full text-primary hover:bg-primary/10">
+                <button type="button" aria-label="Decrease" onClick={onDecrement} className="flex h-10 w-10 items-center justify-center rounded-full text-primary hover:bg-primary/10 sm:h-8 sm:w-8">
                   <Minus className="h-3.5 w-3.5" aria-hidden />
                 </button>
                 <span className="min-w-4 text-center text-xs font-bold tabular-nums">{formatNumber(quantity, locale)}</span>
-                <button type="button" aria-label="Increase" onClick={onIncrement} className="flex h-7 w-7 items-center justify-center rounded-full text-primary hover:bg-primary/10">
+                <button type="button" aria-label="Increase" onClick={onIncrement} className="flex h-10 w-10 items-center justify-center rounded-full text-primary hover:bg-primary/10 sm:h-8 sm:w-8">
                   <Plus className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </div>

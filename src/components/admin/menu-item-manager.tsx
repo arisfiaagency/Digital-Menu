@@ -340,10 +340,10 @@ export function MenuItemManager() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold">{text.menuItems}</h1>
-          <p className="text-muted-foreground">{text.menuItemDescription}</p>
+          <h1 className="text-2xl font-semibold sm:text-3xl">{text.menuItems}</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">{text.menuItemDescription}</p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">
           {reorderMode ? (
             <>
               <Button type="button" onClick={saveOrder} disabled={savingOrder}>
@@ -427,7 +427,7 @@ export function MenuItemManager() {
           <CardHeader>
             <CardTitle>{text.menuItem}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <CardContent className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
             <MenuItemEditorForm
               form={form}
               data={data}
@@ -471,23 +471,23 @@ export function MenuItemManager() {
             const unavailable = !item.isAvailable || item.isSoldOut;
             return (
               <Card key={item.id} className={cn(unavailable && "bg-muted/20")}>
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg p-4 transition-colors hover:bg-muted/50 sm:p-5">
+                <div className="flex flex-col gap-3 rounded-lg p-3 transition-colors hover:bg-muted/50 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:p-5">
                   <button
                     type="button"
-                    className="focus-ring flex min-w-0 flex-1 items-center justify-between gap-3 rounded-md text-start"
+                    className="focus-ring flex min-w-0 w-full flex-1 items-start justify-between gap-3 rounded-md text-start sm:items-center"
                     aria-expanded={expanded}
                     onClick={() => setExpandedItemId((current) => (current === item.id ? null : item.id))}
                   >
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <p className="font-semibold">{localized(item.name, locale, item.name.en)}</p>
                         <Badge className={cn(item.isAvailable && !item.isSoldOut ? "border-primary/30 bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
                           {item.isSoldOut ? text.soldOut : item.isAvailable ? text.available : text.inactive}
                         </Badge>
-                        {item.isFeatured ? <Badge>{text.featured}</Badge> : null}
-                        {item.isPosPinned ? <Badge>{text.posPinned}</Badge> : null}
-                        {item.isPopular ? <Badge>{text.popular}</Badge> : null}
-                        {item.isNew ? <Badge>{text.isNew}</Badge> : null}
+                        {item.isFeatured ? <Badge className="hidden sm:inline-flex">{text.featured}</Badge> : null}
+                        {item.isPosPinned ? <Badge className="hidden sm:inline-flex">{text.posPinned}</Badge> : null}
+                        {item.isPopular ? <Badge className="hidden sm:inline-flex">{text.popular}</Badge> : null}
+                        {item.isNew ? <Badge className="hidden sm:inline-flex">{text.isNew}</Badge> : null}
                         {missingTranslationCount ? (
                           <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
                             {text.missingTranslations}
@@ -508,13 +508,14 @@ export function MenuItemManager() {
                         <span className="rounded-full border bg-background px-2 py-0.5">{formatMoney(item.basePrice, item.currency, locale)}</span>
                       </div>
                     </div>
-                    <ChevronDown className={cn("h-5 w-5 shrink-0 text-muted-foreground transition-transform", expanded && "rotate-180")} aria-hidden />
+                    <ChevronDown className={cn("mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform sm:mt-0", expanded && "rotate-180")} aria-hidden />
                   </button>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <div className="flex w-full shrink-0 flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end">
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
+                      className="h-11 w-11 sm:h-9 sm:w-9"
                       aria-label={text.preview}
                       title={text.preview}
                       disabled={!item.imageUrl}
@@ -538,7 +539,7 @@ export function MenuItemManager() {
                 {expanded ? (
                   <CardContent className="settings-panel border-t pt-5">
                     {editingItemId === item.id ? (
-                      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
                         <MenuItemEditorForm
                           form={form}
                           data={data}
@@ -552,7 +553,7 @@ export function MenuItemManager() {
                         />
                       </div>
                     ) : (
-                      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+                      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,22rem)_1fr]">
                         <MenuItemAdminPreview item={item} locale={locale} text={text} />
                         <div className="flex flex-wrap content-start gap-2">
                           <Button
@@ -902,12 +903,12 @@ function MenuItemEditorForm({
             <Button type="button" variant="outline" size="sm" onClick={addVariant}>{text.addVariant}</Button>
           </div>
           {variants.length ? variants.map((variant, index) => (
-            <div key={variant.id} className="grid gap-2 rounded-md border bg-background p-3 lg:grid-cols-[1fr_1fr_1fr_120px_110px_44px]">
+            <div key={variant.id} className="grid gap-2 rounded-md border bg-background p-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_7.5rem_7rem_2.75rem]">
               <Input lang="en" {...form.register(`variants.${index}.name.en`)} placeholder={text.english} />
               <Input dir="rtl" lang="ar" {...form.register(`variants.${index}.name.ar`)} placeholder={text.arabic} />
               <Input dir="rtl" lang="ckb" {...form.register(`variants.${index}.name.ckb`)} placeholder={text.kurdish} />
               <FadeOnFocusInput form={form} name={`variants.${index}.price`} type="number" placeholder={text.price} />
-              <div className="flex items-center justify-between rounded-md border px-3 py-2">
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 sm:col-span-2 xl:col-span-1">
                 <span className="text-xs font-medium">{text.available}</span>
                 <Switch
                   label={`${text.available}: ${localized(variant.name, locale, variant.name.en)}`}
@@ -919,6 +920,7 @@ function MenuItemEditorForm({
                 type="button"
                 variant="outline"
                 size="icon"
+                className="h-11 w-11 justify-self-start xl:h-9 xl:w-9 xl:justify-self-auto"
                 aria-label={text.remove}
                 title={text.remove}
                 onClick={() => form.setValue("variants", (form.getValues("variants") || []).filter((_, entryIndex) => entryIndex !== index), { shouldDirty: true })}

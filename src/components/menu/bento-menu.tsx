@@ -30,7 +30,7 @@ export function BentoMenu({ data, accent }: MenuDesignProps) {
     <main dir={textDir} className="menu-theme-root relative isolate min-h-dvh bg-background text-foreground" style={accentStyle(accent)}>
       <DesignBackdrop design="bento" />
       <div className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <span className="truncate text-base font-extrabold tracking-tight">{ctrl.restaurantName}</span>
           <MenuTopControls ctrl={ctrl} />
         </div>
